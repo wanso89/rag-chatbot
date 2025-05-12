@@ -39,7 +39,7 @@ traceback.print_exc()
 # LLM_MODEL_NAME = r"/home/root/ko-gemma-v1"
 # EMBEDDING_MODEL_NAME = r"/home/root/KURE-v1"
 # RERANKER_MODEL_NAME = r"/home/root/ko-reranker"
-LLM_MODEL_NAME = r"/home/root/Gukbap-Gemma2-9B"
+LLM_MODEL_NAME = r"/home/root/Qwen3-8B"
 EMBEDDING_MODEL_NAME = r"/home/root/kpf-sbert-v1.1"
 RERANKER_MODEL_NAME = r"/home/root/ko-reranker"
 ES_HOST = "http://172.10.2.70:9200"
@@ -47,8 +47,58 @@ STATIC_DIR = "app/static"
 IMAGE_DIR = os.path.join(STATIC_DIR, "document_images")
 os.makedirs(IMAGE_DIR, exist_ok=True)
 
-
-
+# 키워드 추출 함수 - 전역으로 정의
+def extract_keywords_from_text(text, max_keywords=12):
+    """텍스트에서 주요 키워드 추출"""
+    try:
+        # 한글, 영문, 숫자 단어 추출 (특수문자 및 공백 기준 분리)
+        words = re.findall(r'[가-힣a-zA-Z0-9]{2,}', text)
+        
+        # 불용어 제거 (한국어 기준)
+        stopwords = {
+            '이', '그', '저', '것', '수', '등', '및', '에서', '에게', '으로', '로', '을', '를',
+            '이다', '있다', '하다', '이런', '저런', '그런', '어떤', '무슨', '어떻게', '왜',
+            'the', 'a', 'an', 'is', 'are', 'was', 'were', 'in', 'on', 'at', 'to', 'for', 'of',
+            '있는', '없는', '경우', '때문', '위해', '통해', '따라', '의해', '의한', '때는',
+            '있습니다', '없습니다', '합니다', '입니다', '됩니다', '관련', '때문에', '위하여',
+            '만약', '그러나', '하지만', '또한', '그리고', '따라서', '이러한', '그러한', 
+            '이것', '그것', '저것', '무엇', '어디', '언제', '누구'
+        }
+        
+        # 중복 제거 및 단어 개수 세기
+        word_counts = {}
+        for word in words:
+            word_lower = word.lower()
+            if len(word) >= 2 and word_lower not in stopwords:
+                # 특수 가중치 적용 - 특정 길이 범위의 단어에 가중치 부여
+                weight = 1.0
+                if 3 <= len(word) <= 8:  # 보통 의미있는 단어 길이 범위
+                    weight = 1.5
+                if word[0].isupper() and len(word) > 1 and not word.isupper():  # 대문자로 시작하는 단어 (고유명사 가능성)
+                    weight = 2.0
+                
+                word_counts[word] = word_counts.get(word, 0) + weight
+        
+        # 빈도수 기준 상위 키워드 추출 (가중치 적용)
+        keywords = sorted(word_counts.items(), key=lambda x: x[1], reverse=True)
+        
+        # 중복 단어 제거 (소문자화하여 비교)
+        unique_keywords = []
+        added_lower = set()
+        
+        for kw, _ in keywords:
+            kw_lower = kw.lower()
+            if kw_lower not in added_lower and len(kw) >= 2:
+                unique_keywords.append(kw)
+                added_lower.add(kw_lower)
+            
+            if len(unique_keywords) >= max_keywords:
+                break
+        
+        return unique_keywords
+    except Exception as e:
+        print(f"키워드 추출 중 오류: {e}")
+        return []
 
 
 # 질문 요청 모델
@@ -205,9 +255,14 @@ def get_llm_model_and_tokenizer():
             trust_remote_code=True,  # 원격 코드 신뢰 (일부 모델에 필요)
         )
 
-        # 특수 토큰 설정
+        # 특수 토큰 설정 - Qwen3 모델용 업데이트
         if tokenizer.pad_token is None:
             tokenizer.pad_token = tokenizer.eos_token
+            
+        # Qwen3 모델 특수 토큰 확인 및 설정
+        if "qwen" in LLM_MODEL_NAME.lower():
+            tokenizer.padding_side = "left"
+            # Qwen 모델은 이미 필요한 특수 토큰이 설정되어 있음
 
         # 양자화 설정 고급 옵션 (4비트 정밀도 + offload)
         quantization_config = BitsAndBytesConfig(
@@ -584,23 +639,33 @@ async def generate_llm_response(
         conversation_context = "대화 기록:\n" + "\n".join(conversation_parts) + "\n\n"
 
     # 간결하고 명확한 프롬프트 - 최적화: 프롬프트 단순화
-    prompt = f"""<start_of_turn>user
-당신은 사용자 질문에 대해 주어진 참고 문서를 기반으로 답변하는 AI 어시스턴트입니다.
-다음 지침을 따라주세요:
-1. 답변은 반드시 제공된 '참고 문서' 섹션의 내용에 근거해야 합니다.
-2. 문서에 질문과 관련된 정보가 없다면, "제공된 문서에서 관련 정보를 찾을 수 없습니다."라고 명확히 답변하세요.
-3. 답변은 명확하고 간결하게 작성해주세요.
-5. HTML 태그는 <b>, <ul>, <li>만 사용할 수 있습니다.
+    prompt = f"""<|im_start|>system
+당신은 사용자 질문에 대해 주어진 참고 문서를 기반으로 답변하는 한국어 AI 어시스턴트입니다.
+다음 지침을 매우 엄격히 따라주세요:
 
+1. 반드시 한국어로만 답변하세요. 영어로 절대 응답하지 마세요.
+2. 영어로 먼저 답변한 후 한국어로 번역하는 방식은 절대 사용하지 마세요. 처음부터 한국어로만 답변하세요.
+3. 답변은 반드시 제공된 '참고 문서' 섹션의 내용에 근거해야 합니다.
+4. 문서에 질문과 관련된 정보가 없다면, "제공된 문서에서 관련 정보를 찾을 수 없습니다."라고 명확히 답변하세요.
+5. 답변은 명확하고 간결하게 작성해주세요.
+6. HTML 태그는 <b>, <ul>, <li>만 사용할 수 있습니다.
+
+특별 주의사항:
+- 어떤 상황에서도 영어로 응답하지 마세요.
+- 어떤 상황에서도 영어와 한국어를 함께 사용하지 마세요.
+- 첫 문장부터 반드시 한국어로만 작성하세요.
+<|im_end|>
+
+<|im_start|>user
 {conversation_context}
 현재 질문: {question}
 
 참고 문서:
 {combined_context}
-<end_of_turn>
-<start_of_turn>model
+<|im_end|>
 
-답변:"""
+<|im_start|>assistant
+한국어 답변: """
 
     try:
         # 메모리 최적화를 위한 캐시 정리
@@ -632,16 +697,85 @@ async def generate_llm_response(
             # 효율적인 텍스트 디코딩 (skip_special_tokens=True)
             generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
 
-            # 응답 추출 로직 최적화 - 정규식 사용
-            if "<start_of_turn>model" in generated_text:
-                answer = generated_text.split("<start_of_turn>model")[-1].strip()
-                if answer.startswith("답변:"):
-                    answer = answer[3:].strip()  # "답변:" 제거
-            elif "답변:" in generated_text:
-                answer = generated_text.split("답변:")[-1].strip()
+            # 응답 추출 로직 개선 - 영어 출력 제거 및 한국어 응답 최적화
+            import re  # 상단에서 import가 있으므로 여기서는 불필요하지만, 명시적으로 추가
+            
+            if "<|im_start|>" in generated_text:
+                # <|im_start|>assistant 이후 텍스트 추출
+                parts = generated_text.split("<|im_start|>assistant")
+                if len(parts) > 1:
+                    answer = parts[1].strip()
+                    
+                    # 영어 텍스트 제거 로직 - 강화된 버전
+                    # 1. "한국어 답변:" 패턴으로 시작하는지 확인
+                    korean_prefix_match = re.search(r'한국어\s*답변\s*:', answer, re.IGNORECASE)
+                    if korean_prefix_match:
+                        # 해당 패턴 이후의 텍스트만 사용
+                        answer = answer[korean_prefix_match.end():].strip()
+                    
+                    # 2. 한글이 처음 등장하는 위치 찾기
+                    korean_match = re.search(r'[가-힣]', answer)
+                    if korean_match:
+                        korean_start_idx = korean_match.start()
+                        
+                        # 첫 한글 글자 전에 100자 이상의 텍스트가 있으면 영어 응답일 가능성이 높음
+                        if korean_start_idx > 100:
+                            # 첫 한글 직전에 마침표, 줄바꿈, 공백 등이 있는지 찾기
+                            sentence_end = max([
+                                answer[:korean_start_idx].rfind('. '),
+                                answer[:korean_start_idx].rfind('.\n'),
+                                answer[:korean_start_idx].rfind('? '),
+                                answer[:korean_start_idx].rfind('?\n'),
+                                answer[:korean_start_idx].rfind('! '),
+                                answer[:korean_start_idx].rfind('!\n'),
+                                answer[:korean_start_idx].rfind('\n\n')
+                            ])
+                            
+                            if sentence_end > 0:
+                                # 영어 응답 종료 후 한글 응답 시작 지점 발견
+                                answer = answer[sentence_end+1:].strip()
+                                print(f"영어 응답이 감지되어 제거됨. 한글 응답만 유지함.")
+                    
+                    # 3. 응답 시작 부분에 있는 '답변:', '한국어 답변:' 등 패턴 정리
+                    answer = re.sub(r'^(답변|응답|결과|한국어\s*답변)\s*:', '', answer).strip()
+                    
+                    # 언어 확인 - 한글이 없으면 경고 로그 출력
+                    if not re.search(r'[가-힣]', answer):
+                        print("WARNING: 응답에 한글이 포함되어 있지 않습니다. 혹시 모델이 지시를 따르지 않는 것 같습니다.")
+                else:
+                    answer = generated_text
+            elif "assistant" in generated_text:
+                # assistant 이후 텍스트만 추출
+                answer = generated_text.split("assistant")[-1].strip()
+                
+                # 위와 동일한 영어 텍스트 제거 로직 적용
+                korean_prefix_match = re.search(r'한국어\s*답변\s*:', answer, re.IGNORECASE)
+                if korean_prefix_match:
+                    answer = answer[korean_prefix_match.end():].strip()
+                
+                korean_match = re.search(r'[가-힣]', answer)
+                if korean_match:
+                    korean_start_idx = korean_match.start()
+                    if korean_start_idx > 100:
+                        sentence_end = max([
+                            answer[:korean_start_idx].rfind('. '),
+                            answer[:korean_start_idx].rfind('.\n'),
+                            answer[:korean_start_idx].rfind('? '),
+                            answer[:korean_start_idx].rfind('?\n'),
+                            answer[:korean_start_idx].rfind('! '),
+                            answer[:korean_start_idx].rfind('!\n'),
+                            answer[:korean_start_idx].rfind('\n\n')
+                        ])
+                        
+                        if sentence_end > 0:
+                            answer = answer[sentence_end+1:].strip()
+                            print(f"영어 응답이 감지되어 제거됨. 한글 응답만 유지함.")
+                
+                # 응답 시작 부분의 '답변:' 등 제거
+                answer = re.sub(r'^(답변|응답|결과|한국어\s*답변)\s*:', '', answer).strip()
             else:
-                # 프롬프트에 응답 추가 부분 제거
-                prompt_parts = prompt.split("<start_of_turn>model")[0]
+                # 기타 경우 - 프롬프트에 응답 추가 부분 제거
+                prompt_parts = prompt.split("<|im_start|>assistant")[0]
                 if prompt_parts in generated_text:
                     answer = generated_text.replace(prompt_parts, "").strip()
                 else:
@@ -830,38 +964,29 @@ async def search_and_combine(
             llm_model, tokenizer, query, final_docs, 0.2, conversation_history
         )
         
-        # 소스 텍스트가 LLM 출력에 직접 인용된 경우를 확인
-        cited_sources = []
-        
         # 응답이 None인 경우 대체 응답 사용 (방어 코드)
         if answer is None:
             print("LLM 응답이 None입니다. 대체 응답을 사용합니다.")
             answer = "죄송합니다. 응답을 생성하는 중 오류가 발생했습니다. 다시 질문해 주세요."
         
-        # 인용 감지를 위한 간단한 키워드 추출
-        def extract_keywords(text, min_length=3, max_keywords=20):
-            # None이나 비문자열 체크
-            if text is None or not isinstance(text, str):
-                print(f"extract_keywords: 유효하지 않은 입력 타입 - {type(text)}")
-                return []
-                
-            # 특수문자, 공백 등을 기준으로 단어 분리
-            words = re.findall(r'\b[가-힣a-zA-Z0-9]+\b', text)
-            # 길이가 min_length 이상인 단어만 필터링
-            filtered_words = [w for w in words if len(w) >= min_length]
-            # 중복 제거 및 최대 개수 제한
-            unique_words = list(set(filtered_words))[:max_keywords]
-            return unique_words
-            
-        # 응답에서 키워드 추출
-        answer_keywords = extract_keywords(answer)
+        # 소스 텍스트가 LLM 출력에 직접 인용된 경우를 확인
+        cited_sources = []
         
-        # answer가 None이 아닌 경우만 인용 처리 진행 
-        if answer and isinstance(answer, str):
-            for i, meta in enumerate(source_metadata):
+        try:
+            # 답변에서 키워드 추출 (함수 이름 수정: extract_keywords → extract_keywords_from_text)
+            answer_keywords = extract_keywords_from_text(answer)
+            print(f"답변에서 추출된 키워드: {answer_keywords}")
+            
+            # 응답 시간 측정
+            llm_time = time.time() - llm_start
+            print(f"LLM time: {llm_time:.2f}s")
+            
+            # 인용 감지 로직
+            for i, doc in enumerate(final_docs):
                 cited = False
+                meta = source_metadata[i] if i < len(source_metadata) else {}
                 source_text = context_chunks[i] if i < len(context_chunks) else ""
-    
+
                 # 1. 기존 방식: 연속된 텍스트 일치 여부 확인 (최소 30자)
                 if len(source_text) > 50:
                     for j in range(0, len(source_text) - 30, 10):
@@ -869,11 +994,11 @@ async def search_and_combine(
                         if snippet in answer:
                             cited = True
                             break
-    
+
                 # 2. 개선된 방식: 키워드 기반 매칭 (기존 방식으로 감지되지 않은 경우)
                 if not cited and source_text:
-                    # 소스에서 키워드 추출
-                    source_keywords = extract_keywords(source_text)
+                    # 소스에서 키워드 추출 (함수 이름 수정)
+                    source_keywords = extract_keywords_from_text(source_text)
                     # 키워드 일치율 계산
                     if source_keywords:
                         matches = [k for k in source_keywords if k in answer]
@@ -883,10 +1008,12 @@ async def search_and_combine(
                             cited = True
                 
                 # 메타데이터에 인용 여부 저장
-                meta["is_cited"] = cited
-                if cited:
-                    cited_sources.append(meta)
-        else:
+                if meta:
+                    meta["is_cited"] = cited
+                    if cited:
+                        cited_sources.append(meta)
+        except Exception as e:
+            print(f"인용 처리 중 오류 발생: {e}")
             print("유효한 응답이 없어 인용 처리를 건너뜁니다.")
             # 모든 메타데이터에 is_cited = False 설정
             for meta in source_metadata:
@@ -1201,59 +1328,7 @@ async def source_preview_endpoint(request: SourcePreviewRequest = Body(...)):
             "size": 1
         })
         
-        # 키워드 추출 및 문서 콘텐츠 포맷팅 함수
-        def extract_keywords_from_text(text, max_keywords=12):
-            """텍스트에서 주요 키워드 추출"""
-            try:
-                # 한글, 영문, 숫자 단어 추출 (특수문자 및 공백 기준 분리)
-                words = re.findall(r'[가-힣a-zA-Z0-9]{2,}', text)
-                
-                # 불용어 제거 (한국어 기준)
-                stopwords = {
-                    '이', '그', '저', '것', '수', '등', '및', '에서', '에게', '으로', '로', '을', '를',
-                    '이다', '있다', '하다', '이런', '저런', '그런', '어떤', '무슨', '어떻게', '왜',
-                    'the', 'a', 'an', 'is', 'are', 'was', 'were', 'in', 'on', 'at', 'to', 'for', 'of',
-                    '있는', '없는', '경우', '때문', '위해', '통해', '따라', '의해', '의한', '때는',
-                    '있습니다', '없습니다', '합니다', '입니다', '됩니다', '관련', '때문에', '위하여',
-                    '만약', '그러나', '하지만', '또한', '그리고', '따라서', '이러한', '그러한', 
-                    '이것', '그것', '저것', '무엇', '어디', '언제', '누구'
-                }
-                
-                # 중복 제거 및 단어 개수 세기
-                word_counts = {}
-                for word in words:
-                    word_lower = word.lower()
-                    if len(word) >= 2 and word_lower not in stopwords:
-                        # 특수 가중치 적용 - 특정 길이 범위의 단어에 가중치 부여
-                        weight = 1.0
-                        if 3 <= len(word) <= 8:  # 보통 의미있는 단어 길이 범위
-                            weight = 1.5
-                        if word[0].isupper() and len(word) > 1 and not word.isupper():  # 대문자로 시작하는 단어 (고유명사 가능성)
-                            weight = 2.0
-                        
-                        word_counts[word] = word_counts.get(word, 0) + weight
-                
-                # 빈도수 기준 상위 키워드 추출 (가중치 적용)
-                keywords = sorted(word_counts.items(), key=lambda x: x[1], reverse=True)
-                
-                # 중복 단어 제거 (소문자화하여 비교)
-                unique_keywords = []
-                added_lower = set()
-                
-                for kw, _ in keywords:
-                    kw_lower = kw.lower()
-                    if kw_lower not in added_lower and len(kw) >= 2:
-                        unique_keywords.append(kw)
-                        added_lower.add(kw_lower)
-                    
-                    if len(unique_keywords) >= max_keywords:
-                        break
-                
-                return unique_keywords
-            except Exception as e:
-                print(f"키워드 추출 중 오류: {e}")
-                return []
-        
+        # 문서 콘텐츠 포맷팅 함수
         def format_content(content):
             """내용 서식 개선"""
             if not content:
