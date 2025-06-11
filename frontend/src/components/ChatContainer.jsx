@@ -1241,6 +1241,13 @@ function ChatContainer({
       // 같은 모드를 다시 클릭한 경우 무시
       if (currentMode === newMode) return;
       
+      // setMode 함수 호출하여 모드 전환 (App.jsx에서 전달된 props)
+      console.log('모드 전환 요청:', newMode, '현재 모드:', currentMode);
+      if (typeof setMode === 'function') {
+        setMode(newMode);
+      } else {
+        console.error('setMode 함수가 없거나 올바르지 않습니다.');
+      }
     };
 
     // props로 전달받은 현재 모드 사용 (fallback으로 window.currentAppMode도 확인)
