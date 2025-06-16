@@ -1,0 +1,47 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1750042236710",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "한국전자인증 2022년 4월에 있었던 장애와 장애원인이 뭐였지? 한국어로만 나오게 해줘.",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "한국전자인증 2022년 4월에 있었던 장애는 VDI 서버 접속 불가였습니다. 장애 원인은 솔루션 로그가 날짜별로 나뉘는 것이 아닌 하나의 파일에 저장되어 있어 오랜 기간 동안 쌓여서 서버의 가용 용량을 초과했기 때문입니다. 이로 인해 VDI 서버의 가용 용량이 부족해졌고, 이는 일부 VDI 사용자의 서비스 접속에 영향을 미쳤습니다.",
+      "sources": [
+        {
+          "path": "6ca1b5c8-915b-46a2-89f4-174a0d34f120_20220408_장애결과보고_VDI_한국전자인증.pdf",
+          "display_name": "20220408_장애결과보고_VDI_한국전자인증.pdf",
+          "page": 1,
+          "chunk_id": "batch1_0",
+          "score": 85.76129747736276,
+          "is_cited": false
+        },
+        {
+          "path": "ed3ced8d-04af-48a2-9c5b-5d4a5842a458_25년도 상반기 대졸수준 채용공고.pdf",
+          "display_name": "25년도 상반기 대졸수준 채용공고.pdf",
+          "page": 2,
+          "chunk_id": "batch1_1",
+          "score": 58.43384781330597,
+          "is_cited": false
+        },
+        {
+          "path": "ed3ced8d-04af-48a2-9c5b-5d4a5842a458_25년도 상반기 대졸수준 채용공고.pdf",
+          "display_name": "25년도 상반기 대졸수준 채용공고.pdf",
+          "page": 16,
+          "chunk_id": "batch1_10",
+          "score": 55.07741141527921,
+          "is_cited": false
+        }
+      ]
+    }
+  ],
+  "timestamp": "2025-06-16T11:50:51.842664"
+}

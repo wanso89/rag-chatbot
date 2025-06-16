@@ -1,0 +1,79 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1749706164683",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "3S소프트에 대해 알려줘",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "3S소프트는 문서 1과 문서 2에서 언급된 회사입니다. 그러나 두 문서에는 3S소프트에 대한 구체적인 정보가 포함되어 있지 않습니다. 다른 문서들은 3S소프트와 관련된 특정 프로젝트나 기술에 대해 언급하고 있지만, 회사 자체에 대한 설명은 없습니다. 따라서 3S소프트의 정확한 사업 범위, 주요 서비스, 또는 회사의 역사와 같은 정보는 제공된 문서들에서 찾을 수 없습니다.",
+      "sources": [
+        {
+          "path": "4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf",
+          "display_name": "3S소프트 회사소개-250514.pdf",
+          "page": 3,
+          "chunk_id": "batch1_2",
+          "score": 36.75657646858906,
+          "is_cited": true
+        },
+        {
+          "path": "4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf",
+          "display_name": "3S소프트 회사소개-250514.pdf",
+          "page": 2,
+          "chunk_id": "batch1_1",
+          "score": 35.738201549785146,
+          "is_cited": true
+        },
+        {
+          "path": "175fc05c-7809-48e0-9f94-2838cce236ad_(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "display_name": "(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "page": 87,
+          "chunk_id": "batch1_85",
+          "score": 33.12202298045456,
+          "is_cited": false
+        },
+        {
+          "path": "175fc05c-7809-48e0-9f94-2838cce236ad_(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "display_name": "(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "page": 95,
+          "chunk_id": "batch1_93",
+          "score": 31.44169193016384,
+          "is_cited": false
+        },
+        {
+          "path": "b291c857-be85-4cab-9e8b-ae0074c02d1e_25년도_공용NEPYX_NetDesktop_관리자매뉴얼.pdf",
+          "display_name": "25년도_공용NEPYX_NetDesktop_관리자매뉴얼.pdf",
+          "page": 49,
+          "chunk_id": "batch1_48",
+          "score": 29.339651895905316,
+          "is_cited": false
+        },
+        {
+          "path": "40f7926e-cc46-490a-996e-a8664ffc648e_주요정보통신기반시설_기술적_취약점_분석_평가_방법_상세가이드.pdf",
+          "display_name": "주요정보통신기반시설_기술적_취약점_분석_평가_방법_상세가이드.pdf",
+          "page": 468,
+          "chunk_id": "batch1_457",
+          "score": 28.113099458112902,
+          "is_cited": false
+        },
+        {
+          "path": "dfb59f24-85d4-4e30-88b0-730473d340c5_[NDT4]Ceph 설치 가이드(CentOS 8 Stream).pdf",
+          "display_name": "[NDT4]Ceph 설치 가이드(CentOS 8 Stream).pdf",
+          "page": 5,
+          "chunk_id": "batch1_4",
+          "score": 26.088688198850893,
+          "is_cited": false
+        }
+      ]
+    }
+  ],
+  "timestamp": "2025-06-12T14:30:22.863751"
+}

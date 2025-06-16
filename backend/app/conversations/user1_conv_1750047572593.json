@@ -1,0 +1,143 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1750047572593",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "버티카 금융 레퍼런스 알려줘.",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "버티카 국내 레퍼런스_2024.pdf에 대한 정보를 제공해 드리겠습니다.\n\n버티카 국내 레퍼런스_2024.pdf는 버티카의 국내 레퍼런스를 다루고 있으며, 특정 내용이나 사례에 대한 정보를 찾으시는 것으로 보이지만, 제공된 문서에서는 그具体内容에 대한 구체적인 정보를 찾을 수 없습니다. 따라서, 버티카의 국내 레퍼런스에 대한 일반적인 정보나 관련 사례에 대한 내용은 해당 문서에서 확인할 수 없습니다.\n\n만약 특정 사례나 기업의 레퍼런스에 대한 정보를 원하신다면, 해당 문서를 참조하시거나, 버티카의 공식 웹사이트나 연락처를 통해 추가적인 정보를 얻으시는 것이 좋을 것입니다.",
+      "sources": [
+        {
+          "path": "84837922-5a23-4225-ad40-df929b0947b5_버티카 국내 레퍼런스_2024.pdf",
+          "display_name": "버티카 국내 레퍼런스_2024.pdf",
+          "page": 1,
+          "chunk_id": "batch1_0",
+          "score": 78.57078890312853,
+          "is_cited": true
+        },
+        {
+          "path": "a8114fe3-c2f9-43db-815b-491ae621583d_제2024-05호 대한건설기계안전관리원 채용공고문 및 직무기술서.pdf",
+          "display_name": "제2024-05호 대한건설기계안전관리원 채용공고문 및 직무기술서.pdf",
+          "page": 6,
+          "chunk_id": "batch1_5",
+          "score": 2.878199945072156,
+          "is_cited": false
+        },
+        {
+          "path": "dec6453bad36_df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "display_name": "df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "page": 37,
+          "chunk_id": "batch1_11",
+          "score": 2.8363343890387975,
+          "is_cited": false
+        },
+        {
+          "path": "f5a37c6efcee_b73ce06a-9010-443f-8145-97a70438d9f6_B-1001_취업규칙_20230109.pdf",
+          "display_name": "b73ce06a-9010-443f-8145-97a70438d9f6_B-1001_취업규칙_20230109.pdf",
+          "page": 18,
+          "chunk_id": "batch1_15",
+          "score": 2.7582461035558152,
+          "is_cited": false
+        },
+        {
+          "path": "22619ad5-7383-41f9-88b1-0f2411453304_그라파나 구성_V1.pptx",
+          "display_name": "그라파나 구성_V1.pptx",
+          "page": 3,
+          "chunk_id": "batch1_2",
+          "score": 2.743714249300141,
+          "is_cited": false
+        },
+        {
+          "path": "4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf",
+          "display_name": "3S소프트 회사소개-250514.pdf",
+          "page": 21,
+          "chunk_id": "batch1_4",
+          "score": 2.7411301197327904,
+          "is_cited": false
+        },
+        {
+          "path": "dec6453bad36_df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "display_name": "df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "page": 38,
+          "chunk_id": "batch1_12",
+          "score": 2.8124107512014063,
+          "is_cited": false
+        },
+        {
+          "path": "a8114fe3-c2f9-43db-815b-491ae621583d_제2024-05호 대한건설기계안전관리원 채용공고문 및 직무기술서.pdf",
+          "display_name": "제2024-05호 대한건설기계안전관리원 채용공고문 및 직무기술서.pdf",
+          "page": 14,
+          "chunk_id": "batch1_10",
+          "score": 2.7492540074101033,
+          "is_cited": false
+        },
+        {
+          "path": "5d748bac-6533-4eb8-9dd6-7a0e6f8d9c3e_VMware Horizon 8 표준제안서[7318].pdf",
+          "display_name": "VMware Horizon 8 표준제안서[7318].pdf",
+          "page": 13,
+          "chunk_id": "batch1_6",
+          "score": 1.4473193446487813,
+          "is_cited": false
+        },
+        {
+          "path": "175fc05c-7809-48e0-9f94-2838cce236ad_(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "display_name": "(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "page": 215,
+          "chunk_id": "batch1_25",
+          "score": 1.4053508362755749,
+          "is_cited": false
+        },
+        {
+          "path": "d94d87fd-491b-461f-bdb1-adf23a480153_[NDT4]Windows11 Template VM 생성 가이드.pdf",
+          "display_name": "[NDT4]Windows11 Template VM 생성 가이드.pdf",
+          "page": 41,
+          "chunk_id": "batch1_13",
+          "score": 1.3704852930895073,
+          "is_cited": false
+        },
+        {
+          "path": "dec6453bad36_df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "display_name": "df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "page": 10,
+          "chunk_id": "batch1_7",
+          "score": 1.4043954185819378,
+          "is_cited": false
+        },
+        {
+          "path": "175fc05c-7809-48e0-9f94-2838cce236ad_(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "display_name": "(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "page": 213,
+          "chunk_id": "batch1_23",
+          "score": 1.3789016739380189,
+          "is_cited": false
+        },
+        {
+          "path": "175fc05c-7809-48e0-9f94-2838cce236ad_(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "display_name": "(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "page": 209,
+          "chunk_id": "batch1_21",
+          "score": 1.3617554577816562,
+          "is_cited": false
+        },
+        {
+          "path": "175fc05c-7809-48e0-9f94-2838cce236ad_(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "display_name": "(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "page": 205,
+          "chunk_id": "batch1_19",
+          "score": 1.3080780903713345,
+          "is_cited": false
+        }
+      ]
+    }
+  ],
+  "timestamp": "2025-06-16T13:19:44.654883"
+}

@@ -1,0 +1,79 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1750050507905",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "스냅샷 생성하는 방법 알려줘",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "제공된 문서에서 스냅샷 생성 방법에 대한 정보를 찾을 수 없습니다. 스냅샷 생성 방법에 대한 정보가 필요하시다면, 관리자 페이지나 관련 설정 메뉴를 참조하거나, 해당 시스템의 사용자 가이드를 확인해보세요.",
+      "sources": [
+        {
+          "path": "5716fd91-32f5-43bf-ae56-ee4cc3ce6c3e_중앙보훈병원_FAQ_관리_20260324.pdf",
+          "display_name": "중앙보훈병원_FAQ_관리_20260324.pdf",
+          "page": 5,
+          "chunk_id": "batch1_4",
+          "score": 39.49987235138903,
+          "is_cited": false
+        },
+        {
+          "path": "5716fd91-32f5-43bf-ae56-ee4cc3ce6c3e_중앙보훈병원_FAQ_관리_20260324.pdf",
+          "display_name": "중앙보훈병원_FAQ_관리_20260324.pdf",
+          "page": 4,
+          "chunk_id": "batch1_3",
+          "score": 37.46715381086674,
+          "is_cited": false
+        },
+        {
+          "path": "5716fd91-32f5-43bf-ae56-ee4cc3ce6c3e_중앙보훈병원_FAQ_관리_20260324.pdf",
+          "display_name": "중앙보훈병원_FAQ_관리_20260324.pdf",
+          "page": 1,
+          "chunk_id": "batch1_0",
+          "score": 33.881348151692016,
+          "is_cited": false
+        },
+        {
+          "path": "b291c857-be85-4cab-9e8b-ae0074c02d1e_25년도_공용NEPYX_NetDesktop_관리자매뉴얼.pdf",
+          "display_name": "25년도_공용NEPYX_NetDesktop_관리자매뉴얼.pdf",
+          "page": 49,
+          "chunk_id": "batch1_31",
+          "score": 27.475367685380167,
+          "is_cited": false
+        },
+        {
+          "path": "5716fd91-32f5-43bf-ae56-ee4cc3ce6c3e_중앙보훈병원_FAQ_관리_20260324.pdf",
+          "display_name": "중앙보훈병원_FAQ_관리_20260324.pdf",
+          "page": 2,
+          "chunk_id": "batch1_1",
+          "score": 26.863803186306875,
+          "is_cited": false
+        },
+        {
+          "path": "533909ce-f55e-4409-84b6-ff8ee64a5aa9_기본데이터 변환프로그램 매뉴얼.pdf",
+          "display_name": "기본데이터 변환프로그램 매뉴얼.pdf",
+          "page": 3,
+          "chunk_id": "batch1_2",
+          "score": 15.913567483766226,
+          "is_cited": false
+        },
+        {
+          "path": "882ef5bc-8bf3-4a81-87e4-99afe67e3006_[NDT4]Rocky 8.10 설치.pdf",
+          "display_name": "[NDT4]Rocky 8.10 설치.pdf",
+          "page": 11,
+          "chunk_id": "batch1_8",
+          "score": 15.292961610516597,
+          "is_cited": false
+        }
+      ]
+    }
+  ],
+  "timestamp": "2025-06-16T14:08:42.036273"
+}

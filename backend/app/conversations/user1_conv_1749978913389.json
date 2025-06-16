@@ -1,0 +1,22 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1749978913389",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "청원 휴가 관련해서 질문좀 하고 싶은게 있는데 휴가를 어떤경우에 어떻게 쓸 수 있어?",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "요청을 처리하는 중 오류가 발생했습니다: name 'request' is not defined",
+      "sources": []
+    }
+  ],
+  "timestamp": "2025-06-15T18:15:29.756415"
+}

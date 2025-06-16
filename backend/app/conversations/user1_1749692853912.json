@@ -1,0 +1,22 @@
+{
+  "userId": "user1",
+  "conversationId": "1749692853912",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "스냅샷 생성하는 방법에 대해 알려줘",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "스냅샷을 생성하는 방법은 다음과 같습니다:\n\n1. 가상머신을 선택한 후 스냅샷 버튼을 클릭합니다.\n2. 화면 왼쪽에 스냅샷 화면이 슬라이드됩니다.\n3. 스냅샷 생성 버튼을 클릭하면 ",
+      "sources": []
+    }
+  ],
+  "timestamp": "2025-06-12T10:47:50.319449"
+}

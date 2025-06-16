@@ -4,113 +4,87 @@ Qwen3 모델용 최적화된 프롬프트 템플릿 모듈
 
 from typing import List, Dict, Any, Optional
 
-def create_chat_prompt(
+def create_chat_messages(
     question: str, 
     context: str, 
     conversation_history: Optional[List[Dict[str, Any]]] = None,
-    use_html: bool = True,
     language: str = "ko"
-) -> str:
+) -> List[Dict[str, str]]:
     """
-    Qwen3 모델에 최적화된 RAG 챗봇 프롬프트 템플릿을 생성합니다.
+    채팅용 메시지 리스트 생성 (tokenizer.apply_chat_template용)
     
-    Args:
-        question: 사용자 질문
-        context: 검색된 문서 컨텍스트
-        conversation_history: 대화 기록 (선택 사항)
-        use_html: HTML 태그 허용 여부
-        language: 응답 언어 (기본값: 한국어)
-        
     Returns:
-        str: 포맷팅된 프롬프트
+        List[Dict]: messages 형식으로 반환
     """
+    
     # 대화 기록 처리
-    conversation_context = ""
+    messages = []
+    
     if conversation_history:
-        conversation_parts = []
         recent_history = conversation_history[-3:] if len(conversation_history) > 3 else conversation_history
         for msg in recent_history:
-            role = "사용자" if msg["role"] == "user" else "시스템"
-            conversation_parts.append(f"{role}: {msg['content']}")
-        conversation_context = "대화 기록:\n" + "\n".join(conversation_parts) + "\n\n"
+            if isinstance(msg, dict) and "role" in msg and "content" in msg:
+                messages.append({"role": msg["role"], "content": msg["content"]})
     
-    # HTML 태그 관련 지시사항
-    html_instruction = "<b>, <ul>, <li>" if use_html else "사용하지 마세요"
-    
-    # 언어별 시스템 프롬프트
+    # 시스템 메시지
     if language == "ko":
         system_content = f"""당신은 사용자 질문에 대해 주어진 참고 문서를 기반으로 답변하는 한국어 AI 어시스턴트입니다.
 다음 지침을 매우 엄격히 따라주세요:
 
-1. 반드시 한국어로만 답변하세요.
+1. 반드시 한국어로만 답변하세요. 절대 중국어나 다른 언어를 사용하지 마세요.
 2. 답변은 반드시 제공된 '참고 문서' 섹션의 내용에 근거해야 합니다.
 3. 문서에 질문과 관련된 정보가 없다면, "제공된 문서에서 관련 정보를 찾을 수 없습니다."라고 명확히 답변하세요.
-4. 답변은 명확하고 간결하게 작성해주세요.
-5. HTML 태그는 {html_instruction}만 사용할 수 있습니다."""
-    else:
-        # 다국어 지원을 위한 기본 영어 템플릿
-        system_content = f"""You are an AI assistant that answers user questions based on the provided reference documents.
-Please strictly follow these guidelines:
-
-1. Answer in the specified language only.
-2. Base your answers solely on the information in the 'Reference Documents' section.
-3. If the documents don't contain relevant information, clearly state "I cannot find relevant information in the provided documents."
-4. Provide clear and concise answers.
-5. HTML tags: You may only use {html_instruction}."""
-
-    # 최종 프롬프트 조합
-    prompt = f"""<|im_start|>system
-{system_content}
-<|im_end|>
-
-<|im_start|>user
-{conversation_context}현재 질문: {question}
+4. 답변할 때는 반드시 구체적인 출처를 명시해주세요.
+   예: "[취업규칙_test.pdf p.9]에 따르면..." 또는 "[네오오토_취업규칙.pdf]에서 확인할 수 있듯이..."
+5. "문서 1", "문서 2" 같은 표현은 절대 사용하지 마세요.
 
 참고 문서:
-{context}
-<|im_end|>
-
-<|im_start|>assistant
-"""
+{context}"""
+    else:
+        system_content = f"""You are an AI assistant answering questions based on provided documents.
+Reference Documents:
+{context}"""
     
-    return prompt
+    messages.insert(0, {"role": "system", "content": system_content})
+    messages.append({"role": "user", "content": question})
+    
+    return messages
 
-def create_retrieval_improvement_prompt(query: str, relevant_chunks: List[str], irrelevant_chunks: List[str]) -> str:
+def create_query_optimization_prompt(query: str, category: str = None) -> str:
     """
-    검색 개선을 위한 프롬프트 생성
+    쿼리 최적화용 프롬프트 생성
     
     Args:
-        query: 원본 쿼리
-        relevant_chunks: 관련성 높은 청크 목록
-        irrelevant_chunks: 관련성 낮은 청크 목록
+        query: 원본 사용자 질문
+        category: 문서 카테고리
         
     Returns:
-        str: 검색 개선 프롬프트
+        str: 쿼리 최적화 프롬프트
     """
-    # 문서 조각들을 미리 처리하여 백슬래시 문제 해결
-    relevant_docs = '\n---\n'.join(relevant_chunks[:3])
-    irrelevant_docs = '\n---\n'.join(irrelevant_chunks[:3])
+    
+    category_info = f"카테고리: {category}" if category else "카테고리: 일반"
     
     return f"""<|im_start|>system
-당신은 정보 검색 시스템의 검색 품질을 개선하는 AI 전문가입니다. 사용자 질문에 대해 더 관련성 높은 검색 결과를 반환하도록 쿼리를 개선해주세요.
+당신은 검색 쿼리 최적화 전문가입니다.
+사용자의 자연어 질문을 효과적인 검색 쿼리로 변환해주세요.
+
+원칙:
+- 핵심 키워드 포함
+- 동의어, 유사어 활용  
+- 영어/한국어 혼용 고려
+- 불필요한 조사 제거
+
+JSON 형식으로만 응답:
+{{
+    "queries": ["주요 쿼리", "대안 쿼리1", "대안 쿼리2"]
+}}
 <|im_end|>
 
 <|im_start|>user
-원본 사용자 질문: {query}
+사용자 질문: '{query}'
+{category_info}
 
-관련성 높다고 판단된 문서:
-{relevant_docs}
-
-관련성 낮다고 판단된 문서:
-{irrelevant_docs}
-
-다음을 수행해주세요:
-1. 원본 질문을 분석하여 핵심 키워드와 의도를 파악하세요.
-2. 관련성 높은 문서에서 중요 용어와 개념을 추출하세요.
-3. 관련성 낮은 문서를 분석하여 잘못된 방향으로 검색된 이유를 파악하세요.
-4. 원본 질문을 수정하여 더 정확한 검색 결과를 얻을 수 있는 개선된 쿼리를 제안하세요.
-
-개선된 쿼리만 JSON 형식으로 제공하세요: {{"improved_query": "개선된 쿼리 내용"}}
+이 질문에 대한 최적화된 검색 쿼리를 생성해주세요.
 <|im_end|>
 
 <|im_start|>assistant

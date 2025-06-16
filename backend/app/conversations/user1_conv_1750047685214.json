@@ -1,0 +1,143 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1750047685214",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "버티카 레퍼런스 중에 금융 및 통신 쪽 발주처 정리해줘",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "제공된 문서에서 금융 및 통신 쪽 발주처에 대한 정보를 찾을 수 없습니다.",
+      "sources": [
+        {
+          "path": "84837922-5a23-4225-ad40-df929b0947b5_버티카 국내 레퍼런스_2024.pdf",
+          "display_name": "버티카 국내 레퍼런스_2024.pdf",
+          "page": 1,
+          "chunk_id": "batch1_0",
+          "score": 3.529349119059734,
+          "is_cited": false
+        },
+        {
+          "path": "4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf",
+          "display_name": "3S소프트 회사소개-250514.pdf",
+          "page": 23,
+          "chunk_id": "batch1_5",
+          "score": 2.9470636966362362,
+          "is_cited": false
+        },
+        {
+          "path": "f5a37c6efcee_b73ce06a-9010-443f-8145-97a70438d9f6_B-1001_취업규칙_20230109.pdf",
+          "display_name": "b73ce06a-9010-443f-8145-97a70438d9f6_B-1001_취업규칙_20230109.pdf",
+          "page": 20,
+          "chunk_id": "batch1_17",
+          "score": 2.889845198773763,
+          "is_cited": false
+        },
+        {
+          "path": "533909ce-f55e-4409-84b6-ff8ee64a5aa9_기본데이터 변환프로그램 매뉴얼.pdf",
+          "display_name": "기본데이터 변환프로그램 매뉴얼.pdf",
+          "page": 3,
+          "chunk_id": "batch1_2",
+          "score": 2.8792758316779747,
+          "is_cited": false
+        },
+        {
+          "path": "6d6cf919-e544-4cf5-a449-4f2d3e79c88b_한국저작권위원회 망연계 자료전송 관리자 매뉴얼.pdf",
+          "display_name": "한국저작권위원회 망연계 자료전송 관리자 매뉴얼.pdf",
+          "page": 20,
+          "chunk_id": "batch1_9",
+          "score": 2.8771335528423765,
+          "is_cited": false
+        },
+        {
+          "path": "4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf",
+          "display_name": "3S소프트 회사소개-250514.pdf",
+          "page": 21,
+          "chunk_id": "batch1_4",
+          "score": 2.941604729767315,
+          "is_cited": false
+        },
+        {
+          "path": "175fc05c-7809-48e0-9f94-2838cce236ad_(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "display_name": "(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "page": 218,
+          "chunk_id": "batch1_26",
+          "score": 2.8463523953166723,
+          "is_cited": false
+        },
+        {
+          "path": "5d748bac-6533-4eb8-9dd6-7a0e6f8d9c3e_VMware Horizon 8 표준제안서[7318].pdf",
+          "display_name": "VMware Horizon 8 표준제안서[7318].pdf",
+          "page": 25,
+          "chunk_id": "batch1_16",
+          "score": 1.4434456821143284,
+          "is_cited": false
+        },
+        {
+          "path": "175fc05c-7809-48e0-9f94-2838cce236ad_(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "display_name": "(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "page": 160,
+          "chunk_id": "batch1_12",
+          "score": 1.4700898830569453,
+          "is_cited": false
+        },
+        {
+          "path": "b291c857-be85-4cab-9e8b-ae0074c02d1e_25년도_공용NEPYX_NetDesktop_관리자매뉴얼.pdf",
+          "display_name": "25년도_공용NEPYX_NetDesktop_관리자매뉴얼.pdf",
+          "page": 20,
+          "chunk_id": "batch1_15",
+          "score": 1.4253740948420905,
+          "is_cited": false
+        },
+        {
+          "path": "175fc05c-7809-48e0-9f94-2838cce236ad_(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "display_name": "(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "page": 119,
+          "chunk_id": "batch1_8",
+          "score": 1.4528499672340278,
+          "is_cited": false
+        },
+        {
+          "path": "175fc05c-7809-48e0-9f94-2838cce236ad_(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "display_name": "(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "page": 159,
+          "chunk_id": "batch1_11",
+          "score": 1.4390728951782068,
+          "is_cited": false
+        },
+        {
+          "path": "d94d87fd-491b-461f-bdb1-adf23a480153_[NDT4]Windows11 Template VM 생성 가이드.pdf",
+          "display_name": "[NDT4]Windows11 Template VM 생성 가이드.pdf",
+          "page": 41,
+          "chunk_id": "batch1_13",
+          "score": 1.3720148304528266,
+          "is_cited": false
+        },
+        {
+          "path": "175fc05c-7809-48e0-9f94-2838cce236ad_(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "display_name": "(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "page": 215,
+          "chunk_id": "batch1_25",
+          "score": 1.412988422030733,
+          "is_cited": false
+        },
+        {
+          "path": "5d748bac-6533-4eb8-9dd6-7a0e6f8d9c3e_VMware Horizon 8 표준제안서[7318].pdf",
+          "display_name": "VMware Horizon 8 표준제안서[7318].pdf",
+          "page": 13,
+          "chunk_id": "batch1_6",
+          "score": 1.3788258093908927,
+          "is_cited": false
+        }
+      ]
+    }
+  ],
+  "timestamp": "2025-06-16T13:21:29.991852"
+}

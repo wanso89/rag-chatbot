@@ -1,0 +1,111 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1750037720051",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "나 노트북 수리해야돼?",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "네, 노트북 수리를 위해선 먼저 수리 견적을 받아야 합니다. 견적서를 받은 후 품의요청을 할 필요가 있습니다. 품의요청을 할 때는 다음과 같은 내용을 메일로 작성해야 합니다.\n\n        [품의서] 제목\n        품의 목적: 노트북 수리\n        품의 금액: 수리 견적 금액\n        제품명: [수리할 노트북의 모델명]\n        현재 노트북 구매 년월일: [구매한 년월일]\n        견적서 첨부 확인 요청 드립니다.\n\n        참고로, 품의요청은 해당 부서의 관리자에게 메일로 보내야 하며, 품의 승인이 이루어진 후에 수리가 진행됩니다.",
+      "sources": [
+        {
+          "path": "886aafeb3411_6cc0777f-152a-4c98-a89b-12cfdc30a050_회사정보-20250616.docx",
+          "display_name": "6cc0777f-152a-4c98-a89b-12cfdc30a050_회사정보-20250616.docx",
+          "page": 1,
+          "chunk_id": "batch1_0",
+          "score": 75.14169540419041,
+          "is_cited": true
+        },
+        {
+          "path": "e8dd1939-9588-4daf-935a-5c086ca60d1b_NIA 망분리 구축설계ISP_인터뷰질의서(사례분석)_한국교육학술정보원.pdf",
+          "display_name": "NIA 망분리 구축설계ISP_인터뷰질의서(사례분석)_한국교육학술정보원.pdf",
+          "page": 2,
+          "chunk_id": "batch1_1",
+          "score": 40.349121072572586,
+          "is_cited": false
+        },
+        {
+          "path": "40f7926e-cc46-490a-996e-a8664ffc648e_주요정보통신기반시설_기술적_취약점_분석_평가_방법_상세가이드.pdf",
+          "display_name": "주요정보통신기반시설_기술적_취약점_분석_평가_방법_상세가이드.pdf",
+          "page": 466,
+          "chunk_id": "batch1_399",
+          "score": 24.43596564371548,
+          "is_cited": false
+        },
+        {
+          "path": "40f7926e-cc46-490a-996e-a8664ffc648e_주요정보통신기반시설_기술적_취약점_분석_평가_방법_상세가이드.pdf",
+          "display_name": "주요정보통신기반시설_기술적_취약점_분석_평가_방법_상세가이드.pdf",
+          "page": 646,
+          "chunk_id": "batch2_59",
+          "score": 22.79468002802142,
+          "is_cited": false
+        },
+        {
+          "path": "40f7926e-cc46-490a-996e-a8664ffc648e_주요정보통신기반시설_기술적_취약점_분석_평가_방법_상세가이드.pdf",
+          "display_name": "주요정보통신기반시설_기술적_취약점_분석_평가_방법_상세가이드.pdf",
+          "page": 475,
+          "chunk_id": "batch1_408",
+          "score": 20.95508054616251,
+          "is_cited": false
+        },
+        {
+          "path": "40f7926e-cc46-490a-996e-a8664ffc648e_주요정보통신기반시설_기술적_취약점_분석_평가_방법_상세가이드.pdf",
+          "display_name": "주요정보통신기반시설_기술적_취약점_분석_평가_방법_상세가이드.pdf",
+          "page": 524,
+          "chunk_id": "batch1_457",
+          "score": 20.41670743937494,
+          "is_cited": false
+        },
+        {
+          "path": "40f7926e-cc46-490a-996e-a8664ffc648e_주요정보통신기반시설_기술적_취약점_분석_평가_방법_상세가이드.pdf",
+          "display_name": "주요정보통신기반시설_기술적_취약점_분석_평가_방법_상세가이드.pdf",
+          "page": 474,
+          "chunk_id": "batch1_407",
+          "score": 18.05355228939533,
+          "is_cited": false
+        },
+        {
+          "path": "5d748bac-6533-4eb8-9dd6-7a0e6f8d9c3e_VMware Horizon 8 표준제안서[7318].pdf",
+          "display_name": "VMware Horizon 8 표준제안서[7318].pdf",
+          "page": 14,
+          "chunk_id": "batch1_7",
+          "score": 15.40522199473093,
+          "is_cited": false
+        },
+        {
+          "path": "40f7926e-cc46-490a-996e-a8664ffc648e_주요정보통신기반시설_기술적_취약점_분석_평가_방법_상세가이드.pdf",
+          "display_name": "주요정보통신기반시설_기술적_취약점_분석_평가_방법_상세가이드.pdf",
+          "page": 479,
+          "chunk_id": "batch1_412",
+          "score": 12.146841337669152,
+          "is_cited": false
+        },
+        {
+          "path": "3e803550-19a4-4425-bcef-c8b9064d5d32_네오오토_B-1001_취업규칙_20230109.pdf",
+          "display_name": "네오오토_B-1001_취업규칙_20230109.pdf",
+          "page": 18,
+          "chunk_id": "batch1_15",
+          "score": 11.224111512553348,
+          "is_cited": false
+        },
+        {
+          "path": "a8114fe3-c2f9-43db-815b-491ae621583d_제2024-05호 대한건설기계안전관리원 채용공고문 및 직무기술서.pdf",
+          "display_name": "제2024-05호 대한건설기계안전관리원 채용공고문 및 직무기술서.pdf",
+          "page": 18,
+          "chunk_id": "batch1_12",
+          "score": 10.64292045854427,
+          "is_cited": false
+        }
+      ]
+    }
+  ],
+  "timestamp": "2025-06-16T10:35:32.035369"
+}

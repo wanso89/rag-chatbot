@@ -1,0 +1,47 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1750042815308",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "아버지 회갑인데 회사에서 얼마 지원해줘?",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "네오오토의 사내규정에 따르면, 회갑일에 대한 지원금액은 다음과 같습니다. [df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf p.22]\n\n        회갑일에 대한 지원금액은 다음과 같습니다:\n        - 차, 부장: 25,000원\n        - 과장: 20,000원\n        - 대리: 15,000원\n        - 사원: 10,000원\n\n        이는 회갑일에 대한 지원금액이며, 해당 직급에 따라 금액이 결정됩니다.",
+      "sources": [
+        {
+          "path": "3e803550-19a4-4425-bcef-c8b9064d5d32_네오오토_B-1001_취업규칙_20230109.pdf",
+          "display_name": "네오오토_B-1001_취업규칙_20230109.pdf",
+          "page": 28,
+          "chunk_id": "batch1_22",
+          "score": 23.75915472943571,
+          "is_cited": false
+        },
+        {
+          "path": "dec6453bad36_df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "display_name": "df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "page": 22,
+          "chunk_id": "batch1_10",
+          "score": 22.408540135380424,
+          "is_cited": true
+        },
+        {
+          "path": "dec6453bad36_df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "display_name": "df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "page": 10,
+          "chunk_id": "batch1_7",
+          "score": 19.65017060382297,
+          "is_cited": true
+        }
+      ]
+    }
+  ],
+  "timestamp": "2025-06-16T12:00:19.421549"
+}

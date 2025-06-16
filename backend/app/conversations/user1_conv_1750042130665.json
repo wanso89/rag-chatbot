@@ -1,0 +1,71 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1750042130665",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "한국전자인증 2022년 4월에 있었던 장애와 장애원인이 뭐였지?",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "한국전자인증 2022년 4월에 발생한 장애는 VDI 서버 접속 불가였습니다. 이 장애의 원인은 다음과 같습니다:\n\n1. **서버 가용 용량 초과**: 서버의 가용 용량이 초과되어 서비스가 불가능했습니다.\n2. **MongoDB 프로세스 문제**: MongoDB 프로세스가 캐시에 저장된 데이터를 삭제하지 않았습니다. 이는 데이터를 적절히 관리하지 못한 결과였습니다.\n3. **MongoDB 스토리지 엔진 모듈 문제**: MongoDB 스토리지 엔진 모듈이 데이터 페이지의 읽기 성능을 따라가지 못해 단기간에 캐시에 대용량의 데이터가 쌓여서 발생했습니다.\n\n이러한 문제들은 전체적인 시스템의 가용성과 데이터 관리에 대한 문제점을暴로 했으며, 이를 해결하기 위해 추가적인 관리와 모니터링 시스템이 필요하다고 판단되었습니다.",
+      "sources": [
+        {
+          "path": "48ddeb140827_3de77cda-aedb-4ab1-87e8-de4d018450d7_2022-04-19_한국전자인증_장애결과보고_VDI_수정.pdf",
+          "display_name": "3de77cda-aedb-4ab1-87e8-de4d018450d7_2022-04-19_한국전자인증_장애결과보고_VDI_수정.pdf",
+          "page": 1,
+          "chunk_id": "batch1_0",
+          "score": 76.06679938860962,
+          "is_cited": true
+        },
+        {
+          "path": "6ca1b5c8-915b-46a2-89f4-174a0d34f120_20220408_장애결과보고_VDI_한국전자인증.pdf",
+          "display_name": "20220408_장애결과보고_VDI_한국전자인증.pdf",
+          "page": 1,
+          "chunk_id": "batch1_0",
+          "score": 73.22079946223587,
+          "is_cited": false
+        },
+        {
+          "path": "ed3ced8d-04af-48a2-9c5b-5d4a5842a458_25년도 상반기 대졸수준 채용공고.pdf",
+          "display_name": "25년도 상반기 대졸수준 채용공고.pdf",
+          "page": 21,
+          "chunk_id": "batch1_11",
+          "score": 47.71438216107827,
+          "is_cited": false
+        },
+        {
+          "path": "4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf",
+          "display_name": "3S소프트 회사소개-250514.pdf",
+          "page": 1,
+          "chunk_id": "batch1_0",
+          "score": 45.933160852641535,
+          "is_cited": false
+        },
+        {
+          "path": "ed3ced8d-04af-48a2-9c5b-5d4a5842a458_25년도 상반기 대졸수준 채용공고.pdf",
+          "display_name": "25년도 상반기 대졸수준 채용공고.pdf",
+          "page": 1,
+          "chunk_id": "batch1_0",
+          "score": 44.80586707435188,
+          "is_cited": false
+        },
+        {
+          "path": "ed3ced8d-04af-48a2-9c5b-5d4a5842a458_25년도 상반기 대졸수준 채용공고.pdf",
+          "display_name": "25년도 상반기 대졸수준 채용공고.pdf",
+          "page": 16,
+          "chunk_id": "batch1_10",
+          "score": 41.0209006407264,
+          "is_cited": false
+        }
+      ]
+    }
+  ],
+  "timestamp": "2025-06-16T11:48:55.934082"
+}

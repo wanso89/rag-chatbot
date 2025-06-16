@@ -1,0 +1,47 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1750043470328",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "중앙보훈병원 6월 장애보고서에서 재발 방지 항목이 뭐였지?",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "제공된 문서에서 관련 정보를 찾을 수 없습니다. 중앙보훈병원 6월 장애보고서에 대한 재발 방지 항목에 대한 정보는 해당 문서에 포함되어 있지 않습니다.",
+      "sources": [
+        {
+          "path": "175fc05c-7809-48e0-9f94-2838cce236ad_(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "display_name": "(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "page": 186,
+          "chunk_id": "batch1_17",
+          "score": 88.28736235319388,
+          "is_cited": false
+        },
+        {
+          "path": "175fc05c-7809-48e0-9f94-2838cce236ad_(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "display_name": "(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "page": 214,
+          "chunk_id": "batch1_24",
+          "score": 54.712727396637185,
+          "is_cited": false
+        },
+        {
+          "path": "175fc05c-7809-48e0-9f94-2838cce236ad_(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "display_name": "(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "page": 14,
+          "chunk_id": "batch1_2",
+          "score": 46.398472170700394,
+          "is_cited": false
+        }
+      ]
+    }
+  ],
+  "timestamp": "2025-06-16T12:11:21.521928"
+}

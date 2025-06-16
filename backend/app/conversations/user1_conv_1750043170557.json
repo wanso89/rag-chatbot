@@ -1,0 +1,71 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1750043170557",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "본인 회갑 지원금액은?",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "본인의 회갑에 대한 지원금액은 [df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf p.22]에 따르면 200만원입니다. 그러나 회갑일은 호적등본 등재상으로 신청해야 하며, 재혼시 지급률은 반액으로 적용됩니다.",
+      "sources": [
+        {
+          "path": "dec6453bad36_df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "display_name": "df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "page": 22,
+          "chunk_id": "batch1_10",
+          "score": 40.453675982751,
+          "is_cited": true
+        },
+        {
+          "path": "10fd1252-5d3b-4f39-a1ca-f79e8eb8b9e9_취업규칙_test.pdf",
+          "display_name": "취업규칙_test.pdf",
+          "page": 12,
+          "chunk_id": "batch1_11",
+          "score": 26.957663854291415,
+          "is_cited": false
+        },
+        {
+          "path": "ed3ced8d-04af-48a2-9c5b-5d4a5842a458_25년도 상반기 대졸수준 채용공고.pdf",
+          "display_name": "25년도 상반기 대졸수준 채용공고.pdf",
+          "page": 13,
+          "chunk_id": "batch1_7",
+          "score": 20.929520190605718,
+          "is_cited": false
+        },
+        {
+          "path": "dec6453bad36_df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "display_name": "df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "page": 8,
+          "chunk_id": "batch1_5",
+          "score": 21.38330075719101,
+          "is_cited": true
+        },
+        {
+          "path": "dec6453bad36_df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "display_name": "df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "page": 9,
+          "chunk_id": "batch1_6",
+          "score": 21.169388695594154,
+          "is_cited": true
+        },
+        {
+          "path": "ed3ced8d-04af-48a2-9c5b-5d4a5842a458_25년도 상반기 대졸수준 채용공고.pdf",
+          "display_name": "25년도 상반기 대졸수준 채용공고.pdf",
+          "page": 1,
+          "chunk_id": "batch1_0",
+          "score": 20.255675410051392,
+          "is_cited": false
+        }
+      ]
+    }
+  ],
+  "timestamp": "2025-06-16T12:06:45.462660"
+}

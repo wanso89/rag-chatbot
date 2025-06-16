@@ -1954,3 +1954,469 @@ INFO:     172.10.2.100:54728 - "GET /api/datasources/stats HTTP/1.1" 200 OK
 INFO:     172.10.2.70:35864 - "POST /api/dashboard/stats HTTP/1.1" 200 OK
 INFO:     172.10.2.100:54728 - "GET /api/datasources/stats HTTP/1.1" 200 OK
 INFO:     172.10.2.100:54731 - "GET /api/system/status HTTP/1.1" 200 OK
+INFO:     172.10.2.70:38580 - "POST /api/settings/load HTTP/1.1" 200 OK
+INFO:     172.10.2.70:38592 - "POST /api/settings/load HTTP/1.1" 200 OK
+Traceback (most recent call last):
+  File "/home/test_code/test01/rag-chatbot/backend/app/main.py", line 1205, in load_conversation_endpoint
+    raise HTTPException(status_code=404, detail="대화를 찾을 수 없습니다.")
+fastapi.exceptions.HTTPException: 404: 대화를 찾을 수 없습니다.
+대화 불러오기 중 오류 발생: 404: 대화를 찾을 수 없습니다.
+INFO:     172.10.2.70:38604 - "POST /api/conversations/load HTTP/1.1" 500 Internal Server Error
+Traceback (most recent call last):
+  File "/home/test_code/test01/rag-chatbot/backend/app/main.py", line 1205, in load_conversation_endpoint
+    raise HTTPException(status_code=404, detail="대화를 찾을 수 없습니다.")
+fastapi.exceptions.HTTPException: 404: 대화를 찾을 수 없습니다.
+대화 불러오기 중 오류 발생: 404: 대화를 찾을 수 없습니다.
+INFO:     172.10.2.70:38606 - "POST /api/conversations/load HTTP/1.1" 500 Internal Server Error
+Traceback (most recent call last):
+  File "/home/test_code/test01/rag-chatbot/backend/app/main.py", line 1205, in load_conversation_endpoint
+    raise HTTPException(status_code=404, detail="대화를 찾을 수 없습니다.")
+fastapi.exceptions.HTTPException: 404: 대화를 찾을 수 없습니다.
+대화 불러오기 중 오류 발생: 404: 대화를 찾을 수 없습니다.
+INFO:     172.10.2.70:38616 - "POST /api/conversations/load HTTP/1.1" 500 Internal Server Error
+Traceback (most recent call last):
+  File "/home/test_code/test01/rag-chatbot/backend/app/main.py", line 1205, in load_conversation_endpoint
+    raise HTTPException(status_code=404, detail="대화를 찾을 수 없습니다.")
+fastapi.exceptions.HTTPException: 404: 대화를 찾을 수 없습니다.
+대화 불러오기 중 오류 발생: 404: 대화를 찾을 수 없습니다.
+INFO:     172.10.2.70:38622 - "POST /api/conversations/load HTTP/1.1" 500 Internal Server Error
+Traceback (most recent call last):
+  File "/home/test_code/test01/rag-chatbot/backend/app/main.py", line 1205, in load_conversation_endpoint
+    raise HTTPException(status_code=404, detail="대화를 찾을 수 없습니다.")
+fastapi.exceptions.HTTPException: 404: 대화를 찾을 수 없습니다.
+대화 불러오기 중 오류 발생: 404: 대화를 찾을 수 없습니다.
+INFO:     172.10.2.70:38628 - "POST /api/conversations/load HTTP/1.1" 500 Internal Server Error
+INFO:     172.10.2.70:38632 - "POST /api/settings/load HTTP/1.1" 200 OK
+INFO:     172.10.2.70:38648 - "POST /api/settings/load HTTP/1.1" 200 OK
+Traceback (most recent call last):
+  File "/home/test_code/test01/rag-chatbot/backend/app/main.py", line 1205, in load_conversation_endpoint
+    raise HTTPException(status_code=404, detail="대화를 찾을 수 없습니다.")
+fastapi.exceptions.HTTPException: 404: 대화를 찾을 수 없습니다.
+대화 불러오기 중 오류 발생: 404: 대화를 찾을 수 없습니다.
+INFO:     172.10.2.70:38658 - "POST /api/conversations/load HTTP/1.1" 500 Internal Server Error
+Traceback (most recent call last):
+  File "/home/test_code/test01/rag-chatbot/backend/app/main.py", line 1205, in load_conversation_endpoint
+    raise HTTPException(status_code=404, detail="대화를 찾을 수 없습니다.")
+fastapi.exceptions.HTTPException: 404: 대화를 찾을 수 없습니다.
+대화 불러오기 중 오류 발생: 404: 대화를 찾을 수 없습니다.
+INFO:     172.10.2.70:38664 - "POST /api/conversations/load HTTP/1.1" 500 Internal Server Error
+INFO:     172.10.2.70:38674 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:38680 - "POST /api/generate-title HTTP/1.1" 200 OK
+[2025-06-11 17:04:07,412] [    INFO] main.py:2134 - Received chat request: '보안서약서 제2조', Category: '메뉴얼', History items: 1
+[2025-06-11 17:04:07,489] [    INFO] main.py:2162 - Initial document retrieval completed in 0.0663 seconds. Found 10 docs.
+[2025-06-11 17:04:07,490] [    INFO] main.py:2176 - Search enhancement completed in 0.0006 seconds.
+[2025-06-11 17:04:07,542] [    INFO] main.py:2185 - Document reranking completed in 0.0523 seconds. Reranked to 3 docs.
+[2025-06-11 17:04:07,542] [    INFO] main.py:2192 - Using top 3 docs for LLM context.
+[2025-06-11 17:04:07,542] [    INFO] main.py:2207 - Prompt generation completed in 0.0002 seconds.
+[2025-06-11 17:04:07,544] [    INFO] main.py:2249 - Starting LLM generation with params: temp=0.1, max_tokens=2048
+검색 완료: 10 문서 검색됨
+INFO:     172.10.2.70:38686 - "POST /api/chat HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60454 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60470 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60478 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60490 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60506 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60512 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60520 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60524 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60530 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60540 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60548 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60556 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60566 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60580 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60594 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60602 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60604 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60614 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60618 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60634 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60644 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60658 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60664 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60680 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60692 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60708 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60712 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60714 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60728 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60736 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60738 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60740 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60754 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60770 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60776 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60782 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60792 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60794 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60806 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60818 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60834 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60842 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60844 - "POST /api/generate-title HTTP/1.1" 200 OK
+[2025-06-11 17:04:09,888] [    INFO] main.py:2367 - LLM generation stream finished. Total chars: 172. Time: 2.3437s
+[2025-06-11 17:04:09,888] [    INFO] main.py:2371 - 인용된 소스 수: 2/3
+[2025-06-11 17:04:09,888] [    INFO] main.py:2404 - 스트리밍 응답 캐싱 완료: chat:7dd1c7e587bc471b650ad443334ec329
+[2025-06-11 17:04:09,889] [    INFO] main.py:2420 - Total chat request processing time: 2.4763 seconds.
+INFO:     172.10.2.70:60856 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60872 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60876 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60892 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60904 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60920 - "POST /api/generate-title HTTP/1.1" 200 OK
+Traceback (most recent call last):
+  File "/home/test_code/test01/rag-chatbot/backend/app/main.py", line 1205, in load_conversation_endpoint
+    raise HTTPException(status_code=404, detail="대화를 찾을 수 없습니다.")
+fastapi.exceptions.HTTPException: 404: 대화를 찾을 수 없습니다.
+대화 불러오기 중 오류 발생: 404: 대화를 찾을 수 없습니다.
+INFO:     172.10.2.70:60928 - "POST /api/conversations/load HTTP/1.1" 500 Internal Server Error
+Traceback (most recent call last):
+  File "/home/test_code/test01/rag-chatbot/backend/app/main.py", line 1205, in load_conversation_endpoint
+    raise HTTPException(status_code=404, detail="대화를 찾을 수 없습니다.")
+fastapi.exceptions.HTTPException: 404: 대화를 찾을 수 없습니다.
+대화 불러오기 중 오류 발생: 404: 대화를 찾을 수 없습니다.
+INFO:     172.10.2.70:60938 - "POST /api/conversations/load HTTP/1.1" 500 Internal Server Error
+INFO:     172.10.2.70:60946 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60952 - "POST /api/generate-title HTTP/1.1" 200 OK
+[2025-06-11 17:04:13,872] [    INFO] main.py:2134 - Received chat request: '보안서약서 제 4조', Category: '메뉴얼', History items: 1
+[2025-06-11 17:04:13,914] [    INFO] main.py:2162 - Initial document retrieval completed in 0.0325 seconds. Found 10 docs.
+[2025-06-11 17:04:13,915] [    INFO] main.py:2176 - Search enhancement completed in 0.0006 seconds.
+[2025-06-11 17:04:13,968] [    INFO] main.py:2185 - Document reranking completed in 0.0524 seconds. Reranked to 3 docs.
+[2025-06-11 17:04:13,968] [    INFO] main.py:2192 - Using top 3 docs for LLM context.
+[2025-06-11 17:04:13,968] [    INFO] main.py:2207 - Prompt generation completed in 0.0002 seconds.
+[2025-06-11 17:04:13,970] [    INFO] main.py:2249 - Starting LLM generation with params: temp=0.1, max_tokens=2048
+검색 완료: 10 문서 검색됨
+INFO:     172.10.2.70:60968 - "POST /api/chat HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60970 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60982 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:60996 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:32770 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:32776 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:32780 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:32790 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:32806 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:32808 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:32810 - "POST /api/conversations/save HTTP/1.1" 200 OK
+INFO:     172.10.2.70:32824 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:32832 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:32844 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:32858 - "POST /api/conversations/save HTTP/1.1" 200 OK
+INFO:     172.10.2.70:32866 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:32874 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:32884 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:32892 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:32904 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:32906 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:32922 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:32932 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:32936 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:32950 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:32966 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:32976 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:32986 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33000 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33006 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33022 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33036 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33046 - "POST /api/conversations/save HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33052 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33054 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33056 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33070 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33072 - "POST /api/conversations/save HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33088 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33092 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33108 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33120 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33134 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33142 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33144 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33156 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33160 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33172 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33184 - "POST /api/conversations/save HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33194 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33196 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33204 - "POST /api/conversations/save HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33210 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33220 - "POST /api/conversations/save HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33222 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33236 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33250 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33266 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33278 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33288 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33296 - "POST /api/conversations/save HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33300 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33302 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33318 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33334 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33338 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33354 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:33370 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:58918 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:58922 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:58928 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:58944 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:58948 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:58960 - "POST /api/conversations/save HTTP/1.1" 200 OK
+INFO:     172.10.2.70:58964 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:58972 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:58986 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:58996 - "POST /api/conversations/save HTTP/1.1" 200 OK
+INFO:     172.10.2.70:58998 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:59000 - "POST /api/conversations/save HTTP/1.1" 200 OK
+[2025-06-11 17:04:18,059] [    INFO] main.py:2367 - LLM generation stream finished. Total chars: 279. Time: 4.0886s
+[2025-06-11 17:04:18,059] [    INFO] main.py:2371 - 인용된 소스 수: 1/3
+[2025-06-11 17:04:18,059] [    INFO] main.py:2404 - 스트리밍 응답 캐싱 완료: chat:d7bcb006798e07157d5afdd00318c388
+[2025-06-11 17:04:18,059] [    INFO] main.py:2420 - Total chat request processing time: 4.1871 seconds.
+INFO:     172.10.2.70:59004 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:59014 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:59020 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:59024 - "POST /api/generate-title HTTP/1.1" 200 OK
+[2025-06-11 17:04:18,606] [    INFO] main.py:2134 - Received chat request: 'vdi 삭제 방법좀', Category: '메뉴얼', History items: 3
+[2025-06-11 17:04:18,647] [    INFO] main.py:2162 - Initial document retrieval completed in 0.0315 seconds. Found 10 docs.
+[2025-06-11 17:04:18,648] [    INFO] main.py:2176 - Search enhancement completed in 0.0007 seconds.
+[2025-06-11 17:04:18,691] [    INFO] main.py:2185 - Document reranking completed in 0.0430 seconds. Reranked to 3 docs.
+[2025-06-11 17:04:18,691] [    INFO] main.py:2192 - Using top 3 docs for LLM context.
+[2025-06-11 17:04:18,691] [    INFO] main.py:2207 - Prompt generation completed in 0.0002 seconds.
+[2025-06-11 17:04:18,694] [    INFO] main.py:2249 - Starting LLM generation with params: temp=0.1, max_tokens=2048
+검색 완료: 10 문서 검색됨
+INFO:     172.10.2.70:59036 - "POST /api/chat HTTP/1.1" 200 OK
+[2025-06-11 17:04:27,332] [    INFO] main.py:2367 - LLM generation stream finished. Total chars: 784. Time: 8.6382s
+[2025-06-11 17:04:27,332] [    INFO] main.py:2371 - 인용된 소스 수: 0/3
+[2025-06-11 17:04:27,332] [    INFO] main.py:2404 - 스트리밍 응답 캐싱 완료: chat:16cfaa213baaffe2f897a89a908e965f
+[2025-06-11 17:04:27,332] [    INFO] main.py:2420 - Total chat request processing time: 8.7260 seconds.
+Traceback (most recent call last):
+  File "/home/test_code/test01/rag-chatbot/backend/app/main.py", line 1205, in load_conversation_endpoint
+    raise HTTPException(status_code=404, detail="대화를 찾을 수 없습니다.")
+fastapi.exceptions.HTTPException: 404: 대화를 찾을 수 없습니다.
+대화 불러오기 중 오류 발생: 404: 대화를 찾을 수 없습니다.
+INFO:     172.10.2.70:49800 - "POST /api/conversations/load HTTP/1.1" 500 Internal Server Error
+Traceback (most recent call last):
+  File "/home/test_code/test01/rag-chatbot/backend/app/main.py", line 1205, in load_conversation_endpoint
+    raise HTTPException(status_code=404, detail="대화를 찾을 수 없습니다.")
+fastapi.exceptions.HTTPException: 404: 대화를 찾을 수 없습니다.
+대화 불러오기 중 오류 발생: 404: 대화를 찾을 수 없습니다.
+INFO:     172.10.2.70:49812 - "POST /api/conversations/load HTTP/1.1" 500 Internal Server Error
+INFO:     172.10.2.70:49820 - "POST /api/conversations/load HTTP/1.1" 200 OK
+Traceback (most recent call last):
+  File "/home/test_code/test01/rag-chatbot/backend/app/main.py", line 1205, in load_conversation_endpoint
+    raise HTTPException(status_code=404, detail="대화를 찾을 수 없습니다.")
+fastapi.exceptions.HTTPException: 404: 대화를 찾을 수 없습니다.
+대화 불러오기 중 오류 발생: 404: 대화를 찾을 수 없습니다.
+INFO:     172.10.2.70:49834 - "POST /api/conversations/load HTTP/1.1" 500 Internal Server Error
+INFO:     172.10.2.70:49840 - "POST /api/conversations/load HTTP/1.1" 200 OK
+Traceback (most recent call last):
+  File "/home/test_code/test01/rag-chatbot/backend/app/main.py", line 1205, in load_conversation_endpoint
+    raise HTTPException(status_code=404, detail="대화를 찾을 수 없습니다.")
+fastapi.exceptions.HTTPException: 404: 대화를 찾을 수 없습니다.
+대화 불러오기 중 오류 발생: 404: 대화를 찾을 수 없습니다.
+INFO:     172.10.2.70:49852 - "POST /api/conversations/load HTTP/1.1" 500 Internal Server Error
+INFO:     172.10.2.70:49858 - "POST /api/settings/load HTTP/1.1" 200 OK
+INFO:     172.10.2.70:49872 - "POST /api/settings/load HTTP/1.1" 200 OK
+Indexed file list requested. Found 24 unique files.
+INFO:     172.10.2.70:43778 - "GET /api/indexed-files HTTP/1.1" 200 OK
+File view request for: de946fce-1938-4b28-a576-01b83ec2fbc9_NDT User Guide(Win) (1).pdf, Path: app/static/uploads/de946fce-1938-4b28-a576-01b83ec2fbc9_NDT User Guide(Win) (1).pdf
+INFO:     172.10.2.70:60966 - "GET /api/file-viewer/de946fce-1938-4b28-a576-01b83ec2fbc9_NDT%20User%20Guide%28Win%29%20%281%29.pdf HTTP/1.1" 200 OK
+[2025-06-11 17:50:29,079] [    INFO] main.py:1956 - 파일 업로드 요청 수신: 1개 파일, 카테고리: 메뉴얼
+[2025-06-11 17:50:29,119] [    INFO] main.py:1965 - 업로드 처리 시작 - 초기 GPU 메모리 사용량: 13345.67 MB
+[2025-06-11 17:50:29,119] [    INFO] main.py:1968 - [1/1] 파일 처리 중: 3S소프트 회사소개-250514.pdf, 카테고리: 메뉴얼
+[2025-06-11 17:50:29,122] [    INFO] main.py:2004 - 파일 인덱싱 시작: 3S소프트 회사소개-250514.pdf
+[2025-06-11 17:50:29,122] [    INFO] main.py:2007 - OCR 지원 파일 감지: 3S소프트 회사소개-250514.pdf - OCR 처리가 시도될 수 있습니다.
+[2025-06-11 17:50:29,129] [    INFO] main.py:2029 - 파일 처리 전 GPU 메모리: 13345.67 MB
+[2025-06-11 17:50:29,129] [    INFO] main.py:2036 - OCR 처리 시작: 3S소프트 회사소개-250514.pdf
+파일 해시 계산 완료: app/static/uploads/4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf, 크기: 3.48 MB, 해시: 77078edd...
+파일 처리 시작: 'app/static/uploads/4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf', 카테고리: '메뉴얼'
+파일 해시 계산 완료: app/static/uploads/4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf, 크기: 3.48 MB, 해시: 77078edd...
+load_document 호출: file_path_to_load='app/static/uploads/4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf', loader_selector_ext='.pdf'
+DEBUG (load_document): 총 25개의 Document 객체 로드됨 (path: app/static/uploads/4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf)
+  Loaded doc 0 metadata: {'producer': 'Microsoft® PowerPoint® Microsoft 365용', 'creator': 'Microsoft® PowerPoint® Microsoft 365용', 'creationdate': '2025-06-11T17:49:46+09:00', 'moddate': '2025-06-11T17:50:08+09:00', 'source': 'app/static/uploads/4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf', 'total_pages': 25, 'page': 0, 'page_label': '1'}
+  Loaded doc 1 metadata: {'producer': 'Microsoft® PowerPoint® Microsoft 365용', 'creator': 'Microsoft® PowerPoint® Microsoft 365용', 'creationdate': '2025-06-11T17:49:46+09:00', 'moddate': '2025-06-11T17:50:08+09:00', 'source': 'app/static/uploads/4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf', 'total_pages': 25, 'page': 1, 'page_label': '2'}
+  Loaded doc 2 metadata: {'producer': 'Microsoft® PowerPoint® Microsoft 365용', 'creator': 'Microsoft® PowerPoint® Microsoft 365용', 'creationdate': '2025-06-11T17:49:46+09:00', 'moddate': '2025-06-11T17:50:08+09:00', 'source': 'app/static/uploads/4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf', 'total_pages': 25, 'page': 2, 'page_label': '3'}
+  Loaded doc 3 metadata: {'producer': 'Microsoft® PowerPoint® Microsoft 365용', 'creator': 'Microsoft® PowerPoint® Microsoft 365용', 'creationdate': '2025-06-11T17:49:46+09:00', 'moddate': '2025-06-11T17:50:08+09:00', 'source': 'app/static/uploads/4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf', 'total_pages': 25, 'page': 3, 'page_label': '4'}
+  Loaded doc 4 metadata: {'producer': 'Microsoft® PowerPoint® Microsoft 365용', 'creator': 'Microsoft® PowerPoint® Microsoft 365용', 'creationdate': '2025-06-11T17:49:46+09:00', 'moddate': '2025-06-11T17:50:08+09:00', 'source': 'app/static/uploads/4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf', 'total_pages': 25, 'page': 4, 'page_label': '5'}
+  Loaded doc 5 metadata: {'producer': 'Microsoft® PowerPoint® Microsoft 365용', 'creator': 'Microsoft® PowerPoint® Microsoft 365용', 'creationdate': '2025-06-11T17:49:46+09:00', 'moddate': '2025-06-11T17:50:08+09:00', 'source': 'app/static/uploads/4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf', 'total_pages': 25, 'page': 5, 'page_label': '6'}
+  Loaded doc 6 metadata: {'producer': 'Microsoft® PowerPoint® Microsoft 365용', 'creator': 'Microsoft® PowerPoint® Microsoft 365용', 'creationdate': '2025-06-11T17:49:46+09:00', 'moddate': '2025-06-11T17:50:08+09:00', 'source': 'app/static/uploads/4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf', 'total_pages': 25, 'page': 6, 'page_label': '7'}
+  Loaded doc 7 metadata: {'producer': 'Microsoft® PowerPoint® Microsoft 365용', 'creator': 'Microsoft® PowerPoint® Microsoft 365용', 'creationdate': '2025-06-11T17:49:46+09:00', 'moddate': '2025-06-11T17:50:08+09:00', 'source': 'app/static/uploads/4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf', 'total_pages': 25, 'page': 7, 'page_label': '8'}
+  Loaded doc 8 metadata: {'producer': 'Microsoft® PowerPoint® Microsoft 365용', 'creator': 'Microsoft® PowerPoint® Microsoft 365용', 'creationdate': '2025-06-11T17:49:46+09:00', 'moddate': '2025-06-11T17:50:08+09:00', 'source': 'app/static/uploads/4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf', 'total_pages': 25, 'page': 8, 'page_label': '9'}
+  Loaded doc 9 metadata: {'producer': 'Microsoft® PowerPoint® Microsoft 365용', 'creator': 'Microsoft® PowerPoint® Microsoft 365용', 'creationdate': '2025-06-11T17:49:46+09:00', 'moddate': '2025-06-11T17:50:08+09:00', 'source': 'app/static/uploads/4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf', 'total_pages': 25, 'page': 9, 'page_label': '10'}
+  Loaded doc 10 metadata: {'producer': 'Microsoft® PowerPoint® Microsoft 365용', 'creator': 'Microsoft® PowerPoint® Microsoft 365용', 'creationdate': '2025-06-11T17:49:46+09:00', 'moddate': '2025-06-11T17:50:08+09:00', 'source': 'app/static/uploads/4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf', 'total_pages': 25, 'page': 10, 'page_label': '11'}
+  Loaded doc 11 metadata: {'producer': 'Microsoft® PowerPoint® Microsoft 365용', 'creator': 'Microsoft® PowerPoint® Microsoft 365용', 'creationdate': '2025-06-11T17:49:46+09:00', 'moddate': '2025-06-11T17:50:08+09:00', 'source': 'app/static/uploads/4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf', 'total_pages': 25, 'page': 11, 'page_label': '12'}
+  Loaded doc 12 metadata: {'producer': 'Microsoft® PowerPoint® Microsoft 365용', 'creator': 'Microsoft® PowerPoint® Microsoft 365용', 'creationdate': '2025-06-11T17:49:46+09:00', 'moddate': '2025-06-11T17:50:08+09:00', 'source': 'app/static/uploads/4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf', 'total_pages': 25, 'page': 12, 'page_label': '13'}
+  Loaded doc 13 metadata: {'producer': 'Microsoft® PowerPoint® Microsoft 365용', 'creator': 'Microsoft® PowerPoint® Microsoft 365용', 'creationdate': '2025-06-11T17:49:46+09:00', 'moddate': '2025-06-11T17:50:08+09:00', 'source': 'app/static/uploads/4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf', 'total_pages': 25, 'page': 13, 'page_label': '14'}
+  Loaded doc 14 metadata: {'producer': 'Microsoft® PowerPoint® Microsoft 365용', 'creator': 'Microsoft® PowerPoint® Microsoft 365용', 'creationdate': '2025-06-11T17:49:46+09:00', 'moddate': '2025-06-11T17:50:08+09:00', 'source': 'app/static/uploads/4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf', 'total_pages': 25, 'page': 14, 'page_label': '15'}
+  Loaded doc 15 metadata: {'producer': 'Microsoft® PowerPoint® Microsoft 365용', 'creator': 'Microsoft® PowerPoint® Microsoft 365용', 'creationdate': '2025-06-11T17:49:46+09:00', 'moddate': '2025-06-11T17:50:08+09:00', 'source': 'app/static/uploads/4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf', 'total_pages': 25, 'page': 15, 'page_label': '16'}
+  Loaded doc 16 metadata: {'producer': 'Microsoft® PowerPoint® Microsoft 365용', 'creator': 'Microsoft® PowerPoint® Microsoft 365용', 'creationdate': '2025-06-11T17:49:46+09:00', 'moddate': '2025-06-11T17:50:08+09:00', 'source': 'app/static/uploads/4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf', 'total_pages': 25, 'page': 16, 'page_label': '17'}
+  Loaded doc 17 metadata: {'producer': 'Microsoft® PowerPoint® Microsoft 365용', 'creator': 'Microsoft® PowerPoint® Microsoft 365용', 'creationdate': '2025-06-11T17:49:46+09:00', 'moddate': '2025-06-11T17:50:08+09:00', 'source': 'app/static/uploads/4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf', 'total_pages': 25, 'page': 17, 'page_label': '18'}
+  Loaded doc 18 metadata: {'producer': 'Microsoft® PowerPoint® Microsoft 365용', 'creator': 'Microsoft® PowerPoint® Microsoft 365용', 'creationdate': '2025-06-11T17:49:46+09:00', 'moddate': '2025-06-11T17:50:08+09:00', 'source': 'app/static/uploads/4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf', 'total_pages': 25, 'page': 18, 'page_label': '19'}
+[2025-06-11 17:50:31,019] [    INFO] main.py:2043 - 파일 처리 소요 시간: 1.89초
+[2025-06-11 17:50:31,020] [    INFO] main.py:2050 - 파일 처리 후 GPU 메모리: 13345.67 MB (변화: 0.00 MB)
+[2025-06-11 17:50:31,020] [    INFO] main.py:2053 - 파일 인덱싱 성공: 3S소프트 회사소개-250514.pdf
+[2025-06-11 17:50:31,020] [    INFO] main.py:2102 - 전체 처리 완료 - 최종 GPU 메모리 사용량: 13345.67 MB
+  Loaded doc 19 metadata: {'producer': 'Microsoft® PowerPoint® Microsoft 365용', 'creator': 'Microsoft® PowerPoint® Microsoft 365용', 'creationdate': '2025-06-11T17:49:46+09:00', 'moddate': '2025-06-11T17:50:08+09:00', 'source': 'app/static/uploads/4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf', 'total_pages': 25, 'page': 19, 'page_label': '20'}
+  Loaded doc 20 metadata: {'producer': 'Microsoft® PowerPoint® Microsoft 365용', 'creator': 'Microsoft® PowerPoint® Microsoft 365용', 'creationdate': '2025-06-11T17:49:46+09:00', 'moddate': '2025-06-11T17:50:08+09:00', 'source': 'app/static/uploads/4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf', 'total_pages': 25, 'page': 20, 'page_label': '21'}
+  Loaded doc 21 metadata: {'producer': 'Microsoft® PowerPoint® Microsoft 365용', 'creator': 'Microsoft® PowerPoint® Microsoft 365용', 'creationdate': '2025-06-11T17:49:46+09:00', 'moddate': '2025-06-11T17:50:08+09:00', 'source': 'app/static/uploads/4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf', 'total_pages': 25, 'page': 21, 'page_label': '22'}
+  Loaded doc 22 metadata: {'producer': 'Microsoft® PowerPoint® Microsoft 365용', 'creator': 'Microsoft® PowerPoint® Microsoft 365용', 'creationdate': '2025-06-11T17:49:46+09:00', 'moddate': '2025-06-11T17:50:08+09:00', 'source': 'app/static/uploads/4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf', 'total_pages': 25, 'page': 22, 'page_label': '23'}
+  Loaded doc 23 metadata: {'producer': 'Microsoft® PowerPoint® Microsoft 365용', 'creator': 'Microsoft® PowerPoint® Microsoft 365용', 'creationdate': '2025-06-11T17:49:46+09:00', 'moddate': '2025-06-11T17:50:08+09:00', 'source': 'app/static/uploads/4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf', 'total_pages': 25, 'page': 23, 'page_label': '24'}
+  Loaded doc 24 metadata: {'producer': 'Microsoft® PowerPoint® Microsoft 365용', 'creator': 'Microsoft® PowerPoint® Microsoft 365용', 'creationdate': '2025-06-11T17:49:46+09:00', 'moddate': '2025-06-11T17:50:08+09:00', 'source': 'app/static/uploads/4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf', 'total_pages': 25, 'page': 24, 'page_label': '25'}
+문서 로드 완료: 24 페이지/섹션 (처리 파일: 'app/static/uploads/4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf')
+DEBUG (split_text): 총 32개의 청크 생성됨.
+텍스트 분할 완료: 32 청크 생성
+인덱싱 완료: 총 32 청크 중 32개 성공, 0개 실패
+INFO:     172.10.2.70:45346 - "POST /api/upload HTTP/1.1" 200 OK
+Indexed file list requested. Found 25 unique files.
+INFO:     172.10.2.70:50366 - "GET /api/indexed-files HTTP/1.1" 200 OK
+INFO:     172.10.2.70:35530 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:35536 - "POST /api/generate-title HTTP/1.1" 200 OK
+[2025-06-11 17:51:06,394] [    INFO] main.py:2134 - Received chat request: '3SSOFT에 대해서 소개해줘', Category: '메뉴얼', History items: 1
+[2025-06-11 17:51:06,437] [    INFO] main.py:2162 - Initial document retrieval completed in 0.0323 seconds. Found 10 docs.
+[2025-06-11 17:51:06,438] [    INFO] main.py:2176 - Search enhancement completed in 0.0006 seconds.
+[2025-06-11 17:51:06,467] [    INFO] main.py:2185 - Document reranking completed in 0.0289 seconds. Reranked to 3 docs.
+[2025-06-11 17:51:06,467] [    INFO] main.py:2192 - Using top 3 docs for LLM context.
+[2025-06-11 17:51:06,467] [    INFO] main.py:2207 - Prompt generation completed in 0.0003 seconds.
+[2025-06-11 17:51:06,469] [    INFO] main.py:2249 - Starting LLM generation with params: temp=0.1, max_tokens=2048
+검색 완료: 10 문서 검색됨
+INFO:     172.10.2.70:35544 - "POST /api/chat HTTP/1.1" 200 OK
+INFO:     172.10.2.70:35560 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:35568 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:35572 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:35574 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:35584 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:35588 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:35604 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:35614 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:35630 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:35642 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:35654 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:35668 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:35684 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56114 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56122 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56124 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56136 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56148 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56150 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56164 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56180 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56190 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56206 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56212 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56226 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56232 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56244 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56250 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56252 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56262 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56266 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56268 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56276 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56280 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56294 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56300 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56302 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56308 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56312 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56322 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56324 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56328 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56344 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56350 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56358 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56362 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56374 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56378 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56386 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56398 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56412 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56418 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56428 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56430 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56432 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56446 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56460 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56464 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56470 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56474 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56490 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56506 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56508 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56520 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56522 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56538 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56552 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56554 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56570 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56578 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56582 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56590 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56592 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56602 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56608 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56610 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56624 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56632 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56642 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56650 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56666 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56674 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56686 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56702 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56708 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56724 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56726 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56736 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56742 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56744 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56746 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56748 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56752 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56766 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56772 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56784 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56798 - "POST /api/generate-title HTTP/1.1" 200 OK
+[2025-06-11 17:51:11,694] [    INFO] main.py:2367 - LLM generation stream finished. Total chars: 411. Time: 5.2251s
+[2025-06-11 17:51:11,694] [    INFO] main.py:2371 - 인용된 소스 수: 0/3
+[2025-06-11 17:51:11,694] [    INFO] main.py:2404 - 스트리밍 응답 캐싱 완료: chat:20764a6f7c57bd7d06ac64f7d7cae615
+[2025-06-11 17:51:11,695] [    INFO] main.py:2420 - Total chat request processing time: 5.3004 seconds.
+INFO:     172.10.2.70:56802 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56810 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56814 - "POST /api/generate-title HTTP/1.1" 200 OK
+INFO:     172.10.2.70:56824 - "POST /api/generate-title HTTP/1.1" 200 OK
+[2025-06-11 17:51:45,900] [    INFO] main.py:2134 - Received chat request: '3SSOFT 최신 매출액은 얼마야?', Category: '메뉴얼', History items: 3
+[2025-06-11 17:51:45,986] [    INFO] main.py:2162 - Initial document retrieval completed in 0.0749 seconds. Found 10 docs.
+[2025-06-11 17:51:45,986] [    INFO] main.py:2176 - Search enhancement completed in 0.0006 seconds.
+[2025-06-11 17:51:46,011] [    INFO] main.py:2185 - Document reranking completed in 0.0243 seconds. Reranked to 3 docs.
+[2025-06-11 17:51:46,011] [    INFO] main.py:2192 - Using top 3 docs for LLM context.
+[2025-06-11 17:51:46,011] [    INFO] main.py:2207 - Prompt generation completed in 0.0002 seconds.
+[2025-06-11 17:51:46,013] [    INFO] main.py:2249 - Starting LLM generation with params: temp=0.1, max_tokens=2048
+검색 완료: 10 문서 검색됨
+INFO:     172.10.2.70:43670 - "POST /api/chat HTTP/1.1" 200 OK
+[2025-06-11 17:51:46,784] [    INFO] main.py:2367 - LLM generation stream finished. Total chars: 42. Time: 0.7710s
+[2025-06-11 17:51:46,784] [    INFO] main.py:2371 - 인용된 소스 수: 0/3
+[2025-06-11 17:51:46,784] [    INFO] main.py:2404 - 스트리밍 응답 캐싱 완료: chat:5411c2df2a14ad613a83cbcdea4f0396
+[2025-06-11 17:51:46,784] [    INFO] main.py:2420 - Total chat request processing time: 0.8841 seconds.
+INFO:     172.10.2.70:47266 - "POST /api/conversations/save HTTP/1.1" 200 OK
+INFO:     172.10.2.70:47278 - "POST /api/settings/load HTTP/1.1" 200 OK
+INFO:     172.10.2.70:47294 - "POST /api/settings/load HTTP/1.1" 200 OK
+INFO:     172.10.2.70:47306 - "POST /api/conversations/load HTTP/1.1" 200 OK
+[2025-06-11 23:56:42,205] [    INFO] main.py:2134 - Received chat request: '테스트', Category: 'general', History items: 0
+[2025-06-11 23:56:42,426] [    INFO] main.py:2162 - Initial document retrieval completed in 0.1551 seconds. Found 0 docs.
+[2025-06-11 23:56:42,426] [    INFO] main.py:2165 - No relevant documents found for the query from initial retrieval.
+검색 완료: 0 문서 검색됨
+INFO:     127.0.0.1:56706 - "POST /api/chat HTTP/1.1" 200 OK
+
+
+--------------------------------------
+C++ Traceback (most recent call last):
+--------------------------------------
+0   uv_run
+1   uv__io_poll
+
+----------------------
+Error Message Summary:
+----------------------
+FatalError: `Termination signal` is detected by the operating system.
+  [TimeInfo: *** Aborted at 1749653976 (unix time) try "date -d @1749653976" if you are using GNU date ***]
+  [SignalInfo: *** SIGTERM (@0x360bae) received by PID 3447242 (TID 0x7faeb5619000) from PID 3541934 ***]
+

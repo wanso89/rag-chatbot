@@ -1,0 +1,71 @@
+{
+  "userId": "user1",
+  "conversationId": "1750039851304",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "한국전자인증 2022년 4월에 있었던 장애와 장애원인이 뭐였지?",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "한국전자인증 2022년 4월에 있었던 장애는 VDI 서버 접속 불가가 발생했습니다. 이는 서버의 가용 용량이 초과되어 서비스가 불가능했기 때문입니다. 또한, 장애 원인으로는 MongoDB 프로세스가 캐시에 저장된 데이터를 삭제하지 않았으며, MongoDB 스토리지 엔진 모듈이 데이터 페이지의 읽기 성능을 따라가지 못해 단기간에 캐시쪽으로 데이터를 대용량으로 쌓아 발생했다고 설명되었습니다.",
+      "sources": [
+        {
+          "path": "48ddeb140827_3de77cda-aedb-4ab1-87e8-de4d018450d7_2022-04-19_한국전자인증_장애결과보고_VDI_수정.pdf",
+          "display_name": "3de77cda-aedb-4ab1-87e8-de4d018450d7_2022-04-19_한국전자인증_장애결과보고_VDI_수정.pdf",
+          "page": 1,
+          "chunk_id": "batch1_0",
+          "score": 76.06703697193552,
+          "is_cited": true
+        },
+        {
+          "path": "6ca1b5c8-915b-46a2-89f4-174a0d34f120_20220408_장애결과보고_VDI_한국전자인증.pdf",
+          "display_name": "20220408_장애결과보고_VDI_한국전자인증.pdf",
+          "page": 1,
+          "chunk_id": "batch1_0",
+          "score": 73.2210281704088,
+          "is_cited": false
+        },
+        {
+          "path": "ed3ced8d-04af-48a2-9c5b-5d4a5842a458_25년도 상반기 대졸수준 채용공고.pdf",
+          "display_name": "25년도 상반기 대졸수준 채용공고.pdf",
+          "page": 21,
+          "chunk_id": "batch1_11",
+          "score": 47.71453424067384,
+          "is_cited": false
+        },
+        {
+          "path": "4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf",
+          "display_name": "3S소프트 회사소개-250514.pdf",
+          "page": 1,
+          "chunk_id": "batch1_0",
+          "score": 45.93330725497035,
+          "is_cited": false
+        },
+        {
+          "path": "ed3ced8d-04af-48a2-9c5b-5d4a5842a458_25년도 상반기 대졸수준 채용공고.pdf",
+          "display_name": "25년도 상반기 대졸수준 채용공고.pdf",
+          "page": 1,
+          "chunk_id": "batch1_0",
+          "score": 44.80600988366923,
+          "is_cited": false
+        },
+        {
+          "path": "7b7b14a5-df9b-4295-8213-b01a75151fcd_한국도로공사서비스 2025년 경력직 전문직 제한경쟁 공개채용 공고.pdf",
+          "display_name": "한국도로공사서비스 2025년 경력직 전문직 제한경쟁 공개채용 공고.pdf",
+          "page": 1,
+          "chunk_id": "batch1_0",
+          "score": 41.237757468603554,
+          "is_cited": false
+        }
+      ]
+    }
+  ],
+  "timestamp": "2025-06-16T11:10:57.615514"
+}

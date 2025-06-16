@@ -1,0 +1,79 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1750043165872",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "아버지 회갑인데 얼마 지원해줘?",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "아버지가 회갑일에 대한 지원금액은 [df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf p.22]에 따라 100만원입니다. 이는 회갑일에 대한 경조금 지급 기준으로, 해당 기준에 따라 지원금액이 결정됩니다.",
+      "sources": [
+        {
+          "path": "e8dd1939-9588-4daf-935a-5c086ca60d1b_NIA 망분리 구축설계ISP_인터뷰질의서(사례분석)_한국교육학술정보원.pdf",
+          "display_name": "NIA 망분리 구축설계ISP_인터뷰질의서(사례분석)_한국교육학술정보원.pdf",
+          "page": 3,
+          "chunk_id": "batch1_2",
+          "score": 26.94313106422034,
+          "is_cited": false
+        },
+        {
+          "path": "dec6453bad36_df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "display_name": "df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "page": 22,
+          "chunk_id": "batch1_10",
+          "score": 17.954739021125807,
+          "is_cited": true
+        },
+        {
+          "path": "ed3ced8d-04af-48a2-9c5b-5d4a5842a458_25년도 상반기 대졸수준 채용공고.pdf",
+          "display_name": "25년도 상반기 대졸수준 채용공고.pdf",
+          "page": 13,
+          "chunk_id": "batch1_7",
+          "score": 16.819609227112323,
+          "is_cited": false
+        },
+        {
+          "path": "5716fd91-32f5-43bf-ae56-ee4cc3ce6c3e_중앙보훈병원_FAQ_관리_20260324.pdf",
+          "display_name": "중앙보훈병원_FAQ_관리_20260324.pdf",
+          "page": 2,
+          "chunk_id": "batch1_1",
+          "score": 16.517594467083022,
+          "is_cited": false
+        },
+        {
+          "path": "39cae61f-2456-4125-baf5-766dcd853e79_원격업무지원시스템 관련 FAQ(v1.4).pdf",
+          "display_name": "원격업무지원시스템 관련 FAQ(v1.4).pdf",
+          "page": 1,
+          "chunk_id": "batch1_0",
+          "score": 16.028623514846362,
+          "is_cited": false
+        },
+        {
+          "path": "175fc05c-7809-48e0-9f94-2838cce236ad_(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "display_name": "(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "page": 219,
+          "chunk_id": "batch1_27",
+          "score": 15.31998852286609,
+          "is_cited": false
+        },
+        {
+          "path": "e8dd1939-9588-4daf-935a-5c086ca60d1b_NIA 망분리 구축설계ISP_인터뷰질의서(사례분석)_한국교육학술정보원.pdf",
+          "display_name": "NIA 망분리 구축설계ISP_인터뷰질의서(사례분석)_한국교육학술정보원.pdf",
+          "page": 6,
+          "chunk_id": "batch1_5",
+          "score": 15.283863388010229,
+          "is_cited": false
+        }
+      ]
+    }
+  ],
+  "timestamp": "2025-06-16T12:06:28.697676"
+}

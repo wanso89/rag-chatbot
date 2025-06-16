@@ -1,0 +1,22 @@
+{
+  "userId": "user1",
+  "conversationId": "1749694135025",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "쓰리에스소프트 삿업번호가 뭐야?",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "문서에는 쓰리에스소프트의 삿업번호에 대한 정보가 제공되지 않았습니다. 따라서 이 질문에 대한 답변을 ",
+      "sources": []
+    }
+  ],
+  "timestamp": "2025-06-12T11:09:01.658365"
+}

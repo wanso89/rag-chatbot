@@ -1,11 +1,12 @@
+import sys
 import os
 import asyncio
 import uuid
 import time
-import hashlib
 import json
 import traceback
 import difflib  # 유사도 비교를 위한 표준 라이브러리
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # CUDA 메모리 관리 환경 변수 설정
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
@@ -17,8 +18,6 @@ from pydantic import BaseModel, Field, validator, root_validator
 from typing import List, Dict, Any, Optional, Union
 from datetime import datetime, timedelta
 import logging
-import random
-from enum import Enum
 from elasticsearch import Elasticsearch
 from app.utils.indexing_utils import process_and_index_file, ES_INDEX_NAME, check_file_exists, format_file_size
 from fastapi.responses import FileResponse, StreamingResponse
@@ -31,15 +30,18 @@ from fastapi import Request as FastAPIRequest # FastAPI의 Request를 명시적�
 # 검색 개선 모듈 import
 from app.utils.search_enhancer import EnhancedSearchPipeline
 # 피드백 분석 모듈 import
-from app.utils.feedback_analyzer import FeedbackAnalyzer, SearchQualityOptimizer
+from app.utils.feedback_analyzer import FeedbackAnalyzer
 # 파일 관리 모듈 import
-from app.utils.file_manager import delete_indexed_file, find_file_by_name
+from app.utils.file_manager import delete_indexed_file
+#분리 모듈 import
+from app.core.elasticsearch import get_elasticsearch_client
+from app.core.embeddings import get_embedding_function
+from app.core.retriever import ElasticsearchRetriever, generate_llm_response
 
 # 모델 임포트
 import torch
 from torch.cuda.amp import autocast
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, TextIteratorStreamer
-from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.schema import Document
 from sentence_transformers import CrossEncoder
 import traceback
@@ -61,7 +63,6 @@ if not any(isinstance(h, logging.StreamHandler) for h in logger.handlers):
     sh = logging.StreamHandler()
     sh.setFormatter(formatter)
     logger.addHandler(sh)
-
 # traceback.print_exc() # 애플리케이션 시작 시 불필요한 traceback 제거
 
 # 설정 상수
@@ -103,164 +104,6 @@ app.add_middleware(
 
 # 정적 파일 서빙 설정
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
-
-
-# 모델 로드 함수들
-def get_elasticsearch_client():
-    """Elasticsearch 클라이언트를 로드합니다."""
-    print("Initializing Elasticsearch client...")
-    try:
-        client = Elasticsearch(
-            ES_HOST,
-            request_timeout=60,
-            retry_on_timeout=True,
-            max_retries=3,
-            verify_certs=False,
-        )
-
-        if not client.ping():
-            print("Elasticsearch 서버에 연결할 수 없습니다. 서버 상태를 확인하세요.")
-            return None
-
-        print("Elasticsearch client connected successfully.")
-
-        # 인덱스 존재 확인 및 생성
-        if not client.indices.exists(index=ES_INDEX_NAME):
-            INDEX_SETTINGS = {
-                "settings": {
-                    "number_of_shards": 1,
-                    "number_of_replicas": 0,
-                    "refresh_interval": "30s",
-                    "analysis": {
-                        "analyzer": {
-                            "korean": {
-                                "type": "custom",
-                                "tokenizer": "nori_tokenizer",
-                                "filter": ["lowercase", "nori_part_of_speech"],
-                            }
-                        }
-                    },
-                },
-                "mappings": {
-                    "properties": {
-                        "text": {
-                            "type": "text",
-                            "analyzer": "korean",
-                            "search_analyzer": "korean",
-                        },
-                        "embedding": {
-                            "type": "dense_vector",
-                            "dims": 768,
-                            "index": True,
-                            "similarity": "cosine",
-                            "index_options": {
-                                "type": "hnsw",
-                                "m": 16,
-                                "ef_construction": 100,
-                            },
-                        },
-                        "source": {"type": "keyword"},
-                        "page": {"type": "integer"},
-                        "category": {"type": "keyword"},
-                        "chunk_id": {"type": "keyword"},
-                        "total_chunks": {"type": "integer"},
-                        "indexed_at": {"type": "date"},
-                        "image_path": {"type": "keyword"},
-                    }
-                },
-            }
-
-            try:
-                client.indices.create(index=ES_INDEX_NAME, body=INDEX_SETTINGS)
-                print(f"Elasticsearch 인덱스 '{ES_INDEX_NAME}' 생성 완료.")
-            except Exception as e:
-                print(f"Elasticsearch 인덱스 생성 실패: {e}")
-                return None
-
-        return client
-    except Exception as e:
-        print(f"Elasticsearch 클라이언트 초기화 중 오류 발생: {e}")
-        traceback.print_exc()
-        return None
-
-
-def get_embedding_function():
-    """임베딩 기능을 제공하는 함수를 반환합니다."""
-    print("Loading embedding function...")
-    try:
-        # HuggingFace 임베딩 커스텀 래퍼 클래스
-        from app.utils.cache_utils import cache_embeddings
-
-        class LangchainEmbeddingFunction:
-            def __init__(self, model_name: str):
-                # HuggingFaceEmbeddings 직접 사용
-                try:
-                    # 빠른 토크나이저 및 장치 최적화 설정 추가
-                    self.embeddings_model = HuggingFaceEmbeddings(
-                        model_name=model_name,
-                        model_kwargs={"device": "cuda" if torch.cuda.is_available() else "cpu"},
-                        encode_kwargs={"normalize_embeddings": True, "batch_size": 8},  # 배치 크기 제한
-                        cache_folder="./.cache",  # 명시적 캐시 폴더 설정
-                        multi_process=False  # 임베딩 병렬 처리 비활성화
-                    )
-                    print(f"임베딩 모델 로드 성공: {model_name}")
-                except Exception as e:
-                    print(f"임베딩 모델 로드 실패, CPU 버전으로 재시도: {e}")
-                    self.embeddings_model = HuggingFaceEmbeddings(
-                        model_name=model_name, 
-                        model_kwargs={"device": "cpu"}
-                    )
-            
-            # 캐싱 데코레이터 제거 - 올바른 위치로 이동
-            def __call__(self, texts: list[str]) -> List[List[float]]:
-                # embed_documents 메서드 사용
-                embeddings = []
-                try:
-                    # 수정: 임베딩 생성 전에 타입 확인
-                    if not isinstance(texts, list):
-                        print(f"경고: texts가 리스트가 아님 - 타입: {type(texts)}")
-                        if isinstance(texts, str):
-                            texts = [texts]
-                        else:
-                            return [[0.0] * 768]  # 타입 오류 시 기본값 반환
-                            
-                    # 빈 입력 처리
-                    if not texts:
-                        return []
-                        
-                    # 임베딩 생성 전 각 텍스트 항목이 문자열인지 확인
-                    for i, text in enumerate(texts):
-                        if not isinstance(text, str):
-                            print(f"경고: texts[{i}]가 문자열이 아님 - 타입: {type(text)}")
-                            texts[i] = str(text)
-                    
-                    # 메모리 효율적인 임베딩 생성 (배치 처리로 변경)
-                    import numpy as np
-                    batch_size = 8  # 작은 배치 크기로 설정
-                    
-                    # 배치 단위로 처리
-                    embeddings = []
-                    for i in range(0, len(texts), batch_size):
-                        batch_texts = texts[i:i+batch_size]
-                        if torch.cuda.is_available():
-                            # 메모리 정리
-                            torch.cuda.empty_cache()
-                        batch_embeddings = self.embeddings_model.embed_documents(batch_texts)
-                        embeddings.extend(batch_embeddings)
-                except Exception as e:
-                    print(f"임베딩 생성 오류: {e}")
-                    traceback.print_exc()
-                    # 오류 시 빈 임베딩 반환 (각 768차원)
-                    embeddings = [[0.0] * 768 for _ in range(len(texts))]
-                return embeddings
-
-        # 클래스 인스턴스 생성 및 반환
-        return LangchainEmbeddingFunction(EMBEDDING_MODEL_NAME)
-    except Exception as e:
-        print(f"임베딩 모델 로딩 중 오류 발생: {e}")
-        traceback.print_exc()
-        return None
-
 
 def get_llm_model_and_tokenizer():
     print("Loading LLM model and tokenizer...")
@@ -348,170 +191,6 @@ def get_reranker_model():
         return None
 
 
-# ElasticsearchRetriever 클래스 정의
-class ElasticsearchRetriever:
-    def __init__(self, es_client: Any, embedding_function: Any, category: str, k=25):
-        self.es_client = es_client
-        self.index_name = ES_INDEX_NAME
-        self.embedding_function = embedding_function
-        self.k = k
-        self.category = category
-        # 성능 최적화를 위한 캐시 추가
-        self._cache = {}
-        self._cache_size = 150  # 최대 캐시 항목 수 증가 (100 → 150)
-        self._cache_ttl = 7200  # 캐시 유효 시간 증가 (3600 → 7200초, 2시간)
-        # 피드백 기반 검색 최적화 도구 초기화
-        self.search_optimizer = SearchQualityOptimizer()
-
-    def get_relevant_documents(self, query: str) -> List[Document]:
-        if not self.es_client or not self.embedding_function:
-            print("Elasticsearch 클라이언트 또는 임베딩 함수가 초기화되지 않았습니다.")
-            return []
-
-        # 캐시 키 생성 (쿼리와 카테고리 조합)
-        query_normalized = query.lower().strip()
-        cache_key = f"{query_normalized}:{self.category}"
-
-        # 캐시에서 결과 확인
-        current_time = time.time()
-        if cache_key in self._cache:
-            cache_entry = self._cache[cache_key]
-            if current_time - cache_entry["timestamp"] < self._cache_ttl:
-                print(f"캐시에서 검색 결과 반환: '{query[:30]}...'")
-                return cache_entry["results"]
-
-        # 캐시 정리 (필요시) - LRU 방식 최적화
-        if len(self._cache) >= self._cache_size:
-            # 가장 오래된 항목부터 삭제 (LRU)
-            oldest_keys = sorted(
-                self._cache.keys(), 
-                key=lambda k: self._cache[k]["timestamp"]
-            )[:len(self._cache) // 3]  # 1/3 정도 삭제 (기존 1/4에서 증가)
-            for old_key in oldest_keys:
-                del self._cache[old_key]
-
-        try:
-            # 임베딩 생성
-            query_normalized = query.lower().strip()
-            try:
-                # 임베딩 함수 호출 시 오류 방지를 위한 타입 확인
-                if callable(self.embedding_function):
-                    query_embedding = self.embedding_function([query_normalized])[0]
-                else:
-                    print("경고: 임베딩 함수가 호출 가능하지 않음")
-                    return []
-            except Exception as embed_error:
-                print(f"임베딩 생성 중 오류 발생: {embed_error}")
-                traceback.print_exc()
-                return []  # 임베딩 실패 시 빈 결과 반환
-
-            # 하이브리드 쿼리 구성 (BM25 + 벡터 검색) - 가중치 최적화
-            hybrid_query = {
-                "size": self.k,
-                "_source": {"excludes": ["embedding"]},
-                "query": {
-                    "bool": {
-                        "should": [
-                            # 1. 정확한 문구 검색 (가중치 상향)
-                            {
-                                "match_phrase": {
-                                    "text": {"query": query, "boost": 3.5, "slop": 3}  # 3.0 → 3.5
-                                }
-                            },
-                            # 2. BM25 키워드 검색 (가중치 상향)
-                            {
-                                "match": {
-                                    "text": {
-                                        "query": query,
-                                        "boost": 2.5,  # 2.0 → 2.5
-                                        "operator": "OR",
-                                        "minimum_should_match": "60%",  # 50%에서 60%로 상향
-                                    }
-                                }
-                            },
-                            # 3. 벡터 검색 (가중치 상향)
-                            {
-                                "script_score": {
-                                    "query": {"match_all": {}},
-                                    "script": {
-                                        "source": "cosineSimilarity(params.query_vector, 'embedding') + 1.0",
-                                        "params": {"query_vector": query_embedding},
-                                    },
-                                    "boost": 2.2,  # 가중치 상향 (1.5 → 2.2)
-                                }
-                            },
-                        ],
-                        "filter": [{"term": {"category": self.category}}],
-                        "minimum_should_match": 1,
-                    }
-                },
-            }
-
-            # 피드백 기반 쿼리 최적화 적용
-            try:
-                optimized_query = self.search_optimizer.apply_optimizations_to_query(
-                    query_normalized, hybrid_query
-                )
-                if optimized_query != hybrid_query:
-                    print(f"피드백 기반 쿼리 최적화 적용됨: '{query[:30]}...'")
-                    hybrid_query = optimized_query
-            except Exception as optimize_error:
-                print(f"쿼리 최적화 적용 중 오류: {optimize_error}")
-                # 최적화 오류 시 원본 쿼리 사용
-
-            # 검색 실행 (타임아웃 설정)
-            response = self.es_client.search(
-                index=self.index_name,
-                body=hybrid_query,
-                request_timeout=30  # 30초 타임아웃
-            )
-
-            # 결과 처리
-            docs = []
-            for hit in response["hits"]["hits"]:
-                # 메타데이터 추출 (embedding 필드 제외)
-                metadata = {}
-                for k, v in hit["_source"].items():
-                    if k != "text" and k != "embedding":
-                        metadata[k] = v
-
-                # 점수 정규화 (0~1 사이로)
-                raw_score = hit["_score"]
-                # Elasticsearch 스코어는 범위가 다양하므로 정규화
-                normalized_score = min(
-                    max(raw_score / 10, 0), 1
-                )  # 10으로 나누어 0~1 범위로 조정
-
-                metadata["relevance_score"] = raw_score  # 원본 점수 유지
-                metadata["source"] = hit["_source"].get("source", "unknown")
-                metadata["page"] = hit["_source"].get("page", 1)
-
-                # chunk_id가 정수형이면 문자열로 변환 (type 오류 방지)
-                chunk_id = hit["_source"].get("chunk_id")
-                if chunk_id is not None:
-                    metadata["chunk_id"] = str(chunk_id)  # 명시적 문자열 변환
-
-                # Document 객체 생성
-                docs.append(
-                    Document(
-                        page_content=hit["_source"].get("text", ""), metadata=metadata
-                    )
-                )
-
-            print(f"검색 완료: {len(docs)} 문서 검색됨")
-
-            # 결과 캐싱
-            self._cache[cache_key] = {
-                "results": docs,
-                "timestamp": current_time,
-            }
-
-            return docs
-        except Exception as e:
-            print(f"Elasticsearch 검색 중 오류 발생: {e}")
-            traceback.print_exc()
-            return []
-
 
 # 향상된 리랭커 클래스 정의
 class EnhancedLocalReranker:
@@ -526,178 +205,101 @@ class EnhancedLocalReranker:
         self.batch_size = 24  # 배치 크기 증가 (16 → 24)
 
     def rerank(self, query: str, docs: List[Document]) -> List[Document]:
-        if not docs or not self.reranker:
-            return []
+        # 리랭킹 비활성화 - 원본 문서 그대로 반환
+        print(f"리랭킹 스킵: 원본 {len(docs)}개 문서 그대로 사용")
+        return docs[:self.top_n]  # 상위 top_n개만 반환
 
-        # 캐시 키 생성 (쿼리와 문서 ID 조합)
-        # chunk_id를 명시적으로 문자열로 변환하여 에러 방지
-        query_normalized = query.lower().strip()
-        cache_key = f"{query_normalized}:{','.join([str(d.metadata.get('chunk_id', i)) for i, d in enumerate(docs[:10])])}"
+        # # 캐시 키 생성 (쿼리와 문서 ID 조합)
+        # # chunk_id를 명시적으로 문자열로 변환하여 에러 방지
+        # query_normalized = query.lower().strip()
+        # cache_key = f"{query_normalized}:{','.join([str(d.metadata.get('chunk_id', i)) for i, d in enumerate(docs[:10])])}"
 
-        # 캐시에서 결과 확인
-        current_time = time.time()
-        if cache_key in self._cache:
-            cache_entry = self._cache[cache_key]
-            if current_time - cache_entry["timestamp"] < self._cache_ttl:
-                print(f"리랭킹 캐시 적중: '{query[:30]}...'")
-                return cache_entry["results"]
+        # # 캐시에서 결과 확인
+        # current_time = time.time()
+        # if cache_key in self._cache:
+        #     cache_entry = self._cache[cache_key]
+        #     if current_time - cache_entry["timestamp"] < self._cache_ttl:
+        #         print(f"리랭킹 캐시 적중: '{query[:30]}...'")
+        #         return cache_entry["results"]
 
-        # 캐시 정리 (필요시) - LRU 방식 최적화
-        if len(self._cache) >= self._cache_size:
-            oldest_keys = sorted(
-                self._cache.keys(), 
-                key=lambda k: self._cache[k]["timestamp"]
-            )[:len(self._cache) // 3]  # 1/3 정도 삭제 (1/4에서 증가)
-            for old_key in oldest_keys:
-                del self._cache[old_key]
+        # # 캐시 정리 (필요시) - LRU 방식 최적화
+        # if len(self._cache) >= self._cache_size:
+        #     oldest_keys = sorted(
+        #         self._cache.keys(), 
+        #         key=lambda k: self._cache[k]["timestamp"]
+        #     )[:len(self._cache) // 3]  # 1/3 정도 삭제 (1/4에서 증가)
+        #     for old_key in oldest_keys:
+        #         del self._cache[old_key]
 
-        try:
-            # 메모리 최적화를 위한 캐시 정리
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
+        # try:
+        #     # 메모리 최적화를 위한 캐시 정리
+        #     if torch.cuda.is_available():
+        #         torch.cuda.empty_cache()
 
-            # 상위 12개 문서 리랭킹 (원래 10개에서 상향) → 12개 그대로 유지
-            docs_to_rerank = docs[:12]
-            pairs = [(query_normalized, doc.page_content) for doc in docs_to_rerank]
+        #     # 상위 12개 문서 리랭킹 (원래 10개에서 상향) → 12개 그대로 유지
+        #     docs_to_rerank = docs[:12]
+        #     pairs = [(query_normalized, doc.page_content) for doc in docs_to_rerank]
 
-            # 배치 처리로 성능 최적화
-            scores = []
-            for i in range(0, len(pairs), self.batch_size):
-                batch_pairs = pairs[i:i + self.batch_size]
-                # torch CUDA 설정으로 성능 최적화
-                with torch.no_grad(), torch.cuda.amp.autocast(enabled=True):
-                    batch_scores = self.reranker.predict(batch_pairs)
-                    scores.extend(batch_scores)
+        #     # 배치 처리로 성능 최적화
+        #     scores = []
+        #     for i in range(0, len(pairs), self.batch_size):
+        #         batch_pairs = pairs[i:i + self.batch_size]
+        #         # torch CUDA 설정으로 성능 최적화
+        #         with torch.no_grad(), torch.cuda.amp.autocast(enabled=True):
+        #             batch_scores = self.reranker.predict(batch_pairs)
+        #             scores.extend(batch_scores)
 
-            # 메타데이터에 점수 추가 및 정규화
-            for doc, score in zip(docs_to_rerank, scores):
-                # 점수 범위를 0~1로 정규화 (-1~1 범위에서)
-                normalized_score = min(max((score + 1) / 2, 0), 1)
-                doc.metadata["rerank_score"] = float(normalized_score)
-                doc.metadata["raw_rerank_score"] = float(score)  # 원본 점수도 저장
+        #     # 메타데이터에 점수 추가 및 정규화
+        #     for doc, score in zip(docs_to_rerank, scores):
+        #         # 점수 범위를 0~1로 정규화 (-1~1 범위에서)
+        #         normalized_score = min(max((score + 1) / 2, 0), 1)
+        #         doc.metadata["rerank_score"] = float(normalized_score)
+        #         doc.metadata["raw_rerank_score"] = float(score)  # 원본 점수도 저장
 
-            # 리랭킹된 문서와 나머지 문서 결합
-            sorted_docs = sorted(
-                docs_to_rerank,
-                key=lambda x: x.metadata.get("rerank_score", 0.0),
-                reverse=True,
-            )
+        #     # 리랭킹된 문서와 나머지 문서 결합
+        #     sorted_docs = sorted(
+        #         docs_to_rerank,
+        #         key=lambda x: x.metadata.get("rerank_score", 0.0),
+        #         reverse=True,
+        #     )
 
-            # 나머지 문서 추가 (이미 포함된 문서 제외)
-            remaining_docs = [doc for doc in docs[12:] if doc not in docs_to_rerank]
-            sorted_docs.extend(remaining_docs)
+        #     # 나머지 문서 추가 (이미 포함된 문서 제외)
+        #     remaining_docs = [doc for doc in docs[12:] if doc not in docs_to_rerank]
+        #     sorted_docs.extend(remaining_docs)
 
-            # 임계값 필터링 - 점수가 낮은 문서 제외 (임계값 하향으로 더 많은 문서 포함)
-            threshold = 0.52  # 임계값 하향 (0.6 → 0.52)
-            filtered_docs = [
-                doc
-                for doc in sorted_docs
-                if doc.metadata.get("rerank_score", 0.0) >= threshold
-            ]
+        #     # 임계값 필터링 - 점수가 낮은 문서 제외 (임계값 하향으로 더 많은 문서 포함)
+        #     threshold = 0.52  # 임계값 하향 (0.6 → 0.52)
+        #     filtered_docs = [
+        #         doc
+        #         for doc in sorted_docs
+        #         if doc.metadata.get("rerank_score", 0.0) >= threshold
+        #     ]
 
-            # 필터링 결과가 최소 개수 미만이면 상위 문서 추가
-            min_docs = 3  # 최소 3개 문서 보장
-            if len(filtered_docs) < min_docs and sorted_docs:
-                additional_docs = [
-                    doc for doc in sorted_docs 
-                    if doc not in filtered_docs
-                ][:min_docs - len(filtered_docs)]
-                filtered_docs.extend(additional_docs)
+        #     # 필터링 결과가 최소 개수 미만이면 상위 문서 추가
+        #     min_docs = 3  # 최소 3개 문서 보장
+        #     if len(filtered_docs) < min_docs and sorted_docs:
+        #         additional_docs = [
+        #             doc for doc in sorted_docs 
+        #             if doc not in filtered_docs
+        #         ][:min_docs - len(filtered_docs)]
+        #         filtered_docs.extend(additional_docs)
 
-            # 결과 캐싱
-            result_docs = filtered_docs[:self.top_n]
-            self._cache[cache_key] = {
-                "results": result_docs,
-                "timestamp": current_time
-            }
+        #     # 결과 캐싱
+        #     result_docs = filtered_docs[:self.top_n]
+        #     self._cache[cache_key] = {
+        #         "results": result_docs,
+        #         "timestamp": current_time
+        #     }
 
-            return result_docs
+        #     return result_docs
 
-        except Exception as e:
-            print(f"Reranking 중 오류 발생: {e}")
-            traceback.print_exc()
-            return docs
+        # except Exception as e:
+        #     print(f"Reranking 중 오류 발생: {e}")
+        #     traceback.print_exc()
+        #     return docs
 
 
-# LLM 답변 생성 함수
-async def generate_llm_response(
-    request: Request,
-    tokenizer_for_template_application: Any,
-    question: str,
-    top_docs: List[Document],
-    temperature: float = 0.2,
-    conversation_history=None,
-) -> dict:  # 반환 타입을 str에서 dict로 변경
-    logger.debug("Generating final prompt for LLM.")
-    # 1. 대화 기록과 현재 질문, 검색된 문서를 바탕으로 프롬프트 구성
-    context_str = "\\n\\n".join([f"문서 {i+1}: {doc.page_content}" for i, doc in enumerate(top_docs)])
-    
-    # Qwen ChatML 형식에 맞게 프롬프트 생성
-    # 실제 tokenizer.apply_chat_template 사용을 권장하며, 아래는 그 예시입니다.
-    # messages 구성 (conversation_history가 None일 경우 빈 리스트로 초기화)
-    messages = []
-    if conversation_history:
-        for entry in conversation_history:
-            # role과 content 키가 있는지 확인
-            if isinstance(entry, dict) and "role" in entry and "content" in entry:
-                messages.append({"role": entry["role"], "content": entry["content"]})
-            else:
-                logger.warning(f"Invalid entry in conversation_history: {entry}")
 
-    # 시스템 메시지 추가
-    system_message = f"""You are a helpful AI assistant. Answer the questions based on the provided documents.
-If the information is not in the documents, say that you cannot answer.
-Provided documents:
-{context_str}"""
-    messages.insert(0, {"role": "system", "content": system_message})
-    
-    # 사용자 질문 추가
-    messages.append({"role": "user", "content": question})
-
-    try:
-        # tokenizer_for_template_application (원래 tokenizer)를 사용하여 프롬프트 템플릿 적용
-        final_prompt_text = tokenizer_for_template_application.apply_chat_template(
-            messages,
-            tokenize=False,
-            add_generation_prompt=True # assistant 응답을 유도
-        )
-    except Exception as e:
-        logger.error(f"Error applying chat template: {e}")
-        # 템플릿 적용 실패 시 기본 폴백 프롬프트 (매우 단순화된 버전)
-        final_prompt_text = f"System: {system_message}\\nUser: {question}\\nAssistant:"
-
-    logger.debug(f"Generated final_prompt_text (first 100 chars): {final_prompt_text[:100]}")
-    
-    # 문서 출처 정보 추출
-    source_metadata = []
-    for i, doc in enumerate(top_docs):
-        # 소스 정보 URL 인코딩
-        source_path = doc.metadata.get("source", "unknown")
-        page_num = doc.metadata.get("page", 1)
-        chunk_id = doc.metadata.get("chunk_id", i)
-
-        # 파일명에서 UUID 제거 (UUID_파일명.확장자 형식 가정)
-        clean_filename = os.path.basename(source_path)
-        # UUID_ 패턴 감지 (UUID는 일반적으로 8-4-4-4-12 형식의 16진수 문자)
-        if '_' in clean_filename:
-            uuid_parts = clean_filename.split('_', 1)
-            if len(uuid_parts) > 1 and len(uuid_parts[0]) >= 8:  # UUID로 추정되는 부분이 있으면 제거
-                clean_filename = uuid_parts[1]
-
-        source_metadata.append({
-            "path": source_path,
-            "display_name": clean_filename,  # 화면 표시용 정제된 파일명 추가
-            "page": page_num,
-            "chunk_id": chunk_id,
-            "score": doc.metadata.get("relevance_score", 0),
-        })
-    
-    # 프롬프트 텍스트와 소스 메타데이터를 함께 반환
-    return {
-        "prompt_text": final_prompt_text,
-        "source_metadata": source_metadata,
-        "top_docs": top_docs  # 문서 전체 내용도 함께 반환 (인용 감지용)
-    }
 
 
 # 검색 및 결합 함수
@@ -745,7 +347,7 @@ async def search_and_combine(
     start_time = time.time()
     
     # Redis 캐싱 적용: 동일한 쿼리의 중복 처리 방지 - 성능 대폭 개선
-    from app.utils.cache_utils import RedisCache, CacheKeys, CACHE_TTL_SEARCH
+    from utils.cache_utils import RedisCache, CacheKeys, CACHE_TTL_SEARCH
     
     # 캐시 키 생성 (질문 + 카테고리 기반)
     cache_key = RedisCache.generate_key(
@@ -804,12 +406,18 @@ async def search_and_combine(
 
         # 1. 검색 (비동기 처리) - 검색 결과 수 최적화
         retrieval_start = time.time()
-        # ElasticsearchRetriever 검색 결과 수 감소 (25 → 10): 정확도는 유지하면서 처리 속도 향상
+        # ElasticsearchRetriever 대안 쿼리 추가로 문서 10-> 15개 반환으로 수정
         retriever = ElasticsearchRetriever(
-            es_client, embedding_function, category=category, k=10
+        es_client=es_client,
+        index_name=ES_INDEX_NAME,
+        embedding_function=embedding_function,
+        category=category,
+        k=15,
+        llm_model=llm_model,      # 추가
+        tokenizer=tokenizer       
         )
 
-        docs = retriever.get_relevant_documents(query)
+        docs = await retriever.async_get_relevant_documents(query)
         retrieval_time = time.time() - retrieval_start
         print(f"Retrieval time: {retrieval_time:.2f}s, Found {len(docs)} docs from ES.")
 
@@ -900,11 +508,15 @@ async def search_and_combine(
                 if len(uuid_parts) > 1 and len(uuid_parts[0]) >= 8:  # UUID로 추정되는 부분이 있으면 제거
                     clean_filename = uuid_parts[1]
 
-            if chunk_text:
-                context_chunks.append(f"[문서 {i+1}] {chunk_text}")
-                source_metadata.append({
+            if page_num and page_num > 1:
+                source_label = f"[{clean_filename} p.{page_num}]"
+            else:
+                source_label = f"[{clean_filename}]"
+            
+            context_chunks.append(f"{source_label} {chunk_text}")
+            source_metadata.append({
                         "path": source_path,
-                    "display_name": clean_filename,  # 화면 표시용 정제된 파일명 추가
+                        "display_name": clean_filename,  # 화면 표시용 정제된 파일명 추가
                         "page": page_num,
                         "chunk_id": chunk_id,
                         "score": doc.metadata.get("relevance_score", 0),
@@ -916,11 +528,29 @@ async def search_and_combine(
         # LLM으로 답변 생성
         llm_start = time.time()
         answer = await generate_llm_response(
-            request,
             tokenizer,
             query,
-            0.2,
+            final_docs,
+            0.1,
             conversation_history
+        )
+        prompt_text = answer["prompt_text"]
+        inputs = tokenizer(prompt_text, return_tensors="pt", truncation=True)
+        inputs = {k: v.to(llm_model.device) for k, v in inputs.items()}
+
+        with torch.no_grad():
+            outputs = llm_model.generate(
+                **inputs,
+                max_new_tokens=1024,
+                temperature=0.1,
+                do_sample=False,
+                eos_token_id=tokenizer.eos_token_id, #토큰으로 끝나면 자동종료
+                pad_token_id=tokenizer.eos_token_id
+            )
+
+        answer = tokenizer.decode(
+            outputs[0][inputs['input_ids'].shape[1]:], 
+            skip_special_tokens=True
         )
         
         # 응답이 None인 경우 대체 응답 사용 (방어 코드)
@@ -1076,7 +706,7 @@ def get_sqlcoder_model():
     """SQLCoder 모델을 로드합니다."""
     print("SQLCoder 모델 로딩 중...")
     try:
-        from app.utils.sqlcoder_utils import load_sqlcoder_model
+        from utils.sqlcoder_utils import load_sqlcoder_model
         model, tokenizer = load_sqlcoder_model()
         
         if model is None or tokenizer is None:
@@ -1300,7 +930,7 @@ async def load_user_settings_endpoint(request: UserSettingsLoadRequest = Body(..
 class SourcePreviewRequest(BaseModel):
     path: str
     page: int  # 페이지 정보는 여전히 유용할 수 있음 (UI 표시용)
-    chunk_id: Any  # 문자열 또는 정수일 수 있으므로 Any (ES 저장 방식에 따라)
+    chunk_id: str  #str로 고정
     keywords: Optional[List[str]] = None  # 프론트엔드에서 전달하는 하이라이트 키워드 (선택)
     answer_text: Optional[str] = None  # 챗봇 응답 전체 텍스트 (선택)
 
@@ -1405,26 +1035,7 @@ async def source_preview_endpoint(request: SourcePreviewRequest = Body(...)):
                 }
         })
 
-        # 2. chunk_id가 정수로 저장되었을 가능성 (2순위)
-        try:
-            chunk_id_int = int(request.chunk_id)
-            search_attempts.append({
-                    "query": {
-                        "bool": {
-                            "must": [
-                                {"term": {"source": request.path}},
-                                {"term": {"page": request.page}},
-                                {"term": {"chunk_id": chunk_id_int}}
-                            ]
-                        }
-                    }
-            })
-        except (ValueError, TypeError):
-            # 정수 변환 불가 시 이 시도는 건너뜀
-            print(f"chunk_id({request.chunk_id})를 정수로 변환할 수 없어 두 번째 쿼리 시도 건너뜀")
-            pass
-
-        # 3. source와 page로만 검색 (3순위)
+        # 2. source와 page로만 검색 (3순위)
         search_attempts.append({
                 "query": {
                     "bool": {
@@ -1725,37 +1336,6 @@ async def query_stats_endpoint(request: StatsQueryRequest = Body(...)):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"통계 조회 중 오류 발생: {str(e)}")
 
-
-# 서버 시작 시 인덱스 확인
-@app.on_event("startup")
-async def startup_event():
-    # 필수 리소스 확인
-    if not all([es_client, embedding_function, llm_model, tokenizer, reranker_model]):
-        print("필수 리소스 로딩에 실패했습니다. 서버 로그를 확인하세요.")
-    
-    # SQLCoder 초기화
-    print("SQLCoder 모듈 초기화 중...")
-    try:
-        # sql_sqlcoder_init.py 에서 초기화 함수 임포트
-        from app.sql_sqlcoder_init import initialize_sqlcoder
-        
-        # SQLCoder 초기화
-        success, message = initialize_sqlcoder()
-        
-        if success:
-            print(f"SQLCoder 초기화 성공: {message}")
-            # 앱 상태에 모델 저장 (API에서 사용)
-            app.state.sqlcoder_model = sqlcoder_model
-            app.state.sqlcoder_tokenizer = sqlcoder_tokenizer
-        else:
-            print(f"SQLCoder 초기화 실패: {message}")
-    except Exception as e:
-        print(f"SQLCoder 초기화 중 예외 발생: {str(e)}")
-        traceback.print_exc()
-    
-    # 모델 상태 확인
-    app.state.llm_model = llm_model
-    app.state.tokenizer = tokenizer
 
 
 @app.get("/api/file-viewer/{filename}")
@@ -2128,16 +1708,12 @@ async def upload_files(
         }
     )
 
-# 질문-응답 엔드포인트
 @app.post("/api/chat")
 async def chat(fastapi_request: FastAPIRequest, request: QuestionRequest = Body(...)):
     logger.info(f"Received chat request: '{request.question}', Category: '{request.category}', History items: {len(request.history) if request.history else 0}")
     request_start_time = time.time()
 
-    # 의존성 주입 또는 전역 변수를 통해 모델/클라이언트 가져오기
-    # 이 예제에서는 전역 변수(es_client, embedding_function, reranker_model, llm_model, tokenizer)를 사용한다고 가정합니다.
-    # 실제 프로덕션 코드에서는 FastAPI의 Depends 시스템을 사용하는 것이 좋습니다.
-    # FastAPI 애플리케이션 시작 시 (예: @app.on_event("startup")) 이 변수들이 초기화되어야 합니다.
+    # 의존성 확인
     global es_client, embedding_function, reranker_model, llm_model, tokenizer
 
     if not all([es_client, embedding_function, reranker_model, llm_model, tokenizer]):
@@ -2148,287 +1724,61 @@ async def chat(fastapi_request: FastAPIRequest, request: QuestionRequest = Body(
         )
 
     try:
-        # 1. Elasticsearch에서 문서 검색, 검색 결과 개선, 리랭킹
-        search_pipeline_start_time = time.time()
-
-        # 1a. Elasticsearch Retriever를 사용하여 초기 문서 검색
-        retriever = ElasticsearchRetriever(
+        result = await search_and_combine(
             es_client=es_client,
             embedding_function=embedding_function,
+            reranker_model=reranker_model,
+            llm_model=llm_model,
+            tokenizer=tokenizer,
+            query=request.question,
             category=request.category,
-            k=10 # 초기 검색 문서 수 (search_and_combine 함수 참고)
+            conversation_history=request.history
         )
-        retrieved_docs_initial = await asyncio.to_thread(retriever.get_relevant_documents, request.question)
-        logger.info(f"Initial document retrieval completed in {time.time() - search_pipeline_start_time:.4f} seconds. Found {len(retrieved_docs_initial)} docs.")
-
-        if not retrieved_docs_initial:
-            logger.info("No relevant documents found for the query from initial retrieval.")
-            async def empty_response_stream():
-                yield f"data: {json.dumps({'token': '관련 문서를 찾을 수 없습니다. 다른 질문을 시도해 주세요.'})}\n\n"
-                yield f"data: {json.dumps({'event': 'eos'})}\n\n"
-            return StreamingResponse(empty_response_stream(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
-
-        # 1b. EnhancedSearchPipeline을 사용하여 검색 결과 개선 (TypeError 수정)
-        enhance_start_time = time.time()
-        enhancer = EnhancedSearchPipeline() # 인자 없이 초기화
-        # process 메소드는 (query, docs)를 인자로 받음
-        _query_info, enhanced_docs = await asyncio.to_thread(enhancer.process, request.question, retrieved_docs_initial)
-        logger.info(f"Search enhancement completed in {time.time() - enhance_start_time:.4f} seconds.")
         
-        # 개선된 문서가 있으면 사용, 없으면 초기 검색 결과 사용
-        docs_for_reranking = enhanced_docs if enhanced_docs else retrieved_docs_initial
-
-        # 1c. Reranking
-        rerank_start_time = time.time()
-        local_reranker = EnhancedLocalReranker(reranker_model=reranker_model)
-        reranked_docs = await asyncio.to_thread(local_reranker.rerank, request.question, docs_for_reranking)
-        logger.info(f"Document reranking completed in {time.time() - rerank_start_time:.4f} seconds. Reranked to {len(reranked_docs)} docs.")
+        # 🚀 result가 StreamingResponse인 경우 그대로 반환 (캐시된 경우)
+        if isinstance(result, StreamingResponse):
+            logger.info("Returning cached streaming response")
+            return result
         
-        # 실제 LLM에 전달할 문서 수 제한 (예: 상위 5-10개)
-        # 너무 많은 문서는 컨텍스트 길이 초과 또는 노이즈 증가 유발 가능
-        # 이 값은 실험을 통해 최적화 필요
-        NUM_DOCS_FOR_LLM = 7 # 예시 값
-        top_docs = reranked_docs[:NUM_DOCS_FOR_LLM]
-        logger.info(f"Using top {len(top_docs)} docs for LLM context.")
-
-        # 2. LLM에 전달할 최종 프롬프트 생성
-        prompt_generation_start_time = time.time()
-        prompt_data = await generate_llm_response(
-            request,
-            tokenizer,
-            request.question,
-            top_docs,
-            0.1,
-            request.history
-        )
-        final_prompt_text = prompt_data["prompt_text"]
-        source_metadata = prompt_data["source_metadata"]
-        top_docs_content = prompt_data["top_docs"]
-        logger.info(f"Prompt generation completed in {time.time() - prompt_generation_start_time:.4f} seconds.")
-        # logger.debug(f"Final prompt for LLM (first 200 chars): {final_prompt_text[:200]}")
-
-        # 3. TextIteratorStreamer 및 StreamingResponse 설정
-        # streamer는 현재 토큰나이저를 사용
-        streamer = TextIteratorStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
-
-        # 모델 추론을 위한 입력 준비 (토큰화)
-        # 주의: final_prompt_text가 이미 ChatML 템플릿이 적용된 완전한 문자열이어야 함
-        # (즉, tokenizer.apply_chat_template의 결과물)
-        try:
-            inputs = tokenizer(final_prompt_text, return_tensors="pt", padding=False, truncation=False).to(llm_model.device)
-        except Exception as e:
-            logger.error(f"Error tokenizing final prompt: {e}. Prompt (first 100 chars): {final_prompt_text[:100]}")
-            raise # 토큰화 실패는 심각한 문제이므로 예외를 다시 발생시켜 처리 중단
-
-        # LLM 생성 파라미터 설정
-        # 실제 모델 및 사용 사례에 맞게 이 값들을 조정해야 합니다.
-        generation_temperature = 0.1 # 예시: 약간의 창의성 허용, 너무 높으면 일관성 저하
-        generation_max_new_tokens = 2048 # 답변 최대 길이
-
-        generation_kwargs = dict(
-            **inputs,
-            max_new_tokens=generation_max_new_tokens,
-            temperature=generation_temperature,
-            pad_token_id=tokenizer.eos_token_id, # 매우 중요
-            #eos_token_id=tokenizer.eos_token_id, # 필요시 명시 (Qwen은 여러 eos_token_id를 가질 수 있음)
-            streamer=streamer,
-        )
-        # temperature > 0 이면 do_sample=True가 기본이나, 명시적으로 설정 가능
-        if generation_temperature > 0.0:
-             generation_kwargs["do_sample"] = True
-        else: # temperature가 0이면 greedy decoding
-             generation_kwargs["do_sample"] = False
+        # 📝 일반 응답인 경우 스트리밍으로 변환
+        logger.info(f"Converting result to streaming response. Processing time: {result.get('processing_time', {}).get('total', 0)}s")
         
-        # Qwen 모델은 <|im_end|>를 eos_token으로 사용할 수 있음.
-        # 또는 tokenizer.eos_token_id가 이를 가리키도록 설정되어 있어야 함.
-        # eos_token_ids = [tokenizer.eos_token_id]
-        # if tokenizer.im_end_id: # Qwen의 특수 토큰 ID 확인
-        #    eos_token_ids.append(tokenizer.im_end_id)
-        # generation_kwargs["eos_token_id"] = eos_token_ids # 리스트로 전달 가능
-
-        logger.info(f"Starting LLM generation with params: temp={generation_temperature}, max_tokens={generation_max_new_tokens}")
-        llm_generation_start_time = time.time()
-
-        # 별도 스레드에서 모델 생성 실행 (GPU 작업은 GIL의 영향을 덜 받지만, I/O 바운드 작업처럼 처리)
-        # autocast 컨텍스트는 generate 함수 내부에서 처리되거나, 스레드 타겟 함수를 래핑하여 적용 가능
-        # 현재 llm_model.generate가 autocast를 내부적으로 처리한다고 가정
-        thread = Thread(target=llm_model.generate, kwargs=generation_kwargs)
-        thread.start()
-
-        # 인용 감지 및 소스 처리를 위한 변수
-        accumulated_text = ""
-        cited_sources = []
-
-        # 비동기 제너레이터 정의
-        async def stream_generator():
-            nonlocal accumulated_text, cited_sources
-            # logger.debug("Stream generator started.")
-            generated_text_count = 0
-            try:
-                for new_text in streamer:
-                    # 클라이언트 연결 중단 확인
-                    if await fastapi_request.is_disconnected():
-                        logger.info("Client disconnected, stopping stream.")
-                        # 스레드가 아직 실행 중이면 종료 시도 (주의: 스레드를 강제로 종료하는 것은 위험할 수 있음)
-                        # 모델 생성 로직이 중단 신호를 받을 수 있도록 설계하는 것이 이상적
-                        if thread.is_alive():
-                            logger.warning("LLM generation thread is still alive. Attempting to manage resources.")
-                            # streamer.end = True # TextIteratorStreamer에 종료 플래그가 있다면 설정 (라이브러리 확인 필요)
-                            # 또는 모델 generate 함수가 중단될 수 있는 방법을 찾아야 함
-                        break # 스트리밍 루프 중단
-
-                    if new_text:
-                        generated_text_count += len(new_text)
-                        accumulated_text += new_text
-                        # logger.debug(f"Streaming token: {new_text}")
-                        yield f"data: {json.dumps({'token': new_text})}\n\n" # SSE 형식
-                    await asyncio.sleep(0.001) # 다른 비동기 작업 실행 기회 부여
-                
-                # 스트림 종료 시 인용 소스 처리
-                if accumulated_text:
-                    # 응답 정제 (불필요한 시스템 메시지 등 제거)
-                    def clean_response(resp):
-                        if not resp:
-                            return "죄송합니다. 응답을 생성하는 중 오류가 발생했습니다."
-                            
-                        # 1. 시스템 메시지 제거
-                        if resp.startswith("system\n"):
-                            parts = resp.split("user\n")
-                            if len(parts) > 1:
-                                resp = parts[1]
-                                parts = resp.split("assistant\n")
-                                if len(parts) > 1:
-                                    resp = parts[1].strip()
-                                    return resp
-                        
-                        # 2. assistant 접두사 제거
-                        if "assistant\n" in resp:
-                            parts = resp.split("assistant\n")
-                            if len(parts) > 1:
-                                resp = parts[-1].strip()
-                                return resp
-                        
-                        # 3. 그 외의 경우
-                        # 불필요한 태그 제거
-                        for tag in ["system\n", "user\n", "assistant\n", "system:", "user:", "assistant:", "system", "user", "assistant"]:
-                            if resp.startswith(tag):
-                                resp = resp[len(tag):].strip()
-                                
-                        return resp.strip()
-                    
-                    # 응답 정제 적용
-                    cleaned_text = clean_response(accumulated_text)
-                    
-                    # 인용 소스 감지
-                    def extract_keywords(text, min_length=3, max_keywords=20):
-                        if text is None or not isinstance(text, str):
-                            return []
-                        words = re.findall(r'\b[가-힣a-zA-Z0-9]+\b', text)
-                        filtered_words = [w for w in words if len(w) >= min_length]
-                        unique_words = list(set(filtered_words))[:max_keywords]
-                        return unique_words
-                    
-                    # 응답에서 키워드 추출
-                    answer_keywords = extract_keywords(cleaned_text)
-                    
-                    # 인용 소스 감지
-                    for i, meta in enumerate(source_metadata):
-                        cited = False
-                        source_text = top_docs_content[i].page_content if i < len(top_docs_content) else ""
-                        
-                        # 1. 연속된 텍스트 일치 여부 확인 (최소 40자로 상향 조정)
-                        if len(source_text) > 50:
-                            # 더 긴 스니펫(40자)으로 일치 여부 확인하여 정확도 향상
-                            for j in range(0, len(source_text) - 40, 10):
-                                snippet = source_text[j:j+40]
-                                if snippet in cleaned_text:
-                                    cited = True
-                                    logger.debug(f"문서 인용 감지: 40자 스니펫 일치 - {snippet[:20]}...")
-                                    break
-                        
-                        # 2. 키워드 기반 매칭 (매칭 비율 임계값 0.3 → 0.4로 상향 조정)
-                        if not cited and source_text:
-                            source_keywords = extract_keywords(source_text)
-                            if source_keywords:
-                                matches = [k for k in source_keywords if k in cleaned_text]
-                                match_ratio = len(matches) / len(source_keywords)
-                                # 매칭 비율 임계값 상향 조정 (0.3 → 0.4)
-                                if match_ratio > 0.4:
-                                    cited = True
-                                    logger.debug(f"문서 인용 감지: 키워드 매칭 비율 {match_ratio:.2f} - 키워드: {matches[:5]}...")
-                        
-                        # 인용된 소스만 추가
-                        if cited:
-                            meta["is_cited"] = True
-                        else:
-                            meta["is_cited"] = False
-                
-                # 스트림 종료 알림 (모든 토큰 생성 완료) - 출처 정보 포함
-                logger.info(f"LLM generation stream finished. Total chars: {generated_text_count}. Time: {time.time() - llm_generation_start_time:.4f}s")
-                
-                # cited_sources를 source_metadata에서 is_cited가 True인 항목으로 명시적으로 필터링
-                cited_sources = [meta for meta in source_metadata if meta.get("is_cited", False)]
-                logger.info(f"인용된 소스 수: {len(cited_sources)}/{len(source_metadata)}")
-                
-                # 최종 메시지에 출처 정보 포함
-                yield f"data: {json.dumps({'event': 'sources', 'sources': source_metadata, 'cited_sources': cited_sources})}\n\n"
-                
-                # 스트림 종료 이벤트
-                yield f"data: {json.dumps({'event': 'eos', 'message': 'Stream ended successfully.'})}\n\n"
-                
-                # 스트리밍 응답 완료 후 캐싱 처리
-                try:
-                    # Redis 캐싱을 위한 데이터 준비
-                    from app.utils.cache_utils import RedisCache, CacheKeys, CACHE_TTL_CHAT
-                    
-                    # 캐시 키 생성 (질문 + 카테고리 기반)
-                    cache_key = RedisCache.generate_key(
-                        CacheKeys.CHAT, 
-                        {"query": request.question, "category": request.category}
-                    )
-                    
-                    # 캐싱할 최종 결과 데이터 구성
-                    final_result = {
-                        "answer": cleaned_text,
-                        "sources": source_metadata,
-                        "cited_sources": cited_sources,
-                        "processing_time": {
-                            "total": round(time.time() - request_start_time, 2),
-                            "llm_generation": round(time.time() - llm_generation_start_time, 2)
-                        }
-                    }
-                    
-                    # 결과 캐싱
-                    cache_success = RedisCache.set(cache_key, final_result, CACHE_TTL_CHAT)
-                    if cache_success:
-                        logger.info(f"스트리밍 응답 캐싱 완료: {cache_key}")
-                    else:
-                        logger.warning(f"스트리밍 응답 캐싱 실패: {cache_key}")
-                except Exception as cache_error:
-                    logger.error(f"스트리밍 응답 캐싱 중 오류 발생: {cache_error}")
-
-            except Exception as e:
-                logger.error(f"Error during LLM streaming: {e}", exc_info=True)
-                yield f"data: {json.dumps({'error': '스트리밍 중 오류가 발생했습니다.', 'details': str(e)})}\n\n"
-            finally:
-                if thread.is_alive():
-                    thread.join(timeout=5.0) # 스레드 종료 대기 (타임아웃 설정)
-                    if thread.is_alive():
-                        logger.warning("LLM generation thread did not terminate gracefully.")
-                # logger.debug("Stream generator finished.")
-                total_request_time = time.time() - request_start_time
-                logger.info(f"Total chat request processing time: {total_request_time:.4f} seconds.")
+        async def result_to_stream():
+            answer = result.get("answer", "응답을 생성할 수 없습니다.")
+            sources = result.get("sources", [])
+            cited_sources = result.get("cited_sources", [])
+            
+            # 텍스트를 청크로 나누어 스트리밍
+            chunk_size = 5  # 5자씩
+            for i in range(0, len(answer), chunk_size):
+                chunk = answer[i:i+chunk_size]
+                yield f"data: {json.dumps({'token': chunk})}\n\n"
+                await asyncio.sleep(0.01)  # 스트리밍 효과
+            
+            # 소스 정보 전송
+            yield f"data: {json.dumps({'event': 'sources', 'sources': sources, 'cited_sources': cited_sources})}\n\n"
+            
+            # 처리 시간 정보 (선택적)
+            if result.get("from_cache"):
+                yield f"data: {json.dumps({'event': 'cache_info', 'from_cache': True})}\n\n"
+            
+            # 스트림 종료
+            yield f"data: {json.dumps({'event': 'eos', 'message': 'Stream ended successfully.'})}\n\n"
+            
+            total_time = time.time() - request_start_time
+            logger.info(f"Total request processing time: {total_time:.4f} seconds")
         
         # StreamingResponse 반환
         headers = {
             "Content-Type": "text/event-stream",
-            "Cache-Control": "no-cache", # 클라이언트 및 프록시 캐싱 방지
-            "Connection": "keep-alive",  # 연결 유지
-            "X-Accel-Buffering": "no",   # Nginx 등 리버스 프록시 버퍼링 비활성화
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
         }
-        return StreamingResponse(stream_generator(), media_type="text/event-stream", headers=headers)
+        
+        return StreamingResponse(result_to_stream(), media_type="text/event-stream", headers=headers)
 
-    except HTTPException: # FastAPI의 HTTPException은 그대로 전달
+    except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Unhandled error in chat endpoint: {e}", exc_info=True)
@@ -2657,7 +2007,7 @@ class SQLAndLLMRequest(BaseModel):
 async def get_db_schema():
     """데이터베이스 스키마 정보를 반환합니다."""
     try:
-        from app.utils.get_mariadb_schema import get_schema_for_sqlcoder, test_db_connection
+        from utils.get_mariadb_schema import get_schema_for_sqlcoder, test_db_connection
         
         # 먼저 DB 연결 테스트
         if not test_db_connection():
@@ -2696,7 +2046,7 @@ async def process_sql_query(request: SQLQueryRequest = Body(...)):
     """자연어 질문을 SQL로 변환하고 실행 결과를 반환합니다."""
     try:
         # SQLCoder 유틸 사용
-        from app.utils.sqlcoder_utils import generate_sql_from_question, run_sql_query
+        from utils.sqlcoder_utils import generate_sql_from_question, run_sql_query
         
         # SQL 생성
         print(f"자연어 질문: {request.question}")
@@ -2775,7 +2125,7 @@ async def process_sql_and_llm(request: SQLAndLLMRequest = Body(...)):
     """자연어 질문을 SQL로 변환 실행하고, LLM으로 설명을 추가합니다. 스트리밍 방식으로 응답합니다."""
     try:
         # SQLCoder 유틸 사용
-        from app.utils.sqlcoder_utils import generate_sql_from_question, run_sql_query
+        from utils.sqlcoder_utils import generate_sql_from_question, run_sql_query
         
         # SQL 생성 및 실행
         sql_query = generate_sql_from_question(request.question)
@@ -3130,8 +2480,10 @@ if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
 
 # 기타 라우터 등록
-from app.stats.dashboard_api import router as dashboard_router
+from stats.dashboard_api import router as dashboard_router
+from api.reindex import router as reindex_router
 app.include_router(dashboard_router, prefix="", tags=["dashboard"])
+app.include_router(reindex_router, prefix="/api/reindex", tags=["reindex"])
 
 # 개선된 중복 제거 함수 (Python 버전) - 마크다운 섹션 기반 구조적 중복 제거
 def deduplicate_markdown_sections_py(markdown_text: str) -> str:
@@ -3198,3 +2550,12 @@ def deduplicate_markdown_sections_py(markdown_text: str) -> str:
     # 연속 빈 줄 정리
     result = re.sub(r'\n{3,}', '\n\n', result)
     return result.strip()
+
+@app.get("/api/test-reindex")
+async def test_reindex():
+    return {"status": "success", "message": "Reindex API works!"}
+
+@app.post("/api/quick-reindex")
+async def quick_reindex():
+    from api.reindex import reindex_all_files
+    return await reindex_all_files()

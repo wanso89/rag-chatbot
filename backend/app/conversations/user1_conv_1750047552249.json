@@ -1,0 +1,111 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1750047552249",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "버티카 레퍼런스 중에 금융 및 통신 쪽 발주처 알려줘",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "버티카 레퍼런스 중 금융 및 통신 쪽 발주처로는 다음과 같은 기관들이 있습니다:\n\n- 신한은행: 통합DW 구축 (용량: 1.2PB)\n- 우리은행: 빅데이터 플랫폼 재구축 (용량: 500TB)\n- KT: 차세대 BI/DW (용량: 500TB)\n- SKT: 유레카 CDR 분석 시스템 (용량: 250TB)\n- LGU+: BS 통합 정보계 / IFRS7 시스템 (용량: 300TB)\n- 한국신용정보원: 빅데이터 분석 및 마이데이터 분석 (용량: 285TB)\n- 새마을금고연합회: 상시감시 분석시스템 (용량: 25TB)\n- 롯데손해보험: 정보계 재구축 (용량: 50TB)\n- 하나은행: 정보계 재구축 (용량: 500TB)\n- 기술보증기금: 정보계 재구축 (용량: 10TB)\n- 빗썸 코리아: Enterprise Data Warehouse (용량: 40TB)\n- 한화생명금융서비스: Enterprise Data Warehouse (용량: 2TB)\n- 한국 조폐공사: Enterprise Data Warehouse (용량: 5TB)\n\n이러한 발주처들은 버티카의 데이터 관리 및 분석 솔루션을 통해 금융 및 통신 분야에서 효율적인 데이터 처리와 분석을 수행하고 있습니다.",
+      "sources": [
+        {
+          "path": "84837922-5a23-4225-ad40-df929b0947b5_버티카 국내 레퍼런스_2024.pdf",
+          "display_name": "버티카 국내 레퍼런스_2024.pdf",
+          "page": 2,
+          "chunk_id": "batch1_1",
+          "score": 27.912881114051203,
+          "is_cited": true
+        },
+        {
+          "path": "84837922-5a23-4225-ad40-df929b0947b5_버티카 국내 레퍼런스_2024.pdf",
+          "display_name": "버티카 국내 레퍼런스_2024.pdf",
+          "page": 1,
+          "chunk_id": "batch1_0",
+          "score": 3.622485686750011,
+          "is_cited": true
+        },
+        {
+          "path": "f5a37c6efcee_b73ce06a-9010-443f-8145-97a70438d9f6_B-1001_취업규칙_20230109.pdf",
+          "display_name": "b73ce06a-9010-443f-8145-97a70438d9f6_B-1001_취업규칙_20230109.pdf",
+          "page": 20,
+          "chunk_id": "batch1_17",
+          "score": 2.9107759136486697,
+          "is_cited": false
+        },
+        {
+          "path": "4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf",
+          "display_name": "3S소프트 회사소개-250514.pdf",
+          "page": 23,
+          "chunk_id": "batch1_5",
+          "score": 2.8907864653050854,
+          "is_cited": false
+        },
+        {
+          "path": "dec6453bad36_df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "display_name": "df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "page": 38,
+          "chunk_id": "batch1_12",
+          "score": 2.870002570923617,
+          "is_cited": false
+        },
+        {
+          "path": "a8114fe3-c2f9-43db-815b-491ae621583d_제2024-05호 대한건설기계안전관리원 채용공고문 및 직무기술서.pdf",
+          "display_name": "제2024-05호 대한건설기계안전관리원 채용공고문 및 직무기술서.pdf",
+          "page": 14,
+          "chunk_id": "batch1_10",
+          "score": 2.845535945980557,
+          "is_cited": false
+        },
+        {
+          "path": "175fc05c-7809-48e0-9f94-2838cce236ad_(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "display_name": "(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "page": 218,
+          "chunk_id": "batch1_26",
+          "score": 2.8324245136046144,
+          "is_cited": false
+        },
+        {
+          "path": "4082fb1d-e452-4d3d-b20f-622d16050b5a_3S소프트 회사소개-250514.pdf",
+          "display_name": "3S소프트 회사소개-250514.pdf",
+          "page": 21,
+          "chunk_id": "batch1_4",
+          "score": 2.8692818454091187,
+          "is_cited": false
+        },
+        {
+          "path": "dec6453bad36_df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "display_name": "df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "page": 37,
+          "chunk_id": "batch1_11",
+          "score": 2.863655506077799,
+          "is_cited": false
+        },
+        {
+          "path": "5d748bac-6533-4eb8-9dd6-7a0e6f8d9c3e_VMware Horizon 8 표준제안서[7318].pdf",
+          "display_name": "VMware Horizon 8 표준제안서[7318].pdf",
+          "page": 13,
+          "chunk_id": "batch1_6",
+          "score": 1.444351848284295,
+          "is_cited": false
+        },
+        {
+          "path": "175fc05c-7809-48e0-9f94-2838cce236ad_(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "display_name": "(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "page": 215,
+          "chunk_id": "batch1_25",
+          "score": 1.4743801845720932,
+          "is_cited": false
+        }
+      ]
+    }
+  ],
+  "timestamp": "2025-06-16T13:19:45.406468"
+}

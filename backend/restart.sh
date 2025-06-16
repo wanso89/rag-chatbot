@@ -1,56 +1,57 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail            # 예상치 못한 오류 즉시 종료
 
-# 변수 정의
-LOG_FILE="./chatbot.log"
-PID_FILE="./server.pid"
-CURRENT_DIR=$(pwd)
+# 절대경로 사용
+BASE_DIR="/home/test_code/test01/rag-chatbot"
+BACKEND_DIR="$BASE_DIR/backend"
+LOG_FILE="$BACKEND_DIR/chatbot.log"
+PID_FILE="$BACKEND_DIR/server.pid"
 
-echo "===== $(date) - 챗봇 서버 재시작 시작 =====" >> $LOG_FILE
+echo "===== $(date) - 챗봇 서버 재시작 시작 ====="
 
-# 기존 서버 프로세스 종료
-if [ -f "$PID_FILE" ]; then
-    PID=$(cat "$PID_FILE")
-    if ps -p $PID > /dev/null; then
-        echo "기존 서버 프로세스(PID: $PID) 종료 중..." >> $LOG_FILE
-        kill $PID
-        sleep 5
-        
-        # 프로세스가 여전히 살아있는지 확인
-        if ps -p $PID > /dev/null; then
-            echo "정상 종료 실패, 강제 종료 시도..." >> $LOG_FILE
-            kill -9 $PID
-            sleep 2
-        fi
-    else
-        echo "PID 파일이 존재하지만, 프로세스가 이미 종료됨" >> $LOG_FILE
+# 1. 기존 서버 종료  (reload 모드라 PGID 전체 kill)
+if [[ -f "$PID_FILE" ]]; then
+    OLD_PID=$(cat "$PID_FILE")
+    echo "기존 서버 PGID 종료 시도 (PID: $OLD_PID)…"
+    # 부모·자식 전체 종료
+    kill -TERM -"$OLD_PID" 2>/dev/null || true
+    sleep 5
+    if ps -p "$OLD_PID" &>/dev/null; then
+        echo "정상 종료 실패, SIGKILL…"
+        kill -KILL -"$OLD_PID" 2>/dev/null || true
+        sleep 2
     fi
     rm -f "$PID_FILE"
 else
-    echo "PID 파일이 없음, 서버가 실행 중이지 않은 것으로 판단" >> $LOG_FILE
+    echo "PID 파일 없음 → 새로 시작"
 fi
 
-# 가상 환경 활성화
-echo "가상 환경 활성화..." >> $LOG_FILE
-source /home/test_code/test01/rag-chatbot/.venv/bin/activate
+# 2. 가상환경 활성화
+echo "가상 환경 활성화…"
+source "$BASE_DIR/.venv/bin/activate"
 
-# 메모리 캐시 정리 (시스템 레벨)
-echo "시스템 메모리 캐시 정리..." >> $LOG_FILE
-sync
-echo 3 > /proc/sys/vm/drop_caches
+# 3. 캐시 드롭 (root만 가능)
+if [[ $EUID -eq 0 ]]; then
+    echo "메모리 캐시 드롭…"
+    sync && echo 3 > /proc/sys/vm/drop_caches
+fi
 
-# 서버 시작
-echo "새 서버 프로세스 시작..." >> $LOG_FILE
-nohup uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --log-level debug >> $LOG_FILE 2>&1 &
+# 4. 작업 디렉터리 이동
+cd "$BACKEND_DIR"
 
-# PID 저장
+# 5. 서버 시작 (parents + child 둘 다 같은 PGID로)
+echo "새 서버 프로세스 시작…"
+# setsid로 새로운 프로세스그룹 생성 → PGID = PID
+nohup setsid python -m uvicorn app.main:app \
+        --reload --host 0.0.0.0 --port 8000 \
+        --log-level debug 2>&1 \
+    | stdbuf -oL grep -Ev 'FatalError: .*Termination signal|leaked semaphore objects' \
+    >> "$LOG_FILE" &
 NEW_PID=$!
-echo $NEW_PID > "$PID_FILE"
-echo "새 서버 시작됨 (PID: $NEW_PID)" >> $LOG_FILE
 
-echo "===== $(date) - 챗봇 서버 재시작 완료 =====" >> $LOG_FILE
+echo "$NEW_PID" > "$PID_FILE"
+echo "새 서버 시작됨 (PGID: $NEW_PID)"
 
-# 로그 출력
-echo "서버가 재시작되었습니다. 최신 로그 확인:"
-tail -n 20 $LOG_FILE
-
-echo "서버 재시작 완료 (PID: $NEW_PID)" 
+echo "===== $(date) - 챗봇 서버 재시작 완료 ====="
+sleep 2
+tail -n 20 "$LOG_FILE"

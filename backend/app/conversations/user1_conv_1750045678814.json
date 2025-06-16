@@ -1,0 +1,95 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1750045678814",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "특별청원휴가 중 출산에 대해 설명해줘",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "특별청원휴가 중 출산에 대한 설명은 [취업규칙_test.pdf p.38]에 기재되어 있습니다. 이 조항은 직원이 출산을 이유로 휴가를 청원할 때의 휴가 일수와 관련된 규정을 명시하고 있습니다.\n\n1. **출산 휴가**:\n   - **첫째, 둘째 자녀**: 자녀 출산 시에는 3일의 휴가를 부여합니다.\n   - **셋째 자녀 이상**: 셋째 자녀 이상을 출산할 경우, 추가로 2일의 휴가를 부여하여 총 5일의 휴가를 제공합니다.\n\n이러한 규정은 직원이 출산을 이유로 휴가를 청원할 때, 회사가 이를 인정하고 휴가를 부여해야 하는 의무를 가지고 있으며, 출산에 따른 휴가 일수를 명확히 정하고 있습니다.",
+      "sources": [
+        {
+          "path": "f5a37c6efcee_b73ce06a-9010-443f-8145-97a70438d9f6_B-1001_취업규칙_20230109.pdf",
+          "display_name": "b73ce06a-9010-443f-8145-97a70438d9f6_B-1001_취업규칙_20230109.pdf",
+          "page": 38,
+          "chunk_id": "batch1_31",
+          "score": 73.03558679156056,
+          "is_cited": false
+        },
+        {
+          "path": "f5a37c6efcee_b73ce06a-9010-443f-8145-97a70438d9f6_B-1001_취업규칙_20230109.pdf",
+          "display_name": "b73ce06a-9010-443f-8145-97a70438d9f6_B-1001_취업규칙_20230109.pdf",
+          "page": 27,
+          "chunk_id": "batch1_21",
+          "score": 54.00869394259673,
+          "is_cited": false
+        },
+        {
+          "path": "dec6453bad36_df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "display_name": "df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "page": 20,
+          "chunk_id": "batch1_8",
+          "score": 47.649132148957605,
+          "is_cited": false
+        },
+        {
+          "path": "f5a37c6efcee_b73ce06a-9010-443f-8145-97a70438d9f6_B-1001_취업규칙_20230109.pdf",
+          "display_name": "b73ce06a-9010-443f-8145-97a70438d9f6_B-1001_취업규칙_20230109.pdf",
+          "page": 8,
+          "chunk_id": "batch1_6",
+          "score": 44.76098240197198,
+          "is_cited": false
+        },
+        {
+          "path": "10fd1252-5d3b-4f39-a1ca-f79e8eb8b9e9_취업규칙_test.pdf",
+          "display_name": "취업규칙_test.pdf",
+          "page": 8,
+          "chunk_id": "batch1_7",
+          "score": 34.606194578512095,
+          "is_cited": false
+        },
+        {
+          "path": "f5a37c6efcee_b73ce06a-9010-443f-8145-97a70438d9f6_B-1001_취업규칙_20230109.pdf",
+          "display_name": "b73ce06a-9010-443f-8145-97a70438d9f6_B-1001_취업규칙_20230109.pdf",
+          "page": 22,
+          "chunk_id": "batch1_19",
+          "score": 35.1109918335601,
+          "is_cited": false
+        },
+        {
+          "path": "f5a37c6efcee_b73ce06a-9010-443f-8145-97a70438d9f6_B-1001_취업규칙_20230109.pdf",
+          "display_name": "b73ce06a-9010-443f-8145-97a70438d9f6_B-1001_취업규칙_20230109.pdf",
+          "page": 37,
+          "chunk_id": "batch1_30",
+          "score": 34.602060138166266,
+          "is_cited": false
+        },
+        {
+          "path": "f5a37c6efcee_b73ce06a-9010-443f-8145-97a70438d9f6_B-1001_취업규칙_20230109.pdf",
+          "display_name": "b73ce06a-9010-443f-8145-97a70438d9f6_B-1001_취업규칙_20230109.pdf",
+          "page": 30,
+          "chunk_id": "batch1_24",
+          "score": 33.94231383858934,
+          "is_cited": false
+        },
+        {
+          "path": "f5a37c6efcee_b73ce06a-9010-443f-8145-97a70438d9f6_B-1001_취업규칙_20230109.pdf",
+          "display_name": "b73ce06a-9010-443f-8145-97a70438d9f6_B-1001_취업규칙_20230109.pdf",
+          "page": 33,
+          "chunk_id": "batch1_26",
+          "score": 33.81489742729602,
+          "is_cited": false
+        }
+      ]
+    }
+  ],
+  "timestamp": "2025-06-16T12:48:08.622863"
+}

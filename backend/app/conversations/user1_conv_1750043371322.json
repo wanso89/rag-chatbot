@@ -1,0 +1,39 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1750043371322",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "아버지 회갑이야. 회사에서 얼마 지원해주니?",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "아버지께서 회갑이 되셨다면, 회사에서는 100만원을 지원합니다. 이는 [df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf p.22]에서 확인할 수 있습니다.",
+      "sources": [
+        {
+          "path": "dec6453bad36_df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "display_name": "df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "page": 22,
+          "chunk_id": "batch1_10",
+          "score": 23.992815359411683,
+          "is_cited": true
+        },
+        {
+          "path": "dec6453bad36_df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "display_name": "df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "page": 10,
+          "chunk_id": "batch1_7",
+          "score": 21.105214385770594,
+          "is_cited": true
+        }
+      ]
+    }
+  ],
+  "timestamp": "2025-06-16T12:09:53.291099"
+}

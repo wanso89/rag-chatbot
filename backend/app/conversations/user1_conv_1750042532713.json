@@ -1,0 +1,103 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1750042532713",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "팀회식을 하려고 하는데, 회식비는 얼마 지급되나요?",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "팀 회식비는 인당 15,000원까지 지원됩니다. [df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf p.5]에 따르면, 지원한도는 인당 15,000원이며, 증빙처리는 법인카드로 사용하고 매월 제출해야 합니다. 또한 팀별 인당 15,000원 초과금 및 당월 미사용 회식비 이월이 불가합니다.",
+      "sources": [
+        {
+          "path": "dec6453bad36_df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "display_name": "df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "page": 7,
+          "chunk_id": "batch1_4",
+          "score": 55.599187156475374,
+          "is_cited": true
+        },
+        {
+          "path": "dec6453bad36_df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "display_name": "df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "page": 22,
+          "chunk_id": "batch1_10",
+          "score": 35.96345253484861,
+          "is_cited": true
+        },
+        {
+          "path": "dec6453bad36_df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "display_name": "df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "page": 1,
+          "chunk_id": "batch1_0",
+          "score": 30.35879291495501,
+          "is_cited": true
+        },
+        {
+          "path": "dec6453bad36_df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "display_name": "df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "page": 8,
+          "chunk_id": "batch1_5",
+          "score": 29.47544392217394,
+          "is_cited": true
+        },
+        {
+          "path": "dec6453bad36_df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "display_name": "df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "page": 9,
+          "chunk_id": "batch1_6",
+          "score": 25.001074199042517,
+          "is_cited": true
+        },
+        {
+          "path": "dec6453bad36_df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "display_name": "df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "page": 5,
+          "chunk_id": "batch1_2",
+          "score": 3.370635032377201,
+          "is_cited": true
+        },
+        {
+          "path": "dec6453bad36_df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "display_name": "df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "page": 38,
+          "chunk_id": "batch1_12",
+          "score": 2.8430811543198184,
+          "is_cited": true
+        },
+        {
+          "path": "a8114fe3-c2f9-43db-815b-491ae621583d_제2024-05호 대한건설기계안전관리원 채용공고문 및 직무기술서.pdf",
+          "display_name": "제2024-05호 대한건설기계안전관리원 채용공고문 및 직무기술서.pdf",
+          "page": 2,
+          "chunk_id": "batch1_1",
+          "score": 2.7362665927284255,
+          "is_cited": false
+        },
+        {
+          "path": "dec6453bad36_df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "display_name": "df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "page": 37,
+          "chunk_id": "batch1_11",
+          "score": 2.7896047141521807,
+          "is_cited": true
+        },
+        {
+          "path": "10fd1252-5d3b-4f39-a1ca-f79e8eb8b9e9_취업규칙_test.pdf",
+          "display_name": "취업규칙_test.pdf",
+          "page": 21,
+          "chunk_id": "batch1_17",
+          "score": 1.5031217425583474,
+          "is_cited": false
+        }
+      ]
+    }
+  ],
+  "timestamp": "2025-06-16T11:55:59.422878"
+}

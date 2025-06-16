@@ -12,26 +12,20 @@ import traceback
 import numpy as np
 import logging
 import time
-from typing import List, Dict, Any, Optional, Tuple, Union
+from typing import List, Dict, Any
 from pathlib import Path
 import asyncio
 import tempfile
-import shutil
-import subprocess
-from concurrent.futures import ThreadPoolExecutor
 
 # 이미지 처리 관련 라이브러리
-from PIL import Image, ImageDraw, ImageFont
-import fitz  # PyMuPDF
-import io
+from PIL import Image
 import cv2
 
-# PaddleOCR 라이브러리
-from paddleocr import PaddleOCR
 
 # PDF 처리 라이브러리
 from pdfminer.high_level import extract_text as pdfminer_extract_text
-from pdf2image import convert_from_path, convert_from_bytes
+from pdf2image import convert_from_path
+import paddleocr
 
 # 로깅 설정
 logger = logging.getLogger(__name__)
@@ -62,7 +56,7 @@ def get_paddle_ocr():
             # lang: 언어 설정 (korean은 한국어/영어 모델 사용)
             # use_gpu: 가능하면 GPU 사용
             # show_log: 로깅 비활성화
-            _paddle_ocr_instance = PaddleOCR(
+            _paddle_ocr_instance = paddleocr.PaddleOCR(
                 use_angle_cls=True, 
                 lang=PADDLE_LANG,
                 use_gpu=True,
