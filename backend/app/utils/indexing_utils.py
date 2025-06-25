@@ -1,6 +1,7 @@
 # indexing_utils.py
 import time
 import subprocess
+import uuid
 import os, re, asyncio
 import hashlib  # 파일 중복 체크를 위한 해시 라이브러리 추가
 from pathlib import Path
@@ -10,7 +11,7 @@ import pandas as pd
 import markdown
 from io import StringIO
 import torch
-from transformers import AutoTokenizer
+import threading
 
 from langchain_community.document_loaders import (
     UnstructuredExcelLoader,
@@ -19,16 +20,21 @@ from langchain_community.document_loaders import (
     UnstructuredFileLoader,
 )
 import fitz
+from elasticsearch import Elasticsearch
 from langchain.schema import Document
 from elasticsearch.helpers import bulk
 import traceback
 from datetime import datetime
 import logging
-
+from .table_parser import (detect_table_in_text,
+                            parse_ocr_table,
+                              is_same_table,
+                              )
 from .ocr_utils import (
         extract_text_from_file,
         extract_text_from_image,
         extract_text_from_pdf_with_ocr,
+        extract_images_from_pdf_with_layout,
 )
 try:
     from docling.document_converter import DocumentConverter
@@ -59,20 +65,28 @@ _last_docling_init_time = None
 # 로깅 설정
 logger = logging.getLogger(__name__)
 
+
 ES_INDEX_NAME = "rag_documents_kure_v1"
-IMAGE_DIR = "static/document_images"  # 사용 안되면 제거 가능
+ROW_INDEX = "rag_rows_v1"
+DOC_INDEX = ES_INDEX_NAME
+ALIAS_READ  = "rag-idx"
+ALIAS_WRITE = "rag-idx-write"
+BATCH_SIZE  = 4
+IMAGE_DIR = Path("app/static/document_images")  # 사용 안되면 제거 가능
 os.makedirs(IMAGE_DIR, exist_ok=True)  # 사용 안되면 제거 가능
 
 # LOADER_MAPPING: 이미지 파일 확장자 추가
 LOADER_MAPPING = {
     ".pdf": (PyPDFLoader, {}),
-    ".xlsx": (UnstructuredExcelLoader, {"mode": "paged"}),
-    ".xls": (UnstructuredExcelLoader, {"mode": "paged"}),
-    ".txt": (TextLoader, {"encoding": "utf-8"}),
     
-    # PPT 파일 추가
-    ".ppt": (UnstructuredFileLoader, {"mode": "paged"}),
-    ".pptx": (UnstructuredFileLoader, {"mode": "paged"}),
+    # 변환 후 PDF로 처리할 파일들
+    ".xlsx": ("CONVERT_TO_PDF", {}),
+    ".xls": ("CONVERT_TO_PDF", {}),
+    ".ppt": ("CONVERT_TO_PDF", {}),
+    ".pptx": ("CONVERT_TO_PDF", {}),
+    ".docx": ("CONVERT_TO_PDF", {}),
+    
+    ".txt": (TextLoader, {"encoding": "utf-8"}),
     
     # 이미지 파일
     ".jpg": ("OCR_LOADER", {}),
@@ -83,16 +97,16 @@ LOADER_MAPPING = {
     ".tif": ("OCR_LOADER", {}),
     ".webp": ("OCR_LOADER", {}),
 }
-#토크나이저
-LLM_MODEL_NAME = r"/home/root/Gukbap-Qwen2.5-7B"
-tokenizer = AutoTokenizer.from_pretrained(
-        LLM_MODEL_NAME,
-        use_fast=True,  # 빠른 토크나이저 사용
-        padding_side="left",  # 왼쪽 패딩 (생성 모델에 적합)
-        use_auth_token=None,  # 인증 토큰 불필요 시 명시적으로 None
-        trust_remote_code=True,  # 원격 코드 신뢰 (일부 모델에 필요)
-    )
+#토크나이저, 모델
 
+shared_llm_model=None 
+shared_tokenizer = None
+llm_model = None
+tokenizer = None
+
+
+def _route_index(et: str) -> str:
+    return ROW_INDEX if et == "table_row" else DOC_INDEX
 
 # --- DOCX를 PDF로 변환하는 함수 (이전과 동일하게 유지) ---
 def convert_docx_to_pdf_sync(docx_path: str, output_dir: str) -> Optional[str]:
@@ -152,7 +166,7 @@ async def convert_docx_to_pdf(docx_path: str, output_dir: str) -> Optional[str]:
 
 
 # --- 파일 내용을 읽어 Langchain Document 객체 리스트로 만드는 함수 (OCR 기능 추가) ---
-async def load_document(file_path_to_load: str, loader_selector_ext: str) -> List[Document]:
+async def load_document(file_path_to_load: str, loader_selector_ext: str, llm_model=None, tokenizer=None) -> List[Document]:
     print(
         f"load_document 호출: file_path_to_load='{file_path_to_load}', loader_selector_ext='{loader_selector_ext}'"
     )
@@ -163,7 +177,20 @@ async def load_document(file_path_to_load: str, loader_selector_ext: str) -> Lis
     if loader_info and loader_info[0] == "OCR_LOADER":
         logger.info(f"OCR 로더를 사용하여 파일 처리: {file_path_to_load}")
         return await load_document_with_ocr(file_path_to_load)
-    
+    if loader_info and loader_info[0] == "CONVERT_TO_PDF":
+        logger.info(f"PDF 변환 후 처리: {file_path_to_load}")
+        temp_dir = "temp_conversions"
+        
+        # Office 파일을 PDF로 변환
+        pdf_path = await convert_office_to_pdf(file_path_to_load, temp_dir)
+        
+        if pdf_path:
+            logger.info(f"PDF 변환 성공, Docling으로 처리: {pdf_path}")
+            # 변환된 PDF를 Docling 파이프라인으로 처리
+            return await load_document_with_ocr(pdf_path)
+        else:
+            logger.warning(f"PDF 변환 실패, 기존 방식으로 fallback: {file_path_to_load}")
+
     # PDF 파일 처리 강화 (OCR 보조)
     if loader_selector_ext == '.pdf':
         # 먼저 기존 PyPDFLoader로 처리 시도
@@ -327,35 +354,39 @@ def crop_pdf_region(pdf_path: str, page_num: int, bbox) -> bytes:
     
     return img_data
 
-async def extract_image_ocr_texts(pdf_path: str, layout_info) -> Dict[int, List[str]]:
-    """Docling 영역으로 이미지 OCR - 실패한 이미지는 제외"""
+async def extract_image_ocr_texts(pdf_path: str, layout_info, doc_id: str = None):
     image_texts = {}
+    image_paths = {}
     
-    if layout_info and hasattr(layout_info, 'pictures'):
-        for image_data in layout_info.pictures:
-            page_num = getattr(image_data, 'page', 1)
-            bbox = getattr(image_data, 'bbox', None)
-            
-            if bbox:
-                img_data = crop_pdf_region(pdf_path, page_num, bbox)
-                import tempfile
-                with tempfile.NamedTemporaryFile(suffix='.png') as tmp:
-                    tmp.write(img_data)
-                    tmp.flush()
-                    extracted_text = await extract_text_from_image(tmp.name, 0.7)
-                    
-                    # 최소 길이 체크 (의미있는 텍스트만)
-                    if extracted_text and len(extracted_text.strip()) > 5:
-                        if page_num not in image_texts:
-                            image_texts[page_num] = []
-                        image_texts[page_num].append(extracted_text)
+    if not doc_id:
+        doc_id = Path(pdf_path).stem
+        
+    img_dir = IMAGE_DIR / doc_id
+    img_dir.mkdir(parents=True, exist_ok=True)
+        
+    # ①  layout_info 는 리스트이므로 그대로 순회
+    for idx, node in enumerate(layout_info):
+        if node.get("type") != "figure":
+            continue                                   # 그림(figure) 만 골라서 진행
+
+        page_num = int(node.get("page", 1))
+        x0, y0, x1, y1 = node["bbox"]
+        img_data = crop_pdf_region(pdf_path, page_num, fitz.Rect(x0, y0, x1, y1))
+
+        img_name = f"page_{page_num}_img_{idx+1}.png"
+        img_path = img_dir / img_name
+        with open(img_path, "wb") as f:
+            f.write(img_data)
+
+        relative = f"document_images/{doc_id}/{img_name}"
+        image_paths.setdefault(page_num, []).append(relative)
     
-    return image_texts
+    return image_texts, image_paths
+
 
 def get_docling_converter():
     """Docling 컨버터 싱글톤 (메모리 효율)"""
     global _docling_layout_converter, _last_docling_init_time
-    
     if not DOCLING_AVAILABLE:
         return None
     
@@ -363,7 +394,7 @@ def get_docling_converter():
         try:
             # 레이아웃 분석만 (OCR 없이)
             pdf_options = PdfPipelineOptions()
-            pdf_options.do_ocr = False  # 속도를 위해 OCR 비활성화
+            pdf_options.do_ocr = True  # 속도를 위해 OCR 비활성화
             pdf_options.do_table_structure = True  # 테이블 구조만
             pdf_options.table_structure_options.do_cell_matching = True
             
@@ -461,115 +492,104 @@ def create_image_caption_from_context(
     
     return base_caption
 
-def merge_table_chunks(docs: List[Document]) -> List[Document]:
-    if not docs:
-        return docs
+def split_table_rows(table_text: str, meta_base: dict) -> list[Document]:
+    """
+    ① 한 표 → 행 단위 Document 리스트
+    ② 각 행에 table_id / row_index / n_rows 저장
+    """
+    rows = [r for r in table_text.splitlines() if r.strip()]
+    tid = uuid.uuid4().hex[:8]
 
-    merged, buf = [], []
-    table_pat = re.compile(r'[\|\t]')        # 파이프·탭 포함 여부
-
-    def flush_table_buf():
-        """buf에 모인 표 조각을 하나로 병합해 merged에 추가"""
-        if not buf:
-            return
-        first = buf[0]
-
-        # ─── ① one-liner(캡션)가 있으면 첫 줄만 따로 꺼낸다 ───
-        head = ""
-        if first.page_content.startswith("이 행은"):
-            head, _ = first.page_content.split("\n", 1)
-            head += " | "
-
-        # ─── ② 본문 병합 + 캡션 보존 ───
-        merged_text = clean_ocr_text(" ".join(x.page_content for x in buf))
-        first.page_content = head + merged_text
-
-        # ─── ③ element_type 유지 ───
-        first.metadata["element_type"] = "table"
-
-        merged.append(first)
-        buf.clear()
-
-    # ──────────────────────────────────────────
-    for d in docs:
-        text = d.page_content
-        looks_like_table = (
-            len(text) < 400
-            or any(k in text for k in ["표", "table", "차트"])
-            or bool(table_pat.search(text))
+    docs = []
+    for idx, row in enumerate(rows):
+        doc = Document(
+            page_content=row,
+            metadata={
+                **meta_base,
+                "element_type": "table_row",
+                "table_id": tid,
+                "row_index": idx,
+                "n_rows": len(rows),
+            },
         )
+        docs.append(doc)
+    print(f"DEBUG MERGE ▸ table_row created = {idx}")
+    return docs
 
-        if looks_like_table:
+
+def merge_table_chunks(docs: list[Document]) -> list[Document]:
+    """
+    1) 페이지를 넘어가면서 쪼개진 표를 다시 '완전한 표 텍스트' 로 복원
+    2) split_table_rows() 에 넘겨 row chunk 로 변환
+    """
+    merged_tables, buf = [], []
+    cur_tid = None
+
+    for d in docs:
+        if d.metadata.get("element_type") == "table":
+            # 같은 표인지 확인 (헤더/ID 기준)
+            same = cur_tid and is_same_table(buf[-1], d)
+            if not same:
+                if buf:
+                    merged_tables.extend(split_table_rows("\n".join(x.page_content for x in buf),
+                                                         buf[0].metadata))
+                    buf.clear()
+                cur_tid = uuid.uuid4().hex[:8]
             buf.append(d)
-            continue
+        else:
+            if buf:
+                merged_tables.extend(split_table_rows("\n".join(x.page_content for x in buf),
+                                                     buf[0].metadata))
+                buf.clear()
+                cur_tid = None
+            merged_tables.append(d)
 
-        # 표 블록 종료 지점
-        flush_table_buf()
-        merged.append(d)
+    if buf:
+        merged_tables.extend(split_table_rows("\n".join(x.page_content for x in buf),
+                                             buf[0].metadata))
+    merged_docs = merged_tables  # ← 기존 반환 리스트
+    row_cnt = sum(d.metadata.get("element_type") == "table_row"
+                  for d in merged_docs)
+    print(f"DEBUG MERGE END ▸ table_row count = {row_cnt}")
+    return merged_tables
 
-    flush_table_buf()          # 파일 끝에 표로 끝난 경우
-    return merged
 
-# 기존 load_document_with_ocr 함수를 하이브리드 방식으로 교체
-# 하지만 기존 인터페이스는 완전히 유지
-async def load_document_with_ocr(file_path: str) -> List[Document]:
-    """
-    기존 함수 시그니처 유지하면서 하이브리드 방식 적용
-    
-    Args:
-        file_path: 파일 경로
-        
-    Returns:
-        Document 객체 리스트 (기존과 동일한 형태)
-    """
+async def load_document_with_ocr(file_path: str) -> List["Document"]:
     try:
         logger.info(f"하이브리드 방식으로 파일 처리 중: {file_path}")
         file_extension = Path(file_path).suffix.lower()
-        
-        # PDF가 아니면 기존 방식 그대로
-        if file_extension != '.pdf':
-            logger.info(f"PDF가 아닌 파일은 기존 방식 사용: {file_path}")
+
+        # ── PDF 외 포맷은 기존 함수로 위임 ───────────────────────────
+        if file_extension != ".pdf":
             return await load_document_with_ocr_original(file_path)
-        
-        # PDF 하이브리드 처리
-        start_time = time.time()
-        
-        
-        # 1단계: Docling 레이아웃 분석 (OCR 없이)
+
+        start = time.time()
+        # 1) Docling 레이아웃
         layout_info = None
         if DOCLING_AVAILABLE:
             try:
                 converter = get_docling_converter()
-                if converter:
+                if converter is not None:
                     layout_result = await asyncio.to_thread(converter.convert, file_path)
                     layout_info = layout_result.document
-                    logger.info(f"✅ 레이아웃 분석 완료")
+                    logger.info("✅ 레이아웃 분석 완료")
             except Exception as e:
-                logger.warning(f"레이아웃 분석 실패, 기존 방식 사용: {e}")
-        
-        # 2단계: 빠른 PDF 텍스트 추출
+                logger.warning(f"Docling 레이아웃 분석 실패 → 무시: {e}")
+        # 2) 텍스트 레이어 추출
         pdf_texts = extract_pdf_text_fast(file_path)
-        # 3단계: 문서 생성 (기존 형태 유지)
-        documents = []
-        
-        if pdf_texts:
-            # PDF 텍스트가 있으면 하이브리드 방식
-            documents = await create_hybrid_documents(
-                pdf_texts, layout_info, file_path
-            )
-        else:
-            # PDF 텍스트가 없으면 기존 OCR 방식으로 fallback
-            logger.info(f"PDF 텍스트 없음, 기존 OCR 방식 사용: {file_path}")
+        # 3) 텍스트 없으면 기존 OCR Fallback
+        if not any(t.strip() for t in pdf_texts.values()):
+            logger.info("PDF 텍스트 없어서 기존 OCR 사용")
             return await load_document_with_ocr_original(file_path)
-        
-        processing_time = time.time() - start_time
-        logger.info(f"하이브리드 처리 완료: {len(documents)} 문서, {processing_time:.2f}초")
-        
-        return documents
-        
+        # # 4) Hybrid 문서 생성
+        docs = await create_hybrid_documents(pdf_texts, layout_info, file_path, llm_model=shared_llm_model, tokenizer=shared_tokenizer)  # layout_info → None
+        logger.info(f"하이브리드 완료: {len(docs)} 청크, {time.time()-start:.2f}s")
+        return docs
+    
     except Exception as e:
-        logger.error(f"하이브리드 처리 실패, 기존 방식으로 fallback: {file_path}, 오류: {e}")
+        logger.error(f"하이브리드 실패 → 기존 방식 Fallback: {e}")
         return await load_document_with_ocr_original(file_path)
+
 def clean_ocr_text(text: str) -> str:
     """OCR 결과에서 불필요한 숫자 패턴 제거"""
     if not text:
@@ -593,104 +613,133 @@ async def create_hybrid_documents(
     layout_info,
     file_path: str,
     *,
-    llm_model=LLM_MODEL_NAME,          # ← Qwen (없으면 None)
-    tokenizer=tokenizer           # ← Tokenizer (없으면 None)
-) -> List[Document]:
+    llm_model: str | None,
+    tokenizer=None,
+) -> List["Document"]:
     """
-    ‣ 표  : Docling → markdown → 행 단위 청크
-    ‣ 본문: 페이지 텍스트 그대로 단락-청킹
-    ‣ 이미지: OCR 있으면 붙이고, 없으면 문맥 기반 캡션
+    Docling과 OCR 결과를 조합하는 하이브리드 문서 생성
+    
+    기존 문제: Docling 결과가 있는 페이지를 무조건 제외 → OCR 표 감지 기회 박탈
+    개선사항: 두 결과를 조합하여 최대한 많은 표 정보 추출
     """
-    documents: list[Document] = []
+    documents: List["Document"] = []
     file_name = Path(file_path).name
+    
+    doc_id = strip_uuid_prefix(file_name)
+    if '.' in doc_id:
+        doc_id = doc_id.rsplit('.', 1)[0]
 
-    # ──────────────────────────────
-    # 1. Docling 구조 정보
-    # ──────────────────────────────
-    tables_info, images_info = [], []
-    if layout_info:
-        if hasattr(layout_info, "tables"):
-            for i, tbl in enumerate(layout_info.tables):
-                md = getattr(tbl, "export_to_markdown", lambda: "")() or ""
-                tables_info.append(
-                    {
-                        "page": getattr(tbl, "page", 1),
-                        "index": i,
-                        "caption": getattr(tbl, "caption", "") or "",
-                        "markdown": md,
-                    }
-                )
-        if hasattr(layout_info, "pictures"):
-            for i, fig in enumerate(layout_info.pictures):
-                images_info.append(
-                    {
-                        "page": getattr(fig, "page", 1),
-                        "index": i,
-                        "caption": getattr(fig, "caption", "") or "",
-                    }
-                )
-
-    # ──────────────────────────────
-    # 2. 표 → 행 단위 청크
-    # ──────────────────────────────
-    for tbl in tables_info:
-        if tbl["markdown"]:
+    # === 1단계: Docling 표 추출 (기존 유지) ===
+    docling_tables = []
+    docling_table_pages = set()
+    
+    if layout_info is not None:
+        tables = getattr(layout_info, "tables", [])
+        for idx, tbl in enumerate(tables):
+            md = getattr(tbl, "export_to_markdown", lambda: "")()
+            if not md:
+                continue
+            
+            page_num = getattr(tbl, "page", 1)
             row_docs = await markdown_to_row_chunks(
-                tbl["markdown"],
-                page=tbl["page"],
-                file_path=file_path,
-                llm_model=llm_model,
-                tokenizer=tokenizer,
+                md, page=page_num, file_path=file_path,
+                llm_model=llm_model, tokenizer=tokenizer,
             )
-            documents.extend(row_docs)
-    table_pages = {t["page"] for t in tables_info}
-    table_pages |= {p + 1 for p in table_pages} 
-    # ──────────────────────────────
-    # 3. 이미지 OCR & 캡션
-    # ──────────────────────────────
-    image_ocr_texts = await extract_image_ocr_texts(file_path, layout_info)
+            
+            if row_docs:  # 실제로 파싱된 경우만 기록
+                docling_tables.extend(row_docs)
+                docling_table_pages.add(page_num)
 
-    # ──────────────────────────────
-    # 4. 본문 단락-단위 청킹 (이미지 텍스트·캡션 삽입)
-    # ──────────────────────────────
+    # === 2단계: 이미지 OCR 처리 (기존 유지) ===
+    print("DEBUG ▸ image OCR 호출:", file_path)
+    image_ocr_texts, image_paths = await extract_images_from_pdf_with_layout(file_path, doc_id)
+    print("DEBUG ▸ image_paths keys =", list(image_paths.keys())[:5])
+
+    # === 3단계: 각 페이지별 표 추출 전략 결정 ===
+    ocr_tables = []
+    
     for page_num, page_text in pdf_texts.items():
-        if page_num in table_pages:
-            continue 
         if not page_text.strip():
             continue
+        
+        # 텍스트에서 표 감지 시도 (모든 페이지에서 시도)
+        if detect_table_in_text(page_text):
+            page_table_docs = parse_ocr_table(page_text)
+            
+            # Docling 결과와 비교하여 더 나은 결과 선택
+            if page_num in docling_table_pages:
+                # 이미 Docling에서 표를 찾은 페이지
+                docling_docs_for_page = [doc for doc in docling_tables 
+                                       if doc.metadata.get("page") == page_num]
+                
+                # OCR이 더 많은 행을 찾았거나, Docling이 실패한 경우 OCR 결과 우선
+                if (len(page_table_docs) > len(docling_docs_for_page) * 1.5 or 
+                    len(docling_docs_for_page) == 0):
+                    print(f"페이지 {page_num}: OCR 표 결과가 더 우수함 ({len(page_table_docs)} vs {len(docling_docs_for_page)})")
+                    
+                    # 기존 Docling 결과 제거하고 OCR 결과 사용
+                    docling_tables = [doc for doc in docling_tables 
+                                    if doc.metadata.get("page") != page_num]
+                    ocr_tables.extend(page_table_docs)
+                else:
+                    print(f"페이지 {page_num}: Docling 표 결과 유지")
+            else:
+                # Docling에서 표를 찾지 못한 페이지 → OCR 결과 사용
+                print(f"페이지 {page_num}: Docling 놓친 표를 OCR로 발견")
+                ocr_tables.extend(page_table_docs)
+    
+    # === 4단계: 표 Document들 병합 및 추가 ===
+    all_table_docs = docling_tables + ocr_tables
+    
+    # 표가 있는 페이지 목록 업데이트
+    actual_table_pages = set()
+    for doc in all_table_docs:
+        page_num = doc.metadata.get("page")
+        if page_num:
+            actual_table_pages.add(page_num)
+    
+    # 표 Document들을 페이지별로 정렬 후 병합 처리
+    all_table_docs.sort(key=lambda x: (x.metadata.get("page", 0), x.metadata.get("row_index", 0)))
+    merged_table_docs = merge_table_chunks(all_table_docs)
+    documents.extend(merged_table_docs)
+    
+    # 표 페이지의 인접 페이지도 제외 (기존 로직 유지하되 실제 표 페이지 기준)
+    extended_table_pages = actual_table_pages | {p + 1 for p in actual_table_pages}
 
-        combined = page_text
-
-        # 4-1) OCR 성공 이미지 텍스트
+    # === 5단계: 본문 + 이미지 처리 (기존 로직 유지) ===
+    for page_num, page_text in pdf_texts.items():
+        if page_num in extended_table_pages or not page_text.strip():
+            continue
+            
+        combined = page_text.strip()
+        page_images = []
+        
+        # 이미지 OCR 성공분 추가
         if page_num in image_ocr_texts:
             combined += "\n\n" + "\n".join(image_ocr_texts[page_num])
+        
+        # 이미지 경로 수집
+        if page_num in image_paths:
+            page_images = image_paths[page_num]
 
-        # 4-2) OCR 실패 이미지 → 문맥 캡션
-        fail_imgs = [
-            img
-            for img in images_info
-            if img["page"] == page_num and page_num not in image_ocr_texts
-        ]
-        if fail_imgs:
-            for img in fail_imgs:
-                cap = create_image_caption_from_context(page_text, img["index"], len(images_info))
-                combined += f"\n\n이 이미지 {img['index']+1}: {cap}"
-
-        # 4-3) 단락 분할
+        # 단락 분할
         for para in re.split(r"\n\s*\n", combined):
-            para = para.strip()
-            if len(para) < 10:
+            p = para.strip()
+            if len(p) < 10:
                 continue
+            
+            metadata = {
+                "source": file_name,
+                "page": page_num,
+                "loaded_at": datetime.now().isoformat(),
+            }
+            
+            if page_images:
+                metadata["images"] = page_images
+                metadata["has_images"] = True
+                
             documents.append(
-                Document(
-                    page_content=para,
-                    metadata={
-                        "source": file_name,
-                        "page": page_num,
-                        "element_type": "text",
-                        "loaded_at": datetime.now().isoformat(),
-                    },
-                )
+                Document(page_content=p, metadata=metadata)
             )
 
     return documents
@@ -787,52 +836,53 @@ async def index_chunks_to_elasticsearch(
 
     async def process_batch(batch_chunks_input, batch_num_for_log):
         nonlocal success_count, failure_count
+
         valid_chunks_in_batch = [
-            chk
-            for chk in batch_chunks_input
-            if chk.page_content and chk.page_content.strip()
+            chk for chk in batch_chunks_input if chk.page_content and chk.page_content.strip()
         ]
         if not valid_chunks_in_batch:
             return
+
         chunk_texts_for_embedding = [chk.page_content for chk in valid_chunks_in_batch]
         try:
-            embeddings = await asyncio.to_thread(
-                embedding_function, chunk_texts_for_embedding
-            )
+            embeddings = await asyncio.to_thread(embedding_function, chunk_texts_for_embedding)
             actions_for_bulk = []
+
+            # ── 핵심 패치: **element_type 기준으로 인덱스 라우팅** ──
             for i, chunk_doc in enumerate(valid_chunks_in_batch):
-                page_number_to_index = chunk_doc.metadata.get("page")
-                if (
-                    page_number_to_index is None
-                ):  # load_document에서 page를 못가져온 경우
-                    print(
-                        f"CRITICAL WARNING (index_chunks): Chunk (source: {chunk_doc.metadata.get('source', 'N/A')}, chunk_id: {chunk_doc.metadata.get('chunk_id', 'N/A')}) 에서 'page' 메타데이터를 찾을 수 없음! 기본값 1 사용."
-                    )
-                    page_number_to_index = 1
+                idx_name = _route_index(chunk_doc.metadata.get("element_type", "text"))
+                page_number_to_index = chunk_doc.metadata.get("page") or 1
 
                 source_filename = chunk_doc.metadata.get("source", "unknown_source")
-                chunk_id_val = chunk_doc.metadata.get(
-                    "chunk_id", f"batch{batch_num_for_log}_{i}"
-                )
-                es_doc_id = f"{source_filename.replace('.', '_')}_{page_number_to_index}_{chunk_id_val}"
+                chunk_id_val    = chunk_doc.metadata.get("chunk_id", f"batch{batch_num_for_log}_{i}")
+                es_doc_id       = f"{source_filename.replace('.', '_')}_{page_number_to_index}_{chunk_id_val}"
+
                 es_source_doc = {
-                    "text": chunk_doc.page_content,
-                    "embedding": embeddings[i],
-                    "source": source_filename,
-                    "page": int(page_number_to_index),
-                    "category": category,
-                    "chunk_id": chunk_id_val,
+                    "text":        chunk_doc.page_content,
+                    "embedding":   embeddings[i],
+                    "source":      source_filename,
+                    "page":        int(page_number_to_index),
+                    "category":    category,
+                    "chunk_id":    chunk_id_val,
                     "total_chunks": chunk_doc.metadata.get("total_chunks", len(chunks)),
-                    "indexed_at": datetime.now().isoformat(),
+                    "indexed_at":  datetime.now().isoformat(),
                     "element_type": chunk_doc.metadata.get("element_type", "text"),
+                    # 표 파싱 실패 시 원문을 row_text 에 그대로 둠
+                    "row_text":   chunk_doc.metadata.get("row_text"),
+                    # 이미지 메타
+                    "images":     chunk_doc.metadata.get("images", []),
+                    "has_images": chunk_doc.metadata.get("has_images", False),
                 }
+
                 actions_for_bulk.append(
                     {
-                        "_index": ES_INDEX_NAME,
-                        "_id": es_doc_id,
+                        "_index": idx_name,          # ← ★★ ES_INDEX_NAME 대신 idx_name
+                        "_id":    es_doc_id,
                         "_source": es_source_doc,
                     }
                 )
+            # ────────────────────────────────────────────────────
+
             if actions_for_bulk:
                 success_num, failed_items = await asyncio.to_thread(
                     bulk,
@@ -846,9 +896,8 @@ async def index_chunks_to_elasticsearch(
                 success_count += success_num
                 if failed_items:
                     failure_count += len(failed_items)
-                    print(
-                        f"배치 {batch_num_for_log} 처리 중 {len(failed_items)}개 문서 인덱싱 실패."
-                    )
+                    print(f"배치 {batch_num_for_log} 처리 중 {len(failed_items)}개 문서 인덱싱 실패.")
+
         except Exception as e_batch:
             print(f"배치 {batch_num_for_log} 처리 중 예외 발생: {e_batch}")
             failure_count += len(valid_chunks_in_batch)
@@ -859,9 +908,7 @@ async def index_chunks_to_elasticsearch(
         for i in range(0, len(chunks), batch_size)
     ]
     await asyncio.gather(*tasks)
-    print(
-        f"인덱싱 완료: 총 {len(chunks)} 청크 중 {success_count}개 성공, {failure_count}개 실패"
-    )
+    print(f"인덱싱 완료: 총 {len(chunks)} 청크 중 {success_count}개 성공, {failure_count}개 실패")
     return success_count > 0
 
 
@@ -934,14 +981,15 @@ def format_file_size(size_in_bytes):
         size_in_bytes /= 1024.0
     return f"{size_in_bytes:.2f} TB"
 
-
 async def process_and_index_file(
-    es_client,
+    es_client: Elasticsearch,
     embedding_function,
     uploaded_file_path: str,
     category: str,
-    *,                       # 키워드 전용
-    reindex: bool = False    # reindex=True → 사본 만들지 않음
+    shared_llm_model=None,      # ← 추가
+    shared_tokenizer=None,      # ← 추가
+    *,                          # 키워드 전용
+    reindex: bool = False       # reindex=True → 사본 만들지 않음
 ) -> bool:
     """
     · reindex=True  → uploads 내부 파일을 그대로 사용
@@ -980,13 +1028,14 @@ async def process_and_index_file(
 
     # ── 2) 문서 로드 · 청킹 ────────────────────────────────────
     ext = saved_path.suffix.lower()
-    documents: List = await load_document(str(saved_path), ext)
+    documents: List = await load_document(str(saved_path), ext, shared_llm_model, shared_tokenizer)
     if not documents:
         print(f"[!] 문서 로드 실패: {saved_path.name}")
         return False
 
     for doc in documents:
-        doc.metadata["source"]    = saved_path.name          # 파일명만 저장
+        clean_name = strip_uuid_prefix(saved_path.name)
+        doc.metadata["source"]    = clean_name        # 파일명만 저장
         doc.metadata["file_hash"] = file_hash
 
     # ── 3) ES 인덱싱 ─────────────────────────────────────────
@@ -996,9 +1045,11 @@ async def process_and_index_file(
 
     if not success:
         print(f"[!] 인덱싱 실패: {saved_path.name}")
-
-    # (DOCX 변환·임시 파일 로직은 제거했으므로 clean-up 불필요)
     return success
+
+import uuid, re, markdown, pandas as pd
+from io import StringIO
+from langchain.schema import Document   # 쓰고 계신 Document 모델에 맞게 import
 
 async def markdown_to_row_chunks(
     md: str,
@@ -1008,10 +1059,24 @@ async def markdown_to_row_chunks(
     tokenizer=None,
 ) -> list[Document]:
     """
-    마크다운 표 → 행 단위 Document 리스트.
-    헤더명을 각 셀 앞에 붙여 문맥을 살린다.
+    마크다운 표 ➜ 행 단위 Document 리스트.
+    - table_id / row_index / n_rows  메타 추가
+    - <caption> 또는 “표 3.” 형태 캡션을 찾아서 metadata["caption"] 에 저장
     """
-    # 1) md ➜ HTML ➜ DataFrame
+    # ── 0) 캡션 추출 ───────────────────────────────────
+    md = clean_html_tags(md)
+    caption = None
+    # ① HTML <caption> 태그
+    m = re.search(r'<caption[^>]*>(.*?)</caption>', md, re.S | re.I)
+    if m:
+        caption = re.sub(r'<[^>]+>', '', m.group(1)).strip()
+    # ② "표 1." · "Table 2." 같은 문장
+    if not caption:
+        m = re.match(r'^\s*(표|Table)\s*\d+[^|]*$', md.strip().splitlines()[0])
+        if m:
+            caption = m.group(0).strip()
+
+    # ── 1) md → HTML → DataFrame ─────────────────────
     html = markdown.markdown(md, extensions=["tables"])
     dfs  = pd.read_html(StringIO(html))
     if not dfs:
@@ -1019,13 +1084,16 @@ async def markdown_to_row_chunks(
 
     df = dfs[0].fillna("")
     headers = list(df.columns)
+    n_rows  = len(df)
+    tid     = uuid.uuid4().hex[:8]              # ★ table_id 한 번만 생성
 
     docs = []
     for ridx, row in df.iterrows():
+        # ── 셀 문맥 살리기 ────────────────────────────
         cells = [f"{h}: {row[h]}" for h in headers]
         raw_row_text = " | ".join(cells)
 
-        # ── ② Qwen로 한 줄 요약(선택) ───────────────────
+        # ── ② 한 줄 요약 (선택) ─────────────────────
         one_liner = None
         if llm_model and tokenizer:
             try:
@@ -1043,8 +1111,11 @@ async def markdown_to_row_chunks(
                 metadata={
                     "source": file_path,
                     "page": page,
-                    "element_type": "table",
+                    "element_type": "table_row",
+                    "table_id": tid,       # ★ 같은 표라면 행마다 동일
                     "row_index": ridx,
+                    "n_rows": n_rows,
+                    **({"caption": caption} if caption else {}),
                 },
             )
         )
@@ -1066,7 +1137,7 @@ async def summarize_row_one_liner(text, llm_model, tokenizer):
             **inputs,
             max_new_tokens=60,
             temperature=0.2,
-            do_sample=False,
+            do_sample=True,
             eos_token_id=tokenizer.eos_token_id,
             pad_token_id=tokenizer.eos_token_id,
         )
@@ -1074,3 +1145,107 @@ async def summarize_row_one_liner(text, llm_model, tokenizer):
         out[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True
     )
     return summary.strip().replace("\n", " ")[:80]
+
+UUID_PREFIX = re.compile(
+    r'(?:(?:[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}'
+    r'|[0-9a-fA-F]{32}'
+    r'|[0-9a-fA-F]{12})[_-]?)+',
+    re.I
+)
+
+def strip_uuid_prefix(filename: str) -> str:
+    """파일명에서 UUID/해시 접두어('_' 또는 '-')를 모두 제거"""
+    return UUID_PREFIX.sub('', os.path.basename(filename))
+
+def clean_html_tags(text: str) -> str:
+    """HTML 태그 제거 및 테이블 정리"""
+    if not text:
+        return text
+    
+    # 1. HTML 태그 완전 제거
+    import re
+    text = re.sub(r'<[^>]+>', '', text)
+    
+    # 2. 연속된 공백/줄바꿈 정리
+    text = re.sub(r'\s+', ' ', text)
+    
+    # 3. 앞뒤 공백 제거
+    return text.strip()
+
+def convert_office_to_pdf_sync(office_path: str, output_dir: str) -> Optional[str]:
+    """LibreOffice로 Office 파일을 PDF로 변환 (Excel, PowerPoint, Word 지원)"""
+    try:
+        file_ext = Path(office_path).suffix.lower()
+        file_stem = Path(office_path).stem
+        
+        print(f"Office 파일을 PDF로 변환 시도 (libreoffice): '{office_path}' -> '{output_dir}' 디렉토리로")
+        print(f"파일 형식: {file_ext}")
+        
+        # 출력 디렉토리 생성
+        os.makedirs(output_dir, exist_ok=True)
+        
+        command = [
+            "libreoffice",
+            "--headless",
+            "--convert-to",
+            "pdf",
+            "--outdir",
+            output_dir,
+            office_path,
+        ]
+        
+        env = os.environ.copy()
+        env["HOME"] = "/tmp"
+        
+        # 파일 형식에 따라 타임아웃 조정
+        timeout = 180 if file_ext in ['.pptx', '.ppt'] else 120  # PPT는 시간이 더 걸릴 수 있음
+        
+        process = subprocess.run(
+            command, 
+            capture_output=True, 
+            text=True, 
+            check=False, 
+            timeout=timeout, 
+            env=env
+        )
+        
+        expected_pdf_filename = file_stem + ".pdf"
+        converted_pdf_path = os.path.join(output_dir, expected_pdf_filename)
+        
+        if process.returncode == 0 and os.path.exists(converted_pdf_path):
+            print(f"PDF 변환 성공 (libreoffice): '{converted_pdf_path}'")
+            return converted_pdf_path
+        else:
+            print(f"PDF 변환 실패 (libreoffice). Return code: {process.returncode}")
+            print(f"Stdout: {process.stdout.strip()}")
+            print(f"Stderr: {process.stderr.strip()}")
+            
+            # 실패한 PDF 파일이 있다면 삭제
+            if os.path.exists(converted_pdf_path):
+                try:
+                    os.remove(converted_pdf_path)
+                    print(f"실패한 PDF 파일 삭제: {converted_pdf_path}")
+                except Exception as e_rem:
+                    print(f"실패한 PDF 파일 삭제 중 오류: {e_rem}")
+            return None
+            
+    except FileNotFoundError:
+        print("PDF 변환 실패: 'libreoffice' 명령어를 찾을 수 없습니다. 서버에 libreoffice가 설치되어 있는지 확인하세요.")
+        return None
+    except subprocess.TimeoutExpired:
+        print(f"PDF 변환 시간 초과 (libreoffice): {office_path} (timeout: {timeout}초)")
+        return None
+    except Exception as e:
+        print(f"Office -> PDF 변환 중 예외 발생 (libreoffice, {office_path}): {e}")
+        traceback.print_exc()
+        return None
+
+
+async def convert_office_to_pdf(office_path: str, output_dir: str) -> Optional[str]:
+    """Office 파일을 PDF로 비동기 변환"""
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(
+        None, convert_office_to_pdf_sync, office_path, output_dir
+    )
+
+

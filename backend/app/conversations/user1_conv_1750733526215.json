@@ -1,0 +1,22 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1750733526215",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "오너비용 지급 기준 알려줘",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "sources": []
+    }
+  ],
+  "timestamp": "2025-06-24T11:52:25.971450"
+}

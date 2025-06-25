@@ -1,0 +1,22 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1750073014263",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "전력기술 관련 학력 및 학과목 설명좀",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "sources": []
+    }
+  ],
+  "timestamp": "2025-06-16T20:23:58.082352"
+}

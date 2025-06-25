@@ -1,0 +1,87 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1750257500337",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "자료전송 로그인하는 방법 알려줘!",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "자료전송 로그인하는 방법은 다음과 같습니다:\n\n1. 자료전송 도메인에 웹브라우저를 통해 접속합니다.\n2. 로그인 화면에서 사용자 아이디와 비밀번호를 입력합니다.\n3. 로그인 버튼을 클릭하여 로그인합니다.\n\n또한, 자료전송 시스템에 대한 인증서를 갱신하고 톰캣을 재가동하는 과정에서 자료전송 서버에 로그인하는 방법도 포함되어 있습니다. 이 경우, WinScp와 같은 전송 프로그램을 사용하여 자료전송 서버의 IP 및 포트 정보를 입력하고 로그인합니다. 이때, 인증서를 업로드하기 위해 WinScp를 사용하여 자료전송 서버에 접속합니다.\n\n참고 문서: [자료전송 시스템 SSL인증서 갱신 매뉴얼.pdf p.3] 및 [자료전송 시스템 SSL인증서 갱신 매뉴얼.pdf p.9]",
+      "sources": [
+        {
+          "path": "da293421-0cb8-43d1-af11-722e1f0ed9d4_자료전송 시스템 SSL인증서 갱신 매뉴얼.pdf",
+          "display_name": "자료전송 시스템 SSL인증서 갱신 매뉴얼.pdf",
+          "page": 1,
+          "chunk_id": "batch1_0",
+          "score": 43.5902012527302,
+          "is_cited": true
+        },
+        {
+          "path": "5716fd91-32f5-43bf-ae56-ee4cc3ce6c3e_중앙보훈병원_FAQ_관리_20260324.pdf",
+          "display_name": "중앙보훈병원_FAQ_관리_20260324.pdf",
+          "page": 4,
+          "chunk_id": "batch1_3",
+          "score": 37.14568733980345,
+          "is_cited": false
+        },
+        {
+          "path": "da293421-0cb8-43d1-af11-722e1f0ed9d4_자료전송 시스템 SSL인증서 갱신 매뉴얼.pdf",
+          "display_name": "자료전송 시스템 SSL인증서 갱신 매뉴얼.pdf",
+          "page": 3,
+          "chunk_id": "batch1_2",
+          "score": 33.80028898130931,
+          "is_cited": true
+        },
+        {
+          "path": "5716fd91-32f5-43bf-ae56-ee4cc3ce6c3e_중앙보훈병원_FAQ_관리_20260324.pdf",
+          "display_name": "중앙보훈병원_FAQ_관리_20260324.pdf",
+          "page": 5,
+          "chunk_id": "batch1_4",
+          "score": 33.762197163773465,
+          "is_cited": false
+        },
+        {
+          "path": "5716fd91-32f5-43bf-ae56-ee4cc3ce6c3e_중앙보훈병원_FAQ_관리_20260324.pdf",
+          "display_name": "중앙보훈병원_FAQ_관리_20260324.pdf",
+          "page": 2,
+          "chunk_id": "batch1_1",
+          "score": 33.13795374511336,
+          "is_cited": false
+        },
+        {
+          "path": "6d6cf919-e544-4cf5-a449-4f2d3e79c88b_한국저작권위원회 망연계 자료전송 관리자 매뉴얼.pdf",
+          "display_name": "한국저작권위원회 망연계 자료전송 관리자 매뉴얼.pdf",
+          "page": 31,
+          "chunk_id": "batch1_15",
+          "score": 23.051614644848687,
+          "is_cited": false
+        },
+        {
+          "path": "175fc05c-7809-48e0-9f94-2838cce236ad_(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "display_name": "(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "page": 124,
+          "chunk_id": "batch1_10",
+          "score": 22.450516246831032,
+          "is_cited": false
+        },
+        {
+          "path": "a8114fe3-c2f9-43db-815b-491ae621583d_제2024-05호 대한건설기계안전관리원 채용공고문 및 직무기술서.pdf",
+          "display_name": "제2024-05호 대한건설기계안전관리원 채용공고문 및 직무기술서.pdf",
+          "page": 7,
+          "chunk_id": "batch1_6",
+          "score": 21.122560601270365,
+          "is_cited": false
+        }
+      ]
+    }
+  ],
+  "timestamp": "2025-06-18T23:38:34.270226"
+}

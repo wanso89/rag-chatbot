@@ -18,7 +18,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from core.embeddings import get_embedding_function
 from core.elasticsearch import get_elasticsearch_client
 from utils.indexing_utils import (    
-    process_and_index_file, 
+    process_and_index_file,
     ES_INDEX_NAME, 
 )
 
@@ -50,7 +50,7 @@ async def reindex_all_files():
     es = get_elasticsearch_client()
     if not es:
         raise HTTPException(500, detail="Elasticsearch 연결 실패")
-
+    
     embed_fn = get_embedding_function()
 
     # 2. uploads 디렉터리 스캔
@@ -88,10 +88,8 @@ async def reindex_all_files():
                     category="메뉴얼",
                     reindex=True,          # ← 복사 금지
                 )
-                if ok:
-                    success += 1
-                else:
-                    failed  += 1
+                success += 1 if ok else 0
+                failed  += 0 if ok else 1
             except Exception as e:
                 failed += 1
                 logger.error(f"{fp.name} 처리 오류: {e}")

@@ -1,0 +1,22 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1750163808467",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "쓰리에스소프트 삿업번호가 뭐야?",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "sources": []
+    }
+  ],
+  "timestamp": "2025-06-17T21:36:55.617794"
+}

@@ -1,0 +1,22 @@
+{
+  "userId": "user1",
+  "conversationId": "1750729187388",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "NDT 유저가이드에서 결재기능 흐름 설명좀",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "sources": []
+    }
+  ],
+  "timestamp": "2025-06-24T10:40:29.783365"
+}

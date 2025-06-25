@@ -12,7 +12,7 @@ import traceback
 import numpy as np
 import logging
 import time
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 from pathlib import Path
 import asyncio
 import tempfile
@@ -26,6 +26,7 @@ import cv2
 from pdfminer.high_level import extract_text as pdfminer_extract_text
 from pdf2image import convert_from_path
 import paddleocr
+from paddleocr import PPStructure
 
 # 로깅 설정
 logger = logging.getLogger(__name__)
@@ -36,42 +37,72 @@ ocr_processing_logger.setLevel(logging.INFO)
 # file_handler = logging.handlers.RotatingFileHandler('ocr_process.log', maxBytes=1024*1024, backupCount=5)
 # file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 # ocr_processing_logger.addHandler(file_handler)
-
-# 전역 PaddleOCR 인스턴스 (초기화는 시간이 많이 걸리므로 싱글톤으로 유지)
-_paddle_ocr_instance = None
-
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'  # GPU 사용
 # PaddleOCR 로케일 설정 (한국어 + 영어)
-PADDLE_LANG = "korean"  # 한국어 지원, 영어도 함께 인식함
+
+_paddle_ocr_instance = None
+_paddle_structure_instance = None 
+PKG_DIR = Path(os.path.dirname(paddleocr.__file__)) 
+str(Path(os.path.dirname(paddleocr.__file__)) / 'ppocr/utils/dict/korean_dict.txt')
 
 def get_paddle_ocr():
-    """
-    PaddleOCR 인스턴스를 싱글톤 패턴으로 가져옵니다.
-    """
+    """기본 OCR 인스턴스"""
     global _paddle_ocr_instance
     if _paddle_ocr_instance is None:
         try:
             logger.info("PaddleOCR 인스턴스 초기화 중...")
-            # 한국어(+영어) 설정으로 PaddleOCR 초기화
-            # use_angle_cls: 기울어진 텍스트 감지
-            # lang: 언어 설정 (korean은 한국어/영어 모델 사용)
-            # use_gpu: 가능하면 GPU 사용
-            # show_log: 로깅 비활성화
             _paddle_ocr_instance = paddleocr.PaddleOCR(
-                use_angle_cls=True, 
-                lang=PADDLE_LANG,
-                use_gpu=True,
-                det_model_dir=None,  # 기본 모델 사용
-                rec_model_dir=None,  # 기본 모델 사용
-                cls_model_dir=None,  # 기본 모델 사용
-                show_log=False
+                det_model_dir='/root/.paddleocr/whl/det/ch/ch_PP-OCRv3_det_infer',
+                rec_model_dir='/root/.paddleocr/whl/rec/korean/korean_PP-OCRv3_rec_infer',    
+                cls_model_dir='/root/.paddleocr/whl/cls/ch_ppocr_mobile_v2.0_cls_infer',
+                use_angle_cls=True,          # ✅ 회전 텍스트 처리
+                lang='korean',               # ✅ 한국어 모델
+                use_gpu=False,               # ✅ GPU 사용
+                show_log=False,             # 🔧 로그 숨김
+                use_space_char=True,
+
+                # 🚀 높인 임계값 (기존 0.3 → 0.5)
+                det_db_thresh=0.6,          # 🔧 검출 임계값 (0.3→0.5)
+                det_db_box_thresh=0.6,      # 🔧 박스 임계값 (0.6→0.7)
+                rec_image_shape="3, 32, 640",  # ✅ 높이32, 너비32
+                rec_batch_num      = 16,   
             )
             logger.info("PaddleOCR 인스턴스 초기화 완료")
         except Exception as e:
             logger.error(f"PaddleOCR 초기화 오류: {e}")
-            traceback.print_exc()
-            # 실패 시 빈 인스턴스 반환 대신 예외 발생
             raise
     return _paddle_ocr_instance
+
+def get_paddle_structure():
+    global _paddle_structure_instance
+    if _paddle_structure_instance is None:
+        _paddle_structure_instance = PPStructure(
+            # ──────────────────────────────────────────────
+            # 1)  layout / table → 지원되는 'en' 로 고정
+            # ──────────────────────────────────────────────
+            lang='en',
+            layout=True, table=True, ocr=True,
+            use_gpu=False, show_log=False,
+
+            # ──────────────────────────────────────────────
+            # 2)  직접 받은 모델 경로들
+            # ──────────────────────────────────────────────
+            det_model_dir = '/root/.paddleocr/whl/det/ch/ch_PP-OCRv3_det_infer',
+            rec_model_dir = '/root/.paddleocr/whl/rec/korean/korean_PP-OCRv3_rec_infer',
+            cls_model_dir = '/root/.paddleocr/whl/cls/ch_ppocr_mobile_v2.0_cls_infer',
+
+            layout_model_dir = '/root/.paddleocr/whl/layout/picodet_lcnet_x1_0_fgd_layout_infer',
+            table_model_dir  = '/root/.paddleocr/whl/table/en_ppstructure_mobile_v2.0_SLANet_infer',
+
+            # ──────────────────────────────────────────────
+            # 3)  각 dict 경로를 명시적으로 맞춰 줌
+            #     - 레이아웃/테이블용
+            # ──────────────────────────────────────────────
+            table_char_dict_path = str(PKG_DIR / 'ppocr/utils/dict/table_structure_dict.txt'),
+            #     - 한글 OCR용
+            rec_char_dict_path   = str(PKG_DIR / 'ppocr/utils/dict/korean_dict.txt'),
+        )
+    return _paddle_structure_instance
 
 def get_paddle_ocr_version():
     """
@@ -323,99 +354,6 @@ async def extract_text_from_file(file_path: str, min_confidence: float = 0.5) ->
         traceback.print_exc()
         return None
 
-# 표 및 구조화된 데이터 추출 (향상된 표 감지 로직)
-async def detect_tables_in_image(image_path: str) -> List[Dict[str, Any]]:
-    """
-    이미지에서 표를 감지하고 구조화된 데이터로 변환합니다.
-    
-    Args:
-        image_path: 이미지 파일 경로
-        
-    Returns:
-        감지된 표 목록 (각 표는 행과 열로 구성된 딕셔너리)
-    """
-    try:
-        # 이미지 로드
-        image = cv2.imread(image_path)
-        if image is None:
-            raise ValueError(f"이미지를 로드할 수 없습니다: {image_path}")
-            
-        # 그레이스케일 변환
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        
-        # 노이즈 제거
-        blur = cv2.GaussianBlur(gray, (5, 5), 0)
-        
-        # 이미지 이진화
-        _, thresh = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
-        
-        # 수평 및 수직 선 감지
-        horizontal_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (40, 1))
-        vertical_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 40))
-        
-        horizontal_lines = cv2.erode(thresh, horizontal_kernel, iterations=3)
-        horizontal_lines = cv2.dilate(horizontal_lines, horizontal_kernel, iterations=3)
-        
-        vertical_lines = cv2.erode(thresh, vertical_kernel, iterations=3)
-        vertical_lines = cv2.dilate(vertical_lines, vertical_kernel, iterations=3)
-        
-        # 수평 및 수직 선 결합
-        table_mask = cv2.bitwise_or(horizontal_lines, vertical_lines)
-        
-        # 표 윤곽선 찾기
-        contours, _ = cv2.findContours(table_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        
-        # 결과 리스트
-        tables = []
-        
-        for contour in contours:
-            # 표 영역 추출
-            x, y, w, h = cv2.boundingRect(contour)
-            
-            # 너무 작은 영역은 무시
-            if w < 100 or h < 100:
-                continue
-                
-            # 표 영역 이미지 추출
-            table_roi = image[y:y+h, x:x+w]
-            
-            # PaddleOCR로 표 내용 추출
-            ocr = get_paddle_ocr()
-            result = ocr.ocr(table_roi, cls=True)
-            
-            # 추출된 텍스트 위치 기반으로 표 구조화
-            cells = []
-            if result:
-                for idx, line_result in enumerate(result[0]):
-                    if not line_result:
-                        continue
-                        
-                    for box, (text, confidence) in line_result:
-                        # 좌표는 상대적 위치이므로 절대 위치로 변환
-                        points = np.array(box)
-                        points[:, 0] += x
-                        points[:, 1] += y
-                        
-                        # 셀 정보 저장
-                        cells.append({
-                            "box": points.tolist(),
-                            "text": text,
-                            "confidence": confidence
-                        })
-            
-            # 표 정보 추가
-            tables.append({
-                "bbox": [x, y, x+w, y+h],
-                "cells": cells
-            })
-            
-        return tables
-        
-    except Exception as e:
-        logger.error(f"표 탐지 중 오류 발생: {e}")
-        traceback.print_exc()
-        return []
-
 # 텍스트 인식 향상을 위한 이미지 전처리 함수
 def preprocess_image_for_ocr(image_path: str) -> np.ndarray:
     """
@@ -453,16 +391,107 @@ def preprocess_image_for_ocr(image_path: str) -> np.ndarray:
     
     return enhanced_img
 
-# DOCX 문서에서 텍스트 추출 (future enhancement)
-async def extract_text_from_docx(docx_path: str) -> str:
-    """
-    DOCX 문서에서 텍스트를 추출합니다. 실패 시 OCR로 처리합니다.
+
+async def extract_images_from_pdf_with_layout(pdf_path: str, doc_id: str) -> Tuple[Dict[int, List[str]], Dict[int, List[str]]]:
+    """PDF 페이지별 이미지 저장 + PP-Structure 문서 파싱"""
     
-    Args:
-        docx_path: DOCX 파일 경로
+    # PDF → 이미지 변환
+    images = convert_from_path(pdf_path, dpi=200, thread_count=2)
+    print("DEBUG ▸ len(images) =", len(images))
+    
+    # 저장 디렉토리
+    img_dir = Path("app/static/document_images") / doc_id
+    img_dir.mkdir(parents=True, exist_ok=True)
+    
+    image_texts = {}
+    image_paths = {}
+    
+    # PP-Structure 인스턴스
+    structure = get_paddle_structure()
+    ocr = get_paddle_ocr()
+    
+    for page_num, page_image in enumerate(images, 1):
+        # 이미지 저장
+        img_name = f"page_{page_num}.png"
+        img_path = img_dir / img_name
+        page_image.save(img_path, 'PNG')
         
-    Returns:
-        추출된 텍스트
-    """
-    # 이 기능은 향후 확장을 위한 플레이스홀더입니다.
-    return None 
+        # PP-Structure 실행
+        import numpy as np
+        img_array = np.array(page_image)
+        layout_result = structure(img_array)
+        
+        # 텍스트 추출
+        page_texts = []
+        
+        for region in layout_result:
+            region_type = region.get('type', '')
+            
+            if region_type in ['text', 'title']:
+                # res가 리스트이므로 각 OCR 결과에서 텍스트 추출
+                res_list = region.get('res', [])
+                if isinstance(res_list, list):
+                    for ocr_item in res_list:
+                        if isinstance(ocr_item, dict):
+                            text = ocr_item.get('text', '').strip()
+                            if text:
+                                prefix = "[제목]" if region_type == 'title' else "[텍스트]"
+                                page_texts.append(f"{prefix} {text}")
+            
+            elif region_type == 'table':
+                # 테이블의 경우 html 키가 있는지 확인 후 처리
+                res_list = region.get('res', [])
+                if isinstance(res_list, list):
+                    for ocr_item in res_list:
+                        if isinstance(ocr_item, dict) and 'html' in ocr_item:
+                            html = ocr_item.get('html', '')
+                            if html:
+                                table_text = parse_table_html_to_text(html)
+                                page_texts.append(f"[테이블] {table_text}")
+                        elif isinstance(ocr_item, dict):
+                            # html이 없으면 일반 텍스트로 처리
+                            text = ocr_item.get('text', '').strip()
+                            if text:
+                                page_texts.append(f"[테이블텍스트] {text}")
+            
+            elif region_type == 'figure':
+                bbox = region.get('bbox', [])
+                page_texts.append(f"[이미지] 좌표: {bbox}")
+        
+        # PP-Structure 결과 없으면 일반 OCR
+        if not page_texts:
+            ocr_result = ocr.ocr(img_array, cls=True)
+            if ocr_result and ocr_result[0]:
+                for line in ocr_result[0]:
+                    if line and len(line) >= 2:
+                        text = line[1][0] if isinstance(line[1], (list, tuple)) else str(line[1])
+                        confidence = line[1][1] if isinstance(line[1], (list, tuple)) and len(line[1]) > 1 else 0.0
+                        
+                        if confidence > 0.6 and text.strip():
+                            page_texts.append(f"[OCR] {text.strip()}")
+        
+        # 결과 저장
+        image_texts[page_num] = page_texts
+        relative_path = f"document_images/{doc_id}/{img_name}"
+        image_paths[page_num] = [relative_path]
+    
+    return image_texts, image_paths
+
+
+def parse_table_html_to_text(html_content: str) -> str:
+    """HTML 테이블을 텍스트로 변환"""
+    from bs4 import BeautifulSoup
+    
+    soup = BeautifulSoup(html_content, 'html.parser')
+    table = soup.find('table')
+    
+    if not table:
+        return html_content
+    
+    rows = []
+    for tr in table.find_all('tr'):
+        cells = [td.get_text(strip=True) for td in tr.find_all(['td', 'th'])]
+        if cells:
+            rows.append(' | '.join(cells))
+    
+    return '\n'.join(rows)

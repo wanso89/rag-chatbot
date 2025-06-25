@@ -1,0 +1,71 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1750310409761",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "아버지 회갑인데 지원금이 얼마야",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "아버지의 회갑에 대한 지원금은 [df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf p.22]에서 확인할 수 있습니다. 회갑일에 대한 지원금은 다음과 같습니다:\n\n- 직원의 회갑일에 대한 지원금은 [사내규정모음집20100129_개정.pdf p.22]에 따르면, 직원의 직위에 따라 다음과 같이 지급됩니다:\n\n  - 차,부장: 25,000원\n  - 과장: 20,000원\n  - 대리: 15,000원\n  - 사원: 10,000원\n\n따라서 아버님의 직위에 따라 해당 금액이 지급됩니다.",
+      "sources": [
+        {
+          "path": "dec6453bad36_df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "display_name": "df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "page": 22,
+          "chunk_id": "batch1_10",
+          "score": 31.95490545652204,
+          "is_cited": true
+        },
+        {
+          "path": "dec6453bad36_df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "display_name": "df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "page": 38,
+          "chunk_id": "batch1_12",
+          "score": 26.823077926738137,
+          "is_cited": true
+        },
+        {
+          "path": "dec6453bad36_df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "display_name": "df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "page": 8,
+          "chunk_id": "batch1_5",
+          "score": 26.106041458150013,
+          "is_cited": true
+        },
+        {
+          "path": "dec6453bad36_df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "display_name": "df0f7b4a-484b-4998-8579-918ff6da90c1_사내규정모음집20100129_개정.pdf",
+          "page": 37,
+          "chunk_id": "batch1_11",
+          "score": 25.95590242538043,
+          "is_cited": true
+        },
+        {
+          "path": "a8114fe3-c2f9-43db-815b-491ae621583d_제2024-05호 대한건설기계안전관리원 채용공고문 및 직무기술서.pdf",
+          "display_name": "제2024-05호 대한건설기계안전관리원 채용공고문 및 직무기술서.pdf",
+          "page": 7,
+          "chunk_id": "batch1_6",
+          "score": 23.310802687363857,
+          "is_cited": false
+        },
+        {
+          "path": "6ca1b5c8-915b-46a2-89f4-174a0d34f120_20220408_장애결과보고_VDI_한국전자인증.pdf",
+          "display_name": "20220408_장애결과보고_VDI_한국전자인증.pdf",
+          "page": 1,
+          "chunk_id": "batch1_0",
+          "score": 21.620339471180067,
+          "is_cited": false
+        }
+      ]
+    }
+  ],
+  "timestamp": "2025-06-19T14:20:37.641558"
+}

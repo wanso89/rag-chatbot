@@ -1,0 +1,55 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1750315696955",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "2025년 6월 16일 ip현항 알려줘",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "제공된 문서에서는 2025년 6월 16일에 대한 정보가 없습니다. 따라서 \"제공된 문서에서 관련 정보를 찾을 수 없습니다.\"라고 답변해야 합니다.",
+      "sources": [
+        {
+          "path": "f5a37c6efcee_b73ce06a-9010-443f-8145-97a70438d9f6_B-1001_취업규칙_20230109.pdf",
+          "display_name": "b73ce06a-9010-443f-8145-97a70438d9f6_B-1001_취업규칙_20230109.pdf",
+          "page": 27,
+          "chunk_id": "batch1_21",
+          "score": 50.596069776896734,
+          "is_cited": false
+        },
+        {
+          "path": "f5a37c6efcee_b73ce06a-9010-443f-8145-97a70438d9f6_B-1001_취업규칙_20230109.pdf",
+          "display_name": "b73ce06a-9010-443f-8145-97a70438d9f6_B-1001_취업규칙_20230109.pdf",
+          "page": 28,
+          "chunk_id": "batch1_22",
+          "score": 44.46523285276548,
+          "is_cited": false
+        },
+        {
+          "path": "a8114fe3-c2f9-43db-815b-491ae621583d_제2024-05호 대한건설기계안전관리원 채용공고문 및 직무기술서.pdf",
+          "display_name": "제2024-05호 대한건설기계안전관리원 채용공고문 및 직무기술서.pdf",
+          "page": 7,
+          "chunk_id": "batch1_6",
+          "score": 41.78325136159898,
+          "is_cited": false
+        },
+        {
+          "path": "f5a37c6efcee_b73ce06a-9010-443f-8145-97a70438d9f6_B-1001_취업규칙_20230109.pdf",
+          "display_name": "b73ce06a-9010-443f-8145-97a70438d9f6_B-1001_취업규칙_20230109.pdf",
+          "page": 23,
+          "chunk_id": "batch1_20",
+          "score": 42.60161690046105,
+          "is_cited": false
+        }
+      ]
+    }
+  ],
+  "timestamp": "2025-06-19T15:48:30.527302"
+}

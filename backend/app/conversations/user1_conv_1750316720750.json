@@ -1,0 +1,22 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1750316720750",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "3S소프트 회사소개 중 주요 고객사 이미지로 띄워줘",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "sources": []
+    }
+  ],
+  "timestamp": "2025-06-19T16:10:09.221457"
+}

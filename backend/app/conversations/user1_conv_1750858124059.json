@@ -1,0 +1,103 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1750858124059",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "자녀출산시 휴가",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "[B-1001_취업규칙_20230109.pdf p.38]에 따르면, 자녀 출산을 이유로 휴가를 청구하는 경우 회사는 첫째, 둘째 자녀에 대해서 3일의 유급휴가를 부여합니다.",
+      "sources": [
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 8,
+          "chunk_id": "batch1_6",
+          "score": 52.909401865150386,
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 27,
+          "chunk_id": "batch1_25",
+          "score": 50.54355881376078,
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 38,
+          "chunk_id": "batch1_36",
+          "score": 46.92852756459546,
+          "is_cited": true
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 29,
+          "chunk_id": "batch1_27",
+          "score": 46.156281189711535,
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 26,
+          "chunk_id": "batch1_24",
+          "score": 22.13932936336557,
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 37,
+          "chunk_id": "batch1_35",
+          "score": 18.69390320960851,
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 6,
+          "chunk_id": "batch1_4",
+          "score": 18.333845170840927,
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 22,
+          "chunk_id": "batch1_20",
+          "score": 16.606610291410597,
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 3,
+          "chunk_id": "batch1_1",
+          "score": 15.475052381530043,
+          "is_cited": false
+        },
+        {
+          "path": "제2024-05호 대한건설기계안전관리원 채용공고문 및 직무기술서.pdf",
+          "display_name": "제2024-05호 대한건설기계안전관리원 채용공고문 및 직무기술서.pdf",
+          "page": 5,
+          "chunk_id": "batch1_4",
+          "score": 14.831649828954243,
+          "is_cited": false
+        }
+      ]
+    }
+  ],
+  "timestamp": "2025-06-25T22:28:51.263005"
+}

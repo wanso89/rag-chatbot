@@ -41,13 +41,16 @@ cd "$BACKEND_DIR"
 
 # 5. 서버 시작 (parents + child 둘 다 같은 PGID로)
 echo "새 서버 프로세스 시작…"
-# setsid로 새로운 프로세스그룹 생성 → PGID = PID
-nohup setsid python -m uvicorn app.main:app \
-        --reload --host 0.0.0.0 --port 8000 \
-        --log-level debug 2>&1 \
-    | stdbuf -oL grep -Ev 'FatalError: .*Termination signal|leaked semaphore objects' \
-    >> "$LOG_FILE" &
-NEW_PID=$!
+setsid -f bash -c '
+  exec python -m uvicorn app.main:app \
+    --reload \
+    --host 0.0.0.0 --port 8000 \
+    --log-level debug \
+    --reload-dir app \
+    --reload-exclude ../logs
+' >> "$LOG_FILE" 2>&1 &
+NEW_PID=$!           # = PGID 리더
+echo "$NEW_PID" > "$PID_FILE"
 
 echo "$NEW_PID" > "$PID_FILE"
 echo "새 서버 시작됨 (PGID: $NEW_PID)"

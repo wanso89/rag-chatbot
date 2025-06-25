@@ -6,6 +6,7 @@ import time
 import json
 import traceback
 import difflib  # 유사도 비교를 위한 표준 라이브러리
+import glob
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # CUDA 메모리 관리 환경 변수 설정
@@ -33,6 +34,17 @@ from app.utils.search_enhancer import EnhancedSearchPipeline
 from app.utils.feedback_analyzer import FeedbackAnalyzer
 # 파일 관리 모듈 import
 from app.utils.file_manager import delete_indexed_file
+from app.utils.indexing_utils import strip_uuid_prefix
+# 문서 출처 및 하이라이트
+from app.utils.source_preview_utils import (
+    extract_keywords_from_query,
+    extract_keywords_from_content, 
+    apply_highlighting,
+    format_source_metadata,
+    enhance_content_with_answer_context
+)
+#llm 호출
+from app.utils.model_loader import get_llm_model_and_tokenizer
 #분리 모듈 import
 from app.core.elasticsearch import get_elasticsearch_client
 from app.core.embeddings import get_embedding_function
@@ -81,6 +93,16 @@ os.makedirs(IMAGE_DIR, exist_ok=True)
 
 
 
+def check_paddle_gpu():
+    try:
+        import paddle
+        print(f"PaddlePaddle GPU 사용 가능: {paddle.is_compiled_with_cuda()}")
+        print(f"현재 디바이스: {paddle.get_device()}")
+    except:
+        print("PaddlePaddle 확인 불가")
+
+# 함수 호출해서 확인
+check_paddle_gpu()
 
 
 # 질문 요청 모델
@@ -105,75 +127,7 @@ app.add_middleware(
 # 정적 파일 서빙 설정
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
-def get_llm_model_and_tokenizer():
-    print("Loading LLM model and tokenizer...")
-    try:
-        torch.cuda.empty_cache()  # 메모리 정리
 
-        # 토크나이저 로드 최적화: 병렬 처리 옵션 활성화
-        tokenizer = AutoTokenizer.from_pretrained(
-            LLM_MODEL_NAME,
-            use_fast=True,  # 빠른 토크나이저 사용
-            padding_side="left",  # 왼쪽 패딩 (생성 모델에 적합)
-            use_auth_token=None,  # 인증 토큰 불필요 시 명시적으로 None
-            trust_remote_code=True,  # 원격 코드 신뢰 (일부 모델에 필요)
-        )
-
-        # 특수 토큰 설정
-        if tokenizer.pad_token is None:
-            tokenizer.pad_token = tokenizer.eos_token
-
-        # Qwen2.5 모델에 최적화된 양자화 설정
-        quantization_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_compute_dtype=torch.bfloat16,  # float16 -> bfloat16로 변경 (Qwen 최적화)
-            bnb_4bit_quant_type="nf4",
-            bnb_4bit_use_double_quant=True,
-            llm_int8_enable_fp32_cpu_offload=False  # A6000 환경에서는 비활성화하는 것이 더 효율적
-        )
-
-        # 모델 로드 최적화 설정
-        model_kwargs = {
-            "quantization_config": quantization_config,
-            "torch_dtype": torch.bfloat16,  # float16 -> bfloat16로 변경 (Qwen 최적화)
-            "device_map": "auto",  # 자동 장치 맵핑
-            "revision": "main",
-            "low_cpu_mem_usage": True,  # 낮은 CPU 메모리 사용
-            "attn_implementation": "flash_attention_2",  # Flash Attention 2 사용 (지원 시)
-            "use_cache": True,  # KV 캐시 활성화
-            "trust_remote_code": True,  # 원격 코드 신뢰
-        }
-
-        # 모델 로드 시도
-        try:
-            # 먼저 Flash Attention으로 로드 시도
-            model = AutoModelForCausalLM.from_pretrained(
-                LLM_MODEL_NAME,
-                **model_kwargs
-            )
-            print("LLM model loaded successfully with Flash Attention.")
-        except Exception as flash_att_error:
-            print(f"Flash Attention 로드 실패, 표준 방식으로 재시도: {flash_att_error}")
-            # Flash Attention 실패 시 일반 방식으로 로드
-            model_kwargs.pop("attn_implementation", None)
-            model = AutoModelForCausalLM.from_pretrained(
-                LLM_MODEL_NAME,
-                **model_kwargs
-            )
-            print("LLM model loaded successfully with standard attention.")
-
-        # 모델 최적화 설정 (추론 전용)
-        model.eval()  # 평가 모드 설정
-
-        # 모델 메모리 사용 정보 출력 (옵션)
-        if torch.cuda.is_available():
-            print(f"GPU 메모리 사용량: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
-
-        return model, tokenizer
-    except Exception as e:
-        print(f"LLM 모델 또는 토크나이저 로딩 중 오류 발생: {e}")
-        traceback.print_exc()
-        return None, None
 
 
 def get_reranker_model():
@@ -501,18 +455,8 @@ async def search_and_combine(
             chunk_text = " ".join(chunk_text.split())
 
             # 파일명에서 UUID 제거 (UUID_파일명.확장자 형식 가정)
-            clean_filename = os.path.basename(source_path)
-            # UUID_ 패턴 감지 (UUID는 일반적으로 8-4-4-4-12 형식의 16진수 문자)
-            if '_' in clean_filename:
-                uuid_parts = clean_filename.split('_', 1)
-                if len(uuid_parts) > 1 and len(uuid_parts[0]) >= 8:  # UUID로 추정되는 부분이 있으면 제거
-                    clean_filename = uuid_parts[1]
-
-            if page_num and page_num > 1:
-                source_label = f"[{clean_filename} p.{page_num}]"
-            else:
-                source_label = f"[{clean_filename}]"
-            
+            clean_filename = strip_uuid_prefix(source_path)
+            source_label = f"[{clean_filename} p.{page_num}]" if page_num > 1 else f"[{clean_filename}]"
             context_chunks.append(f"{source_label} {chunk_text}")
             source_metadata.append({
                         "path": source_path,
@@ -543,7 +487,7 @@ async def search_and_combine(
                 **inputs,
                 max_new_tokens=1024,
                 temperature=0.1,
-                do_sample=False,
+                do_sample=True,
                 eos_token_id=tokenizer.eos_token_id, #토큰으로 끝나면 자동종료
                 pad_token_id=tokenizer.eos_token_id
             )
@@ -726,6 +670,7 @@ embedding_function = get_embedding_function()
 llm_model, tokenizer = get_llm_model_and_tokenizer()
 reranker_model = get_reranker_model()
 sqlcoder_model, sqlcoder_tokenizer = get_sqlcoder_model()
+
 
 
 class FeedbackRequest(BaseModel):
@@ -939,260 +884,55 @@ class SourcePreviewRequest(BaseModel):
 @app.post("/api/source-preview")
 async def source_preview_endpoint(request: SourcePreviewRequest = Body(...)):
     try:
-        # 요청 데이터 유효성 검사
+        # 요청 검증
         if not request.path:
-            print(f"소스 프리뷰 오류: 경로 필드가 비어있습니다")
             return {
                 "status": "error",
                 "message": "요청에 파일 경로가 없습니다",
                 "content": None,
             }
-            
-        print(
-            f"Source preview 요청: path={request.path}, page={request.page}, chunk_id={request.chunk_id}"
-        )
-
-        # ES 클라이언트 확인
-        if not es_client:
-            print("소스 프리뷰 오류: Elasticsearch 클라이언트가 초기화되지 않았습니다")
-            return {
-                "status": "error",
-                "message": "검색 서비스를 사용할 수 없습니다. 관리자에게 문의하세요.",
-                "content": None,
-            }
-
-        # 먼저 해당 파일이 인덱스에 존재하는지 검증
-        file_exists_query = {
-            "size": 0,
-            "query": {
-                "term": {"source": request.path}
-            },
-            "aggs": {
-                "path_exists": {
-                    "value_count": {
-                        "field": "source"
-                    }
-                }
-            }
-        }
         
-        try:
-            # 먼저 파일 존재 여부를 확인
-            verify_response = es_client.search(index=ES_INDEX_NAME, body=file_exists_query)
-            doc_count = verify_response.get("aggregations", {}).get("path_exists", {}).get("value", 0)
+        # retriever 인스턴스 생성 (search_and_combine과 동일한 방식)
+        retriever = ElasticsearchRetriever(
+            es_client=es_client,
+            index_name=ES_INDEX_NAME,
+            embedding_function=embedding_function,
+            category="default",  # 또는 적절한 카테고리
+            k=5,
+            llm_model=llm_model,
+            tokenizer=tokenizer
+        )
+        
+        # 이제 retriever 호출 가능
+        result = await retriever.get_source_preview_document(
+            source_path=request.path,
+            page=request.page,
+            chunk_id=request.chunk_id,
+            original_query=getattr(request, 'answer_text', None),
+            keywords=getattr(request, 'keywords', [])
+        )
+        
+         # 성공한 경우에만 하이라이트 추가
+        if result.get("status") == "success" and result.get("content"):
+            # 키워드 추출
+            keywords = getattr(request, 'keywords', []) or []
+            if not keywords and hasattr(request, 'answer_text') and request.answer_text:
+                keywords = extract_keywords_from_query(request.answer_text)
             
-            if doc_count == 0:
-                print(f"파일이 인덱스에 존재하지 않음: {request.path}")
-                
-                # 파일 목록 조회 및 유사한 파일 찾기
-                indexed_files_resp = es_client.search(
-                    index=ES_INDEX_NAME, 
-                    body={"size": 0, "aggs": {"unique_files": {"terms": {"field": "source", "size": 30}}}}
+            # 하이라이트 적용
+            if keywords:
+                result["content"] = apply_highlighting(
+                    result["content"], 
+                    keywords, 
+                    getattr(request, 'answer_text', None)
                 )
-                
-                files = [bucket["key"] for bucket in indexed_files_resp.get("aggregations", {}).get("unique_files", {}).get("buckets", [])]
-                
-                # 비슷한 파일명 찾기 (간단한 유사도)
-                similar_files = []
-                if files:
-                    request_filename = request.path.split("_", 1)[1] if "_" in request.path else request.path
-                    for file in files:
-                        file_name = file.split("_", 1)[1] if "_" in file else file
-                        if any(part in file_name for part in request_filename.split("_") if len(part) > 3):
-                            similar_files.append(file)
-                
-                return {
-                    "status": "error",
-                    "message": f"요청한 문서를 찾을 수 없습니다.",
-                    "content": None,
-                    "debug_info": {
-                        "request_path": request.path,
-                        "indexed_files_count": len(files),
-                        "similar_files": similar_files[:3] if similar_files else []
-                    }
-                }
-        except Exception as e:
-            print(f"파일 존재 확인 중 오류: {e}")
-            # 오류가 발생하더라도 계속 진행
-            pass
-
-        # chunk_id 전처리 - 명시적 문자열 변환
-        chunk_id_query = str(request.chunk_id) if request.chunk_id is not None else ""
-
-        # 다양한 쿼리 시도 (우선순위에 따라)
-        search_attempts = []
-
-        # 1. source, page, chunk_id(문자열)로 검색 (1순위)
-        search_attempts.append({
-                "query": {
-                    "bool": {
-                        "must": [
-                            {"term": {"source": request.path}},
-                            {"term": {"page": request.page}},
-                            {"term": {"chunk_id": chunk_id_query}}
-                        ]
-                    }
-                }
-        })
-
-        # 2. source와 page로만 검색 (3순위)
-        search_attempts.append({
-                "query": {
-                    "bool": {
-                        "must": [
-                            {"term": {"source": request.path}},
-                            {"term": {"page": request.page}}
-                        ]
-                    }
-                },
-                "size": 1,
-                "sort": [{"chunk_id": "asc"}]  # 첫 번째 청크 선택
-        })
-
-        # 4. source_path만으로 검색 (4순위 - 마지막 시도)
-        search_attempts.append({
-            "query": {
-                "term": {"source": request.path}}
-            ,
-            "size": 1
-        })
+                result["keywords"] = keywords
         
-        # 시도 목록을 순회하며 검색 실행
-        doc = None
-        failed_attempts = []
-        
-        for i, query in enumerate(search_attempts):
-            try:
-                response = es_client.search(index=ES_INDEX_NAME, body=query)
-                hits = response.get("hits", {}).get("hits", [])
-                
-                if hits:
-                    doc = hits[0]
-                    print(f"검색 시도 {i+1}번째 성공: {hits[0].get('_id')}")
-                    break
-                else:
-                    print(f"검색 시도 {i+1}번째 실패")
-                    failed_attempts.append({"query": query, "error": "결과 없음"})
-            except Exception as query_error:
-                print(f"검색 시도 {i+1}번째 오류: {str(query_error)}")
-                failed_attempts.append({"query": query, "error": str(query_error)})
-        
-        # 문서를 찾지 못한 경우
-        if not doc:
-            error_msg = "요청한 문서를 인덱스에서 찾을 수 없습니다."
-            
-            # 디버깅 정보 로깅
-            print(f"소스 프리뷰 실패: {error_msg}")
-            print(f"요청 정보: path={request.path}, page={request.page}, chunk_id={request.chunk_id}")
-            print(f"모든 검색 시도 실패: {json.dumps(failed_attempts, ensure_ascii=False)}")
-            
-            # 비슷한 페이지나 청크 찾기 위한 쿼리
-            try:
-                similar_query = {
-                    "query": {
-                        "bool": {
-                            "must": [
-                                {"term": {"source": request.path}}
-                            ]
-                        }
-                    },
-                    "size": 1
-                }
-                
-                similar_response = es_client.search(index=ES_INDEX_NAME, body=similar_query)
-                similar_hits = similar_response.get("hits", {}).get("hits", [])
-                
-                if similar_hits:
-                    similar_doc = similar_hits[0]["_source"]
-                    similar_page = similar_doc.get("page")
-                    similar_chunk = similar_doc.get("chunk_id")
-                    
-                    suggestions = []
-                    if similar_page and similar_page != request.page:
-                        suggestions.append(f"페이지 {similar_page}에서 내용을 찾을 수 있습니다.")
-                    
-                    if suggestions:
-                        error_msg += f" {suggestions[0]}"
-            except Exception as e:
-                print(f"유사 문서 검색 중 오류: {e}")
-            
-            return {
-                "status": "error",
-                "message": error_msg,
-                "content": None,
-                "debug_info": {
-                    "request_params": {
-                        "path": request.path,
-                        "page": request.page,
-                        "chunk_id": request.chunk_id
-                    },
-                    "failed_attempts": failed_attempts
-                } if os.environ.get("DEBUG_MODE") == "true" else None
-            }
-        
-        # 이미지 경로 확인
-        image_path = doc["_source"].get("image_path")
-        if image_path:
-            print(f"이미지 경로 발견: {image_path}")
-            # 이미지 URL 구성
-            image_url = f"/static/document_images/{os.path.basename(image_path)}"
-            return {
-                "status": "success",
-                "message": "이미지 콘텐츠를 찾았습니다.",
-                "content_type": "image/jpeg",  # 기본값, 실제로는 확장자에 따라 달라질 수 있음
-                "image_url": image_url,
-            }
-        
-        # 텍스트 콘텐츠 가져오기
-        content = doc["_source"].get("text", "")
-        if not content:
-            return {
-                "status": "error",
-                "message": "문서 내용을 찾을 수 없습니다.",
-                "content": None,
-            }
-        
-        # 원본 콘텐츠 포맷팅
-        formatted_content = format_content(content)
-        
-        # 프론트엔드에서 전달한 키워드 또는 자동 추출
-        use_keywords = []
-        if request.keywords and isinstance(request.keywords, list):
-            use_keywords = request.keywords
-        else:
-            # 자동으로 키워드 추출
-            use_keywords = extract_keywords_from_text(formatted_content)
-        
-        # 하이라이트 적용 및 관련 문단 추출
-        highlighted_content, highlighted_keywords = highlight_keywords(
-            formatted_content, 
-            use_keywords,
-            request.answer_text  # 챗봇 응답 텍스트 전달
-        )
-        
-        # 결과 반환
-        return {
-            "status": "success",
-            "message": "문서 콘텐츠를 찾았습니다.",
-            "content": highlighted_content,
-            "original_content": formatted_content,
-            "keywords": highlighted_keywords,  # 하이라이트된 키워드
-            "source_metadata": {
-                "filename": os.path.basename(request.path),
-                "page": request.page,
-                "chunk_id": request.chunk_id,
-            },
-        }
+        return result
         
     except Exception as e:
-        print(f"문서 미리보기 처리 중 오류 발생: {e}")
-        traceback.print_exc()
-        return {
-            "status": "error",
-            "message": f"문서 미리보기 처리 중 오류가 발생했습니다: {str(e)}",
-            "content": None,
-            "error_details": str(e) if os.environ.get("DEBUG_MODE") == "true" else None
-        }
+        # 기존 에러 처리
+        return {"status": "error", "message": str(e), "content": None}
 
 
 @app.get("/api/indexed-files")
@@ -1337,39 +1077,25 @@ async def query_stats_endpoint(request: StatsQueryRequest = Body(...)):
         raise HTTPException(status_code=500, detail=f"통계 조회 중 오류 발생: {str(e)}")
 
 
-
-@app.get("/api/file-viewer/{filename}")
+UPLOAD_DIR = Path(STATIC_DIR) / "uploads" 
+@app.get("/api/file-viewer/{filename:path}")
 async def get_file_for_viewer(filename: str):
     # UUID가 포함된 전체 파일명을 사용한다고 가정
     # 보안: filename에 ../ 등이 포함되어 상위 디렉토리 접근 시도 방지
     if ".." in filename or filename.startswith("/"):
         raise HTTPException(status_code=400, detail="Invalid filename")
 
-    # 파일이 저장된 실제 경로 (main.py 기준 상대 경로 또는 절대 경로)
-    # /api/upload에서 저장한 경로와 동일해야 함
-    file_path = os.path.join(STATIC_DIR, "uploads", filename)
+    abs_path = UPLOAD_DIR / filename
+    if not abs_path.is_file():
+        # 2️⃣  실패하면 “UUID_*” 파일을 자동 탐색
+        pattern = str(UPLOAD_DIR / f"*_{filename}")
+        matches = glob.glob(pattern)
+        if not matches:
+            raise HTTPException(404, "File not found")
+        abs_path = Path(matches[0])                # 첫 번째 매칭 사용
 
-    print(f"File view request for: {filename}, Path: {file_path}")
-
-    if not os.path.exists(file_path) or not os.path.isfile(file_path):
-        print(f"File not found: {file_path}")
-        raise HTTPException(status_code=404, detail="File not found")
-
-    # 파일 타입(MIME) 추측
-    mime_type, _ = mimetypes.guess_type(file_path)
-    if mime_type is None:
-        mime_type = "application/octet-stream"  # 기본값
-
-    # Content-Disposition을 inline으로 설정하여 브라우저에서 바로 열도록 시도
-    # (브라우저 설정에 따라 다운로드될 수도 있음)
-    # 실제 파일명을 표시하려면 cleanFilename 로직을 여기서도 사용 가능
-    # clean_name = filename[filename.find('_')+1:] if '_' in filename else filename
-    # headers = {'Content-Disposition': f'inline; filename="{clean_name}"'}
-
-    # FileResponse 사용하여 파일 내용 반환
-    # return FileResponse(path=file_path, media_type=mime_type, headers=headers)
-    # 간단히 파일 내용만 반환 (브라우저가 타입에 맞게 처리)
-    return FileResponse(path=file_path, media_type=mime_type)
+    mime, _ = mimetypes.guess_type(abs_path)
+    return FileResponse(abs_path, media_type=mime or "application/octet-stream")
 
 
 # 파일 삭제 엔드포인트
@@ -2422,12 +2148,6 @@ def highlight_keywords(content, keywords, answer_text=None):
                         )
                     except Exception as e:
                         print(f"하이라이트 오류: {e}")
-                
-                # 관련성에 따라 다른 클래스 적용 (강한 관련성은 진한 노란색, 중간 관련성은 연한 노란색)
-                highlight_class = "highlight-strong" if direct_match else "highlight-medium"
-                
-                # HTML 태그로 감싸서 노란색 배경 적용
-                highlighted_paragraph = f'<span class="{highlight_class}">{highlighted_paragraph}</span>'
                 
                 highlighted_paragraphs.append(highlighted_paragraph)
                 relevant_paragraphs.append({

@@ -1,5 +1,5 @@
 # indexing_utils.py
-
+import uuid
 import subprocess
 import os, re, asyncio
 import hashlib  # 파일 중복 체크를 위한 해시 라이브러리 추가
@@ -17,7 +17,7 @@ from elasticsearch.helpers import bulk
 import traceback
 from datetime import datetime
 import logging
-
+from app.utils.image_utils import extract_images_from_pdf
 from .ocr_utils import (
         extract_text_from_file,
         extract_text_from_image,
@@ -111,79 +111,106 @@ async def convert_docx_to_pdf(docx_path: str, output_dir: str) -> Optional[str]:
 # PaddleOCR을 이용한 문서 로드 함수
 async def load_document_with_ocr(file_path: str) -> List[Document]:
     """
-    PaddleOCR 엔진을 사용하여 이미지 또는 PDF 파일에서 텍스트를 추출하고 Document 객체로 변환합니다.
-    
-    Args:
-        file_path: 파일 경로
-        
-    Returns:
-        Document 객체 리스트
+    이미지·PDF 파일을 PaddleOCR/텍스트 레이어 분석으로 읽어 Document 리스트를 만든다.
+
+    - PDF 는 텍스트 레이어 우선 추출 → 실패 시 OCR 로 대체
+    - PDF 내부 이미지를 추출해 모든 chunk 메타데이터에 image_paths 로 포함
+    - 이미지/기타 형식은 기존 PaddleOCR 흐름 유지
     """
     try:
         logger.info(f"PaddleOCR을 사용하여 파일 처리 중: {file_path}")
         file_extension = Path(file_path).suffix.lower()
-        
-        # 최소 신뢰도 설정 (0.0 ~ 1.0)
         min_confidence = 0.7
-        
-        # 파일 종류에 따라 적절한 OCR 함수 호출
-        if file_extension == '.pdf':
-            extracted_text = await extract_text_from_pdf_with_ocr(file_path, min_confidence)
-        elif file_extension in ['.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.tif', '.webp']:
+
+        # ---------------- PDF 전용 처리 ----------------
+        if file_extension == ".pdf":
+            # 1) 문서 단위 UUID (이미지 추출 폴더명)
+            doc_uuid = uuid.uuid4().hex
+
+            # 2-A) PDF 텍스트 레이어 우선 추출
+            #     (pdf_texts, layout_info) 튜플 반환한다고 가정
+            pdf_texts, layout_info = extract_pdf_text_fast(file_path)
+
+            # 2-B) 텍스트 레이어가 없으면 OCR 로 대체
+            if not pdf_texts:
+                logger.info("텍스트 레이어 없음 → PaddleOCR 수행")
+                pdf_texts = await extract_text_from_pdf_with_ocr(file_path, min_confidence)
+                layout_info = None
+
+            # 3) PDF 내부 이미지 추출
+            image_paths = extract_images_from_pdf(file_path, doc_uuid)
+
+            # 4) 하이브리드 Document 생성 (텍스트 + 레이아웃)
+            documents = await create_hybrid_documents(pdf_texts, layout_info, file_path)
+            for d in documents:
+                d.metadata.update({
+                    "image_paths": image_paths,
+                    "source": file_path,
+                    "loaded_at": datetime.now().isoformat(),
+                    "ocr_processed": True,
+                    "ocr_engine": "pdf_text_fast" if layout_info else "PaddleOCR"
+                })
+
+            logger.info(f"PaddleOCR 텍스트 추출 완료: {len(documents)} 페이지/섹션 생성")
+            return documents
+        # ------------------------------------------------
+
+        # ------------ 이미지 / 기타 포맷 공통 ------------
+        if file_extension in [
+            '.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.tif', '.webp'
+        ]:
             extracted_text = await extract_text_from_image(file_path, min_confidence)
         else:
             extracted_text = await extract_text_from_file(file_path, min_confidence)
-            
+
         if not extracted_text:
             logger.warning(f"PaddleOCR 텍스트 추출 실패: {file_path}")
             return []
-            
-        # 텍스트 정리
-        cleaned_text = re.sub(r'\s+', ' ', extracted_text).strip()
-        
-        # 추출된 텍스트로 Document 객체 생성
-        # 여러 페이지가 있으면 페이지마다 분리해서 Document 생성
-        documents = []
-        page_texts = re.split(r'---\s*페이지\s*(\d+)\s*---', cleaned_text)
-        
-        if len(page_texts) > 1:  # 페이지 구분자가 있는 경우
-            # 홀수 인덱스는 페이지 번호, 짝수 인덱스는 텍스트 내용
-            for i in range(1, len(page_texts), 2):
-                if i + 1 < len(page_texts):
-                    page_num = int(page_texts[i])
-                    page_content = page_texts[i + 1].strip()
-                    
-                    if page_content:
-                        documents.append(Document(
-                            page_content=page_content,
-                            metadata={
-                                "source": file_path,
-                                "page": page_num,
-                                "loaded_at": datetime.now().isoformat(),
-                                "ocr_processed": True,
-                                "ocr_engine": "PaddleOCR"
-                            }
-                        ))
-        else:  # 페이지 구분자가 없는 경우 (단일 페이지 처리)
-            if cleaned_text:
-                documents.append(Document(
-                    page_content=cleaned_text,
-                    metadata={
-                        "source": file_path,
-                        "page": 1,
-                        "loaded_at": datetime.now().isoformat(),
-                        "ocr_processed": True,
-                        "ocr_engine": "PaddleOCR"
-                    }
-                ))
-        
-        logger.info(f"PaddleOCR 텍스트 추출 완료: {len(documents)} 페이지/섹션 생성")
-        return documents
-        
+
+        return _make_documents_from_text(extracted_text, file_path)
+        # ------------------------------------------------
+
     except Exception as e:
         logger.error(f"PaddleOCR 문서 로드 중 오류 발생: {file_path}, 오류: {e}")
         traceback.print_exc()
         return []
+
+
+def _make_documents_from_text(text: str, file_path: str) -> List[Document]:
+    """페이지 구분자가 있는 일반 텍스트를 Document 로 변환"""
+    cleaned_text = re.sub(r'\s+', ' ', text).strip()
+    documents: List[Document] = []
+
+    page_texts = re.split(r'---\s*페이지\s*(\d+)\s*---', cleaned_text)
+    if len(page_texts) > 1:
+        for i in range(1, len(page_texts), 2):
+            if i + 1 < len(page_texts):
+                page_num = int(page_texts[i])
+                page_content = page_texts[i + 1].strip()
+                if page_content:
+                    documents.append(Document(
+                        page_content=page_content,
+                        metadata={
+                            "source": file_path,
+                            "page": page_num,
+                            "loaded_at": datetime.now().isoformat(),
+                            "ocr_processed": True,
+                            "ocr_engine": "PaddleOCR"
+                        }
+                    ))
+    else:
+        if cleaned_text:
+            documents.append(Document(
+                page_content=cleaned_text,
+                metadata={
+                    "source": file_path,
+                    "page": 1,
+                    "loaded_at": datetime.now().isoformat(),
+                    "ocr_processed": True,
+                    "ocr_engine": "PaddleOCR"
+                }
+            ))
+    return documents
 
 
 # --- 파일 내용을 읽어 Langchain Document 객체 리스트로 만드는 함수 (OCR 기능 추가) ---

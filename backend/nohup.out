@@ -2501,3 +2501,15 @@ INFO:     Stopping reloader process [3710544]
 start.sh: line 4: 3712987 Killed                  uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --log-level debug >> ./chatbot.log
 /root/.pyenv/versions/3.10.14/lib/python3.10/multiprocessing/resource_tracker.py:224: UserWarning: resource_tracker: There appear to be 13 leaked semaphore objects to clean up at shutdown
   warnings.warn('resource_tracker: There appear to be %d '
+Usage: python -m uvicorn [OPTIONS] APP
+Try 'python -m uvicorn --help' for help.
+
+Error: Got unexpected extra argument ( )
+Usage: python -m uvicorn [OPTIONS] APP
+Try 'python -m uvicorn --help' for help.
+
+Error: Got unexpected extra argument ( )
+Usage: python -m uvicorn [OPTIONS] APP
+Try 'python -m uvicorn --help' for help.
+
+Error: Got unexpected extra argument ( )

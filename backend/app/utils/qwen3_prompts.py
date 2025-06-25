@@ -33,7 +33,7 @@ def create_chat_messages(
 
 1. 반드시 한국어로만 답변하세요. 절대 중국어나 다른 언어를 사용하지 마세요.
 2. 답변은 반드시 제공된 '참고 문서' 섹션의 내용에 근거해야 합니다.
-3. 문서에 질문과 관련된 정보가 없다면, "제공된 문서에서 관련 정보를 찾을 수 없습니다."라고 명확히 답변하세요.
+3. 근거가 전혀 없을 경우 다음 한 문장만 그대로 출력할 것: 제공된 문서에서 관련 정보를 찾을 수 없습니다.
 4. 답변할 때는 반드시 구체적인 출처를 명시해주세요.
    예: "[취업규칙_test.pdf p.9]에 따르면..." 또는 "[네오오토_취업규칙.pdf]에서 확인할 수 있듯이..."
 5. "문서 1", "문서 2" 같은 표현은 절대 사용하지 마세요.
@@ -50,45 +50,35 @@ Reference Documents:
     
     return messages
 
-def create_query_optimization_prompt(query: str, category: str = None) -> str:
-    """
-    쿼리 최적화용 프롬프트 생성
-    
-    Args:
-        query: 원본 사용자 질문
-        category: 문서 카테고리
-        
-    Returns:
-        str: 쿼리 최적화 프롬프트
-    """
-    
-    category_info = f"카테고리: {category}" if category else "카테고리: 일반"
-    
-    return f"""<|im_start|>system
-당신은 검색 쿼리 최적화 전문가입니다.
-사용자의 자연어 질문을 효과적인 검색 쿼리로 변환해주세요.
 
-원칙:
-- 핵심 키워드 포함
-- 동의어, 유사어 활용  
-- 영어/한국어 혼용 고려
-- 불필요한 조사 제거
 
-JSON 형식으로만 응답:
+def create_query_optimization_prompt(query: str, category: str | None = None) -> str:
+    """
+    사용자의 자연어 질문 → 검색 엔진용 키워드 세트로 변환하기 위한 프롬프트.
+
+    ◆ 규칙
+    1. 반드시 JSON 하나만 출력.
+    2. "keywords" 배열에는 2~4개의 **명사·영문 키워드**만 넣는다.
+       · 조사·어미(에서, 에서도, 하기 전…) 는 모두 제거
+       · 공백·중복 제거, 소문자 통일
+    3. "search_queries" 배열에는 아래 두 가지 패턴을 넣는다.
+       ├─ 첫 번째: keywords 3개까지를 " AND " 로 결합    예)  ndt4 AND ceph AND 설치
+       └─ 두 번째: keywords 2개를 공백으로 결합        예)  ndt4 ceph
+    4. 원본 문장·형용사·조사는 넣지 않는다.
+    """
+    cat_line = f'분야(선택): {category}\n' if category else ''
+    return f"""당신은 사용자의 자연어 질문을 Elasticsearch 검색에 최적화된
+키워드 쿼리로 변환하는 도우미입니다.
+
+{cat_line}질문:
+\"\"\"{query}\"\"\"
+
+아래 형식을 지켜 단 하나의 JSON 으로만 답하세요.
+
 {{
-    "queries": ["주요 쿼리", "대안 쿼리1", "대안 쿼리2"]
-}}
-<|im_end|>
-
-<|im_start|>user
-사용자 질문: '{query}'
-{category_info}
-
-이 질문에 대한 최적화된 검색 쿼리를 생성해주세요.
-<|im_end|>
-
-<|im_start|>assistant
-"""
+  "keywords": ["", "", ""],
+  "search_queries": ["", ""]
+}}"""
 
 def create_document_summarization_prompt(document_text: str, max_length: int = 300) -> str:
     """

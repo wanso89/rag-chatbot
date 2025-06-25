@@ -1,0 +1,22 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1750377879215",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "아버지 회갑인데 지원금이 얼마야",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "sources": []
+    }
+  ],
+  "timestamp": "2025-06-20T09:23:40.652894"
+}

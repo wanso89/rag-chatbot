@@ -1,0 +1,143 @@
+{
+  "userId": "user1",
+  "conversationId": "1750729931177",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "리눅스 최신 버전은",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "리눅스 최신 버전은 특정 시스템이나 환경에 따라 다릅니다. 일반적으로 리눅스 배포판의 경우, 공식 웹사이트나 해당 배포판의 공식 문서를 참조하여 최신 버전을 확인할 수 있습니다. 예를 들어, Ubuntu의 경우 `ubuntu.com` 웹사이트에서 최신 버전을 확인할 수 있으며, CentOS의 경우 `centos.org`에서 최신 버전을 확인할 수 있습니다. 또한, 특정 환경에 맞춰 최신 버전을 설치하기 위해서는 해당 환경의 관리자 페이지나 설정 화면을 통해 최신 버전의 ISO 파일을 업로드하고, 이를 템플릿으로 추가하는 등의 작업을 수행할 수 있습니다. 예를 들어, [중앙보훈병원_FAQ_관리_20260324.pdf p.5]에 따르면, 관리자 페이지 -> 설정 -> ISO 관리에서 최신 버전의 OS를 ISO 확장자로 업로드하고, 이를 템플릿으로 추가하는 과정을 통해 리눅스 최신 버전을 사용할 수 있습니다.",
+      "sources": [
+        {
+          "path": "(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "display_name": "(국립중앙보훈병원) 쓰리에스소프트.pdf",
+          "page": 162,
+          "chunk_id": "batch1_160",
+          "score": 37.284009294098226,
+          "is_cited": false
+        },
+        {
+          "path": "[NDT4]Windows11 Template VM 생성 가이드.pdf",
+          "display_name": "[NDT4]Windows11 Template VM 생성 가이드.pdf",
+          "page": 23,
+          "chunk_id": "batch1_18",
+          "score": 36.75845999290594,
+          "is_cited": false
+        },
+        {
+          "path": "VMware Horizon 8 표준제안서[7318].pdf",
+          "display_name": "VMware Horizon 8 표준제안서[7318].pdf",
+          "page": 18,
+          "chunk_id": "batch1_17",
+          "score": 31.574834665469197,
+          "is_cited": false
+        },
+        {
+          "path": "VMware Horizon 8 표준제안서[7318].pdf",
+          "display_name": "VMware Horizon 8 표준제안서[7318].pdf",
+          "page": 48,
+          "chunk_id": "batch1_47",
+          "score": 30.386195989335356,
+          "is_cited": false
+        },
+        {
+          "path": "중앙보훈병원_FAQ_관리_20260324.pdf",
+          "display_name": "중앙보훈병원_FAQ_관리_20260324.pdf",
+          "page": 5,
+          "chunk_id": "batch1_4",
+          "score": 26.31118683415032,
+          "is_cited": true
+        },
+        {
+          "path": "VMware Horizon 8 표준제안서[7318].pdf",
+          "display_name": "VMware Horizon 8 표준제안서[7318].pdf",
+          "page": 9,
+          "chunk_id": "batch1_8",
+          "score": 21.39058603497353,
+          "is_cited": false
+        },
+        {
+          "path": "25년도_공용NEPYX_NetDesktop_관리자매뉴얼.pdf",
+          "display_name": "25년도_공용NEPYX_NetDesktop_관리자매뉴얼.pdf",
+          "page": 56,
+          "chunk_id": "batch1_55",
+          "score": 20.059678910681605,
+          "is_cited": false
+        },
+        {
+          "path": "원격업무지원시스템 관련 FAQ(v1.4).pdf",
+          "display_name": "원격업무지원시스템 관련 FAQ(v1.4).pdf",
+          "page": 2,
+          "chunk_id": "batch1_1",
+          "score": 17.75353095828813,
+          "is_cited": false
+        },
+        {
+          "path": "[NDT4]Windows11 Template VM 생성 가이드.pdf",
+          "display_name": "[NDT4]Windows11 Template VM 생성 가이드.pdf",
+          "page": 18,
+          "chunk_id": "batch1_14",
+          "score": 17.521189166643843,
+          "is_cited": false
+        },
+        {
+          "path": "[NDT4]Ceph 설치 가이드(CentOS 8 Stream).pdf",
+          "display_name": "[NDT4]Ceph 설치 가이드(CentOS 8 Stream).pdf",
+          "page": 1,
+          "chunk_id": "batch1_0",
+          "score": 16.63755526312124,
+          "is_cited": false
+        },
+        {
+          "path": "[NDT4]Windows11 Template VM 생성 가이드.pdf",
+          "display_name": "[NDT4]Windows11 Template VM 생성 가이드.pdf",
+          "page": 12,
+          "chunk_id": "batch1_11",
+          "score": 17.127512420193362,
+          "is_cited": false
+        },
+        {
+          "path": "VMware Horizon 8 표준제안서[7318].pdf",
+          "display_name": "VMware Horizon 8 표준제안서[7318].pdf",
+          "page": 31,
+          "chunk_id": "batch1_30",
+          "score": 17.10089603886113,
+          "is_cited": false
+        },
+        {
+          "path": "VMware Horizon 8 표준제안서[7318].pdf",
+          "display_name": "VMware Horizon 8 표준제안서[7318].pdf",
+          "page": 8,
+          "chunk_id": "batch1_7",
+          "score": 16.291444091765598,
+          "is_cited": false
+        },
+        {
+          "path": "25년도_공용NEPYX_NetDesktop_관리자매뉴얼.pdf",
+          "display_name": "25년도_공용NEPYX_NetDesktop_관리자매뉴얼.pdf",
+          "page": 57,
+          "chunk_id": "batch1_56",
+          "score": 12.385668353610209,
+          "is_cited": false
+        },
+        {
+          "path": "25년도_공용NEPYX_NetDesktop_관리자매뉴얼.pdf",
+          "display_name": "25년도_공용NEPYX_NetDesktop_관리자매뉴얼.pdf",
+          "page": 61,
+          "chunk_id": "batch1_60",
+          "score": 11.482377954334112,
+          "is_cited": false
+        }
+      ]
+    }
+  ],
+  "timestamp": "2025-06-24T10:53:21.378349"
+}

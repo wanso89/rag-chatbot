@@ -1,0 +1,22 @@
+{
+  "userId": "user1",
+  "conversationId": "1750306964871",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "vm 템플릿 생성 절차에 대해서 알려줘",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "sources": []
+    }
+  ],
+  "timestamp": "2025-06-19T13:24:24.959628"
+}

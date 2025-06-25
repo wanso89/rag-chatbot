@@ -8,6 +8,7 @@ import asyncio
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 
+from elasticsearch import Elasticsearch
 import torch
 from langchain.schema import Document
 from app.utils.feedback_analyzer import SearchQualityOptimizer
@@ -17,6 +18,10 @@ import logging
 
 
 logger = logging.getLogger(__name__)
+
+ALIAS_READ  = "rag-idx"
+NUM_CANDID  = 200                # K-NN 후보군
+DEFAULT_K = 30
 
 @dataclass
 class OptimizedQuery:
@@ -29,13 +34,23 @@ class OptimizedQuery:
 
 class ElasticsearchRetriever:
     
-    def __init__(self, es_client: Any, embedding_function: Any, category: str, k=25, 
-                 llm_model=None, tokenizer=None, index_name=None):
-        self.es_client = es_client
-        self.index_name = index_name
-        self.embedding_function = embedding_function
-        self.k = k
-        self.category = category
+    def __init__(
+        self,
+        es_client:    Elasticsearch,
+        embedding_function: Any,
+        category: str,
+        k: int = DEFAULT_K,
+        llm_model=None,
+        tokenizer=None,
+        index_name: str | None = None,      # ← 매개변수는 그대로 두되
+    ):
+        self.es_client         = es_client
+        self.embedding_function= embedding_function
+        self.k                 = k
+        self.category          = category
+        self.llm_model         = llm_model
+        self.tokenizer         = tokenizer
+        self.index_name        = index_name or ALIAS_READ
         
         # 캐시 설정
         self._cache = {}
@@ -46,8 +61,10 @@ class ElasticsearchRetriever:
         self.search_optimizer = SearchQualityOptimizer()
         
         # 쿼리 최적화기
-        self.llm_model = llm_model
-        self.tokenizer = tokenizer
+        if llm_model and tokenizer:
+            self.llm_model = llm_model
+            self.tokenizer = tokenizer
+
         self.query_optimizer_enabled = bool(llm_model and tokenizer)
         
         if self.query_optimizer_enabled:
@@ -73,7 +90,10 @@ class ElasticsearchRetriever:
             optimized_queries = await self._optimize_query_with_qwen(query)
             if optimized_queries and len(optimized_queries) > 1:
                 search_queries = optimized_queries
-                print(f"📝 최적화된 쿼리들: {search_queries}")
+                print(f"📝 구조화된 쿼리들: {search_queries}")
+            else:
+                print("⚠️ 쿼리 최적화 실패, 원본 사용")
+                search_queries = [query]
         
         # 다중 쿼리 검색
         all_docs = []
@@ -94,58 +114,78 @@ class ElasticsearchRetriever:
         return result
     
     async def _optimize_query_with_qwen(self, query: str) -> List[str]:
-        """Qwen 쿼리 최적화"""
+        """Qwen 쿼리 최적화 - 구조화된 분해 방식"""
         prompt = create_query_optimization_prompt(query, self.category)
-        inputs = self.tokenizer(prompt, return_tensors="pt", truncation=True, max_length=1000)
-        
-        # 디바이스 일치시키기
-        device = self.llm_model.device
-        print(f"🔍 Model device: {device}")
-        print(f"🔍 Input device before: {inputs['input_ids'].device}")
-        
-        inputs = {k: v.to(device) for k, v in inputs.items()}
-        print(f"🔍 Input device after: {inputs['input_ids'].device}")
-        
-        with torch.no_grad():
-            outputs = self.llm_model.generate(
-                **inputs,
-                max_new_tokens=80,
-                temperature=0.1,
-                do_sample=False,
-                eos_token_id=self.tokenizer.eos_token_id, #토큰으로 끝나면 자동종료
-                pad_token_id=self.tokenizer.eos_token_id
-            )
-        
-        response = self.tokenizer.decode(
-            outputs[0][inputs['input_ids'].shape[1]:], 
-            skip_special_tokens=True
+
+        # 1) 프롬프트 토크나이즈
+        enc = self.tokenizer(
+            prompt,
+            return_tensors="pt",
+            truncation=True,
+            max_length=1000,
         )
-        
+
+        # 2) 모델 디바이스 확인 → 입력도 맞춰서 이동
+        device = next(self.llm_model.parameters()).device   # ex) cuda:0
+        enc = {k: v.to(device) for k, v in enc.items()}     # 중요!
+
+        # 3) 생성
+        with torch.no_grad():
+            out_ids = self.llm_model.generate(
+                **enc,
+                max_new_tokens=120,
+                temperature=0.1,
+                do_sample=True,
+                top_p=0.8,
+                eos_token_id=self.tokenizer.eos_token_id,
+                pad_token_id=self.tokenizer.eos_token_id,
+            )[0]
+
+        # 4) 디코딩(입력 길이 이후만)
+        gen_ids = out_ids[enc["input_ids"].shape[1]:].cpu().tolist()
+        response = self.tokenizer.decode(gen_ids, skip_special_tokens=True)
+
         return self._parse_qwen_response(response, query)
     
     def _parse_qwen_response(self, response: str, original_query: str) -> List[str]:
-        """Qwen 응답 파싱"""
-        json_match = re.search(r'\{[^{}]*\}', response, re.DOTALL)
-        if not json_match:
+        """Qwen 응답 파싱 - 더 다양한 쿼리 생성"""
+        try:
+            json_match = re.search(r'\{[^{}]*\}', response, re.DOTALL)
+            if not json_match:
+                return [original_query]
+
+            data      = json.loads(json_match.group(0))
+            keywords  = [k.strip() for k in data.get("keywords", []) if k.strip()]
+            if not keywords:
+                return [original_query]
+
+            # ────────── 1. 대안 쿼리 만들기 ──────────
+            alts = []
+
+            # (a) 키워드 AND 결합  → 가장 높은 boost 를 주고 싶으므로 첫 번째
+            alts.append(" AND ".join(keywords[:3]))       # ndt4 AND ceph AND 설치
+
+            # (b) 두 핵심 키워드만 공백 결합
+            alts.append(" ".join(keywords[:2]))           # ndt4 ceph
+
+            # ────────── 2. 최종 순서 결정 ──────────
+            # ① 자연어를 뒤에 두고 싶으면 ↓
+            result = alts + [original_query]
+
+            # ② 자연어를 아예 빼고 싶으면 ↓
+            # result = alts
+
+            print(f"🔍 최종 생성된 쿼리들: {result}")
+            return result
+
+        except Exception as e:
+            print(f"⚠️ 파싱 오류: {e}")
             return [original_query]
-            
-        data = json.loads(json_match.group(0))
-        queries = data.get("queries", [])
-        
-        if not queries or not isinstance(queries, list):
-            return [original_query]
-        
-        # 원본 + 대안 최대 2개
-        result = [original_query]
-        for q in queries[:2]:
-            if q and q != original_query:
-                result.append(q.strip())
-        return result
     
     async def _search_single_query(self, query: str, boost_factor: float = 1.0) -> List[Document]:
-        """단일 쿼리 검색"""
         TABLE_KWS = ["표", "table", "도표", "차트"]
         wants_table = any(kw in query.lower() for kw in TABLE_KWS)
+        
         # 캐시 확인
         query_normalized = query.lower().strip()
         cache_key = f"{query_normalized}:{self.category}:{boost_factor}"
@@ -153,7 +193,6 @@ class ElasticsearchRetriever:
         
         cache_entry = self._cache.get(cache_key)
         if cache_entry and current_time - cache_entry["timestamp"] < self._cache_ttl:
-            print(f"💾 캐시 사용: '{query[:20]}...'")
             return cache_entry["results"]
         
         # 캐시 정리
@@ -165,39 +204,52 @@ class ElasticsearchRetriever:
         # 임베딩 생성
         query_embedding = self.embedding_function([query_normalized])[0]
 
-        # 하이브리드 검색 쿼리
+        # 하이브리드 검색 쿼리 구성
+        base_should = [
+            # BM25 / phrase match
+            {"match_phrase": {"text": {"query": query, "boost": 6.0 * boost_factor, "slop": 3}}},
+            {"match": {
+                "text": {"query": query, "boost": 4.0 * boost_factor,
+                         "operator": "OR", "minimum_should_match": "60%"}
+            }},
+            # 벡터 유사도 (script_score)
+            {"script_score": {
+                "query": {"match_all": {}},
+                "script": {
+                    "source": "cosineSimilarity(params.qv, 'embedding') + 1.0",
+                    "params": {"qv": query_embedding},
+                },
+                "boost": 3.0 * boost_factor,
+            }},
+        ]
+        
+        # 표 부스팅 부분
+        table_boost = []
+        if wants_table:
+            table_boost = [
+                {"terms": {"element_type": ["table", "table_row"] , "boost": 6.0 * boost_factor}}
+            ]
+        should_clauses = base_should + table_boost
+
+        base_filter = [{"term": {"category": self.category}}]
+
+        table_filter = []
+        if query.strip() in TABLE_KWS:
+            # 표만 달라는 쿼리라면 table + table_row 로 한정
+            table_filter = [{"terms": {"element_type": ["table", "table_row"]}}]
+        filter_clauses = base_filter + table_filter
+
         hybrid_query = {
-        "size": self.k,
-        "_source": {"excludes": ["embedding"]},
-        "query": {
-            "bool": {
-                "should": [
-                    {"match_phrase": {"text": {"query": query, "boost": 3.5*boost_factor, "slop": 3}}},
-                    {"match": {"text": {"query": query, "boost": 2.5*boost_factor, "operator": "OR",
-                                        "minimum_should_match": "60%"}}},
-                    {"script_score": {
-                        "query": {"match_all": {}},
-                        "script": {
-                            "source": "cosineSimilarity(params.qv, 'embedding') + 1.0",
-                            "params": {"qv": query_embedding},
-                        },
-                        "boost": 2.2*boost_factor
-                    }}
-                ] + (
-                    # 표 키워드가 있을 때만 가중치 ↑
-                    [{"term": {"element_type": {"value": "table", "boost": 4.0*boost_factor}}}]
-                    if wants_table else []
-                ),
-                "filter": [
-                    {"term": {"category": self.category}}
-                ] + (
-                    # “표만 보여줘” 같은 질문이면 필터를 강제해도 됨
-                    [{"term": {"element_type": "table"}}] if query.strip() in TABLE_KWS else []
-                ),
-                "minimum_should_match": 1
+            "size": self.k,
+            "_source": {"excludes": ["embedding"]},
+            "query": {
+                "bool": {
+                    "should": should_clauses,
+                    "filter": filter_clauses,
+                    "minimum_should_match": 1
+                }
             }
         }
-    }
 
         # 피드백 기반 최적화 적용
         optimized_query = self.search_optimizer.apply_optimizations_to_query(query_normalized, hybrid_query)
@@ -208,21 +260,24 @@ class ElasticsearchRetriever:
         # 결과 처리
         docs = []
         for hit in response["hits"]["hits"]:
-            metadata = {k: v for k, v in hit["_source"].items() if k not in ["text", "embedding"]}
-            metadata.update({
-                "relevance_score": hit["_score"] * boost_factor,
-                "source": hit["_source"].get("source", "unknown"),
-                "page": hit["_source"].get("page", 1)
-            })
-            
-            chunk_id = hit["_source"].get("chunk_id")
-            if chunk_id is not None:
+            meta_src = hit["_source"]
+            metadata = {k: v for k, v in meta_src.items() if k not in ["text", "embedding"]}
+            metadata.update(
+                {
+                    "document_id": hit["_id"],
+                    "relevance_score": hit["_score"] * boost_factor,
+                    "source": meta_src.get("source", "unknown"),
+                    "page": meta_src.get("page", 1),
+                    # table_row일 경우 위치 추적용
+                    "table_id": meta_src.get("table_id"),
+                    "row_no": meta_src.get("row_no"),
+                }
+            )
+            if chunk_id := meta_src.get("chunk_id"):
                 metadata["chunk_id"] = str(chunk_id)
 
-            docs.append(Document(
-                page_content=hit["_source"].get("text", ""), 
-                metadata=metadata
-            ))
+            docs.append(Document(page_content=meta_src.get("text", ""), metadata=metadata))
+
 
         # 캐싱
         self._cache[cache_key] = {"results": docs, "timestamp": current_time}
@@ -230,17 +285,112 @@ class ElasticsearchRetriever:
     
     def _deduplicate_results(self, docs: List[Document]) -> List[Document]:
         """중복 제거"""
-        seen = set()
-        unique_docs = []
-        
+        seen, unique_docs = set(), []
         for doc in docs:
-            chunk_id = doc.metadata.get("chunk_id")
-            if not chunk_id or chunk_id not in seen:
-                if chunk_id:
-                    seen.add(chunk_id)
+            key = (
+                doc.metadata.get("document_id"),    # ES _id
+                doc.metadata.get("page"),
+                doc.metadata.get("chunk_id"),
+            )
+            if key not in seen:
+                seen.add(key)
                 unique_docs.append(doc)
-        
         return unique_docs
+
+
+    async def get_source_preview_document(
+        self, 
+        source_path: str, 
+        page: int, 
+        chunk_id: str = None, 
+        original_query: str = None,
+        keywords: List[str] = None
+    ) -> Dict[str, Any]:
+        """소스 프리뷰를 위한 문서 검색"""
+        
+        if not self.es_client:
+            return {
+                "status": "error",
+                "message": "검색 서비스를 사용할 수 없습니다.",
+                "content": None
+            }
+        
+        # 간단한 우선순위 검색
+        search_queries = []
+        
+        # 1순위: 정확한 매칭
+        if chunk_id:
+            search_queries.append({
+                "bool": {
+                    "must": [
+                        {"term": {"source": source_path}},
+                        {"term": {"page": page}},
+                        {"term": {"chunk_id": str(chunk_id)}}
+                    ]
+                }
+            })
+        
+        # 2순위: 페이지 매칭
+        search_queries.append({
+            "bool": {
+                "must": [
+                    {"term": {"source": source_path}},
+                    {"term": {"page": page}}
+                ]
+            }
+        })
+        
+        # 검색 실행
+        found_document = None
+        for query in search_queries:
+            try:
+                response = self.es_client.search(
+                    index=self.index_name,
+                    body={
+                        "size": 1,
+                        "_source": {"excludes": ["embedding"]},
+                        "query": query
+                    }
+                )
+                
+                hits = response.get("hits", {}).get("hits", [])
+                if hits:
+                    found_document = hits[0]
+                    break
+                    
+            except Exception as e:
+                print(f"검색 오류: {e}")
+                continue
+        
+        if not found_document:
+            return {
+                "status": "error",
+                "message": "요청한 문서를 찾을 수 없습니다.",
+                "content": None
+            }
+        
+        # 결과 반환
+        doc_source = found_document["_source"]
+        content = doc_source.get("text", "")
+        
+        return {
+            "status": "success",
+            "message": "문서를 성공적으로 찾았습니다.",
+            "content": content,
+            "source_metadata": {
+                "filename": os.path.basename(source_path),
+                "page": doc_source.get("page", page),
+                "chunk_id": doc_source.get("chunk_id", chunk_id)
+            }
+        }
+    
+def extract_clean_filename(file_path: str) -> str:
+    filename = os.path.basename(file_path)
+    if '_' in filename:
+        parts = filename.split('_', 1)
+        if len(parts) > 1 and len(parts[0]) >= 8:
+            return parts[1]
+    return filename
 
 
 async def generate_llm_response(
@@ -252,14 +402,6 @@ async def generate_llm_response(
 ) -> dict:
     """LLM 답변 생성"""
     
-    def extract_clean_filename(file_path: str) -> str:
-        filename = os.path.basename(file_path)
-        if '_' in filename:
-            parts = filename.split('_', 1)
-            if len(parts) > 1 and len(parts[0]) >= 8:
-                return parts[1]
-        return filename
-
     # 컨텍스트 구성
     context_parts = []
     for doc in top_docs:
@@ -296,6 +438,7 @@ async def generate_llm_response(
     for i, doc in enumerate(top_docs):
         source_path = doc.metadata.get("source", "unknown")
         source_metadata.append({
+            "document_id": doc.metadata.get("document_id"),
             "path": source_path,
             "display_name": extract_clean_filename(source_path),
             "page": doc.metadata.get("page", 1),
@@ -306,5 +449,6 @@ async def generate_llm_response(
     return {
         "prompt_text": final_prompt_text,
         "source_metadata": source_metadata,
-        "top_docs": top_docs
+        "top_docs": top_docs,
+        "used_document_ids": [doc.metadata.get("document_id") for doc in top_docs]
     }
