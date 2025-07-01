@@ -677,7 +677,7 @@ function Sidebar({
       {/* 하단 정보 영역 */}
       <div className="mt-auto border-t border-gray-800 p-3">
         <div className="flex flex-col space-y-2">
-          <h3 className="text-xs font-medium text-gray-500 px-2 mb-1">ㅋㅋ테스트중</h3>
+          <h3 className="text-xs font-medium text-gray-500 px-2 mb-1">버전 0.9</h3>
           
           
         </div>

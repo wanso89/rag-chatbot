@@ -1,0 +1,71 @@
+{
+  "userId": "user1",
+  "conversationId": "1750914604496",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "테스트 메세지",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "테스트 메세지 전송을 위해서는 Outlook 메일 계정 설정이 완료되어야 합니다. 설정이 완료되었는지 확인하기 위해 계정 설정 테스트를 진행할 수 있습니다. 테스트는 계정 설정이 올바르게 이루어졌는지를 확인하고, 메일을 성공적으로 보내고 받을 수 있는지 검증하는 과정입니다. 테스트를 진행하려면 다음과 같은 단계를 따르세요:\n\n1. 계정 설정을 완료한 후, 메일 클라이언트에서 테스트 메일을 보낼 수 있는 메뉴로 이동합니다.\n2. 테스트 메일을 보내기 전에, 메일 클라이언트의 설정에서 해당 계정의 메일 서버 정보가 올바르게 입력되었는지 확인합니다.\n3. 테스트 메일을 보내고, 받는 메일함으로부터 테스트 메일을 확인합니다.\n4. 테스트 메일이 성공적으로 수신되었는지 확인합니다.\n\n위 과정을 통해 계정 설정이 올바르게 이루어졌는지, 그리고 메일을 성공적으로 보내고 받을 수 있는지 확인할 수 있습니다. 만약 테스트가 성공적으로 완료되었다면, 계정 설정이 올바르게 이루어졌으며, 메일을 보내고 받을 수 있는 상태입니다.",
+      "sources": [
+        {
+          "path": "IV. 프로젝트관리 부문.pdf",
+          "display_name": "IV. 프로젝트관리 부문.pdf",
+          "page": 9,
+          "chunk_id": "batch1_8",
+          "score": 39.144611867635675,
+          "is_cited": false
+        },
+        {
+          "path": "Outlook 메일계정 메뉴얼.pptx",
+          "display_name": "Outlook 메일계정 메뉴얼.pptx",
+          "page": 11,
+          "chunk_id": "batch1_20",
+          "score": 37.81814450721392,
+          "is_cited": false
+        },
+        {
+          "path": "IV. 프로젝트관리 부문.pdf",
+          "display_name": "IV. 프로젝트관리 부문.pdf",
+          "page": 12,
+          "chunk_id": "batch1_11",
+          "score": 38.63994069012689,
+          "is_cited": false
+        },
+        {
+          "path": "IV. 프로젝트관리 부문.pdf",
+          "display_name": "IV. 프로젝트관리 부문.pdf",
+          "page": 8,
+          "chunk_id": "batch1_7",
+          "score": 36.940593970319874,
+          "is_cited": false
+        },
+        {
+          "path": "[NDT4]Ceph 설치 가이드(CentOS 8 Stream).pdf",
+          "display_name": "[NDT4]Ceph 설치 가이드(CentOS 8 Stream).pdf",
+          "page": 9,
+          "chunk_id": "batch1_8",
+          "score": 34.61641356833256,
+          "is_cited": false
+        },
+        {
+          "path": "Outlook 메일계정 메뉴얼.pptx",
+          "display_name": "Outlook 메일계정 메뉴얼.pptx",
+          "page": 11,
+          "chunk_id": "batch1_19",
+          "score": 34.46740596979893,
+          "is_cited": true
+        }
+      ]
+    }
+  ],
+  "timestamp": "2025-06-26T14:10:34.405093"
+}

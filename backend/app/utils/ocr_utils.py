@@ -397,10 +397,14 @@ async def extract_images_from_pdf_with_layout(pdf_path: str, doc_id: str) -> Tup
     
     # PDF → 이미지 변환
     images = convert_from_path(pdf_path, dpi=200, thread_count=2)
-    print("DEBUG ▸ len(images) =", len(images))
+    # UUID 제거된 clean doc_id 사용
+    from .indexing_utils import strip_uuid_prefix
+    clean_doc_id = strip_uuid_prefix(doc_id) if doc_id else "unknown"
+    if '.' in clean_doc_id:
+        clean_doc_id = clean_doc_id.rsplit('.', 1)[0]
     
     # 저장 디렉토리
-    img_dir = Path("app/static/document_images") / doc_id
+    img_dir = Path("app/static/document_images") / clean_doc_id
     img_dir.mkdir(parents=True, exist_ok=True)
     
     image_texts = {}
@@ -472,7 +476,7 @@ async def extract_images_from_pdf_with_layout(pdf_path: str, doc_id: str) -> Tup
         
         # 결과 저장
         image_texts[page_num] = page_texts
-        relative_path = f"document_images/{doc_id}/{img_name}"
+        relative_path = f"document_images/{clean_doc_id}/{img_name}"
         image_paths[page_num] = [relative_path]
     
     return image_texts, image_paths

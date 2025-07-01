@@ -38,10 +38,8 @@ from app.utils.indexing_utils import strip_uuid_prefix
 # 문서 출처 및 하이라이트
 from app.utils.source_preview_utils import (
     extract_keywords_from_query,
-    extract_keywords_from_content, 
     apply_highlighting,
-    format_source_metadata,
-    enhance_content_with_answer_context
+
 )
 #llm 호출
 from app.utils.model_loader import get_llm_model_and_tokenizer
@@ -289,14 +287,12 @@ async def search_and_combine(
 
     query = query.strip()
     if not query:
-        print("--- DEBUG: Query is empty after strip, returning early. ---")
         return {
             "answer": "질문 내용을 입력해주세요. 공백만으로는 검색할 수 없습니다.",
             "sources": [],
         }
 
-    print(f"--- DEBUG: search_and_combine ---")
-    print(f"Processed query: '{query}'")
+
 
     start_time = time.time()
     
@@ -360,15 +356,15 @@ async def search_and_combine(
 
         # 1. 검색 (비동기 처리) - 검색 결과 수 최적화
         retrieval_start = time.time()
-        # ElasticsearchRetriever 대안 쿼리 추가로 문서 10-> 15개 반환으로 수정
+        # ElasticsearchRetriever - 2단계 검색 방식으로 개선 (Qwen 대안쿼리 제거)
         retriever = ElasticsearchRetriever(
         es_client=es_client,
         index_name=ES_INDEX_NAME,
         embedding_function=embedding_function,
         category=category,
         k=15,
-        llm_model=llm_model,      # 추가
-        tokenizer=tokenizer       
+        llm_model=None,      # Qwen 대안쿼리 비활성화
+        tokenizer=None       # Qwen 대안쿼리 비활성화
         )
 
         docs = await retriever.async_get_relevant_documents(query)
@@ -377,7 +373,6 @@ async def search_and_combine(
 
         # 검색 결과가 없을 경우 조기 반환
         if not docs:
-            print("--- DEBUG: No documents found from retrieval. ---")
             return {
                 "answer": "검색된 관련 문서가 없습니다. 다른 질문을 시도해 보세요.",
                 "sources": [],
@@ -449,6 +444,7 @@ async def search_and_combine(
             source_path = doc.metadata.get("source", "unknown")
             page_num = doc.metadata.get("page", 1)
             chunk_id = doc.metadata.get("chunk_id", i)
+            element_type = doc.metadata.get("element_type", "text")
 
             # 텍스트에서 불필요한 공백과 개행 정리
             chunk_text = doc.page_content.strip()
@@ -458,13 +454,35 @@ async def search_and_combine(
             clean_filename = strip_uuid_prefix(source_path)
             source_label = f"[{clean_filename} p.{page_num}]" if page_num > 1 else f"[{clean_filename}]"
             context_chunks.append(f"{source_label} {chunk_text}")
-            source_metadata.append({
-                        "path": source_path,
-                        "display_name": clean_filename,  # 화면 표시용 정제된 파일명 추가
-                        "page": page_num,
-                        "chunk_id": chunk_id,
-                        "score": doc.metadata.get("relevance_score", 0),
+            
+            # 표와 이미지 정보 추가
+            metadata_item = {
+                "path": source_path,
+                "display_name": clean_filename,  # 화면 표시용 정제된 파일명 추가
+                "page": page_num,
+                "chunk_id": chunk_id,
+                "score": doc.metadata.get("relevance_score", 0),
+                "element_type": element_type,
+            }
+            
+            # 표 관련 정보 추가
+            if element_type == "table_row":
+                metadata_item.update({
+                    "table_id": doc.metadata.get("table_id"),
+                    "table_caption": doc.metadata.get("table_caption"),
+                    "row_index": doc.metadata.get("row_index"),
+                    "n_rows": doc.metadata.get("n_rows"),
                 })
+            
+            # 이미지 관련 정보 추가
+            if doc.metadata.get("has_images"):
+                metadata_item.update({
+                    "has_images": True,
+                    "images": doc.metadata.get("images", []),
+                    "image_captions": doc.metadata.get("image_captions", []),
+                })
+            
+            source_metadata.append(metadata_item)
 
         full_context = "\n\n".join(context_chunks)
         print(f"Combined context length: {len(full_context)} characters.")
@@ -538,7 +556,7 @@ async def search_and_combine(
         print(f"원본 응답 시작 부분: {answer[:50]}...")
         print(f"정제된 응답 시작 부분: {cleaned_answer[:50]}...")
         
-        # 소스 텍스트가 LLM 출력에 직접 인용된 경우를 확인
+        # 검색해서 히트된 모든 문서를 출처로 표시 (간단하고 직관적)
         cited_sources = []
         
         # 응답 처리 - 정제된 응답 사용
@@ -546,57 +564,85 @@ async def search_and_combine(
             print("정제된 응답이 비어있어 원본 응답을 사용합니다.")
             cleaned_answer = "안녕하세요! 어떻게 도와드릴까요?"
         
-        # 인용 감지를 위한 간단한 키워드 추출
-        def extract_keywords(text, min_length=3, max_keywords=20):
-            # None이나 비문자열 체크
-            if text is None or not isinstance(text, str):
-                print(f"extract_keywords: 유효하지 않은 입력 타입 - {type(text)}")
-                return []
-                
-            # 특수문자, 공백 등을 기준으로 단어 분리
-            words = re.findall(r'\b[가-힣a-zA-Z0-9]+\b', text)
-            # 길이가 min_length 이상인 단어만 필터링
-            filtered_words = [w for w in words if len(w) >= min_length]
-            # 중복 제거 및 최대 개수 제한
-            unique_words = list(set(filtered_words))[:max_keywords]
-            return unique_words
+        # 유효한 응답이 있는 경우 스코어+하이라이트 기반으로 출처 선별
+        if cleaned_answer and isinstance(cleaned_answer, str) and cleaned_answer.strip():
+            print(f"스코어+하이라이트 기반 출처 선별 시작: 총 {len(source_metadata)}개 문서")
             
-        # 응답에서 키워드 추출
-        answer_keywords = extract_keywords(cleaned_answer)
-        
-        # answer가 None이 아닌 경우만 인용 처리 진행 
-        if cleaned_answer and isinstance(cleaned_answer, str):
+            # 각 문서의 하이라이트 여부 확인
+            qualified_sources = []
             for i, meta in enumerate(source_metadata):
-                cited = False
                 source_text = context_chunks[i] if i < len(context_chunks) else ""
-    
-                # 1. 기존 방식: 연속된 텍스트 일치 여부 확인 (최소 30자)
-                if len(source_text) > 50:
-                    for j in range(0, len(source_text) - 30, 10):
-                        snippet = source_text[j:j+30]
-                        if snippet in cleaned_answer:
-                            cited = True
-                            break
-    
-                # 2. 개선된 방식: 키워드 기반 매칭 (기존 방식으로 감지되지 않은 경우)
-                if not cited and source_text:
-                    # 소스에서 키워드 추출
-                    source_keywords = extract_keywords(source_text)
-                    # 키워드 일치율 계산
-                    if source_keywords:
-                        matches = [k for k in source_keywords if k in cleaned_answer]
-                        match_ratio = len(matches) / len(source_keywords)
-                        # 키워드의 30% 이상이 응답에 포함되어 있으면 인용으로 간주
-                        if match_ratio > 0.3:
-                            cited = True
+                element_type = meta.get("element_type", "text")
                 
-                # 메타데이터에 인용 여부 저장
-                meta["is_cited"] = cited
-                if cited:
+                # 표/이미지 요소는 무조건 포함 (하이라이트 검사 생략)
+                if element_type in ["table_row", "table"] or meta.get("has_images"):
+                    score = meta.get("score", 0)
+                    qualified_sources.append({
+                        'meta': meta,
+                        'score': score,
+                        'index': i
+                    })
+                    element_desc = "표 데이터" if element_type in ["table_row", "table"] else "이미지"
+                    print(f"  ✅ 출처 후보: {meta.get('display_name', 'unknown')} (스코어: {score:.3f}, {element_desc})")
+                    continue
+                
+                # 일반 텍스트는 하이라이트 적용해보고 하이라이트가 있는지 확인
+                try:
+                    from app.utils.source_preview_utils import apply_highlighting, extract_keywords_from_query
+                    
+                    # 답변에서 키워드 추출
+                    answer_keywords = extract_keywords_from_query(cleaned_answer)
+                    
+                    # 하이라이트 적용 및 여부 확인
+                    _, has_highlights = apply_highlighting(
+                        content=source_text,
+                        keywords=answer_keywords,
+                        original_query=cleaned_answer
+                    )
+                    
+                    if has_highlights:
+                        score = meta.get("score", 0)
+                        qualified_sources.append({
+                            'meta': meta,
+                            'score': score,
+                            'index': i
+                        })
+                        print(f"  ✅ 출처 후보: {meta.get('display_name', 'unknown')} (스코어: {score:.3f}, 하이라이트: O)")
+                    else:
+                        print(f"  ❌ 제외: {meta.get('display_name', 'unknown')} (하이라이트: X)")
+                        
+                except Exception as e:
+                    print(f"  ⚠️ 하이라이트 확인 오류: {e}")
+                    # 오류 시 기본적으로 포함
+                    qualified_sources.append({
+                        'meta': meta,
+                        'score': meta.get("score", 0),
+                        'index': i
+                    })
+            
+            # 스코어 기준으로 정렬하여 상위 5개 선택 
+            qualified_sources.sort(key=lambda x: x['score'], reverse=True)
+            final_sources = qualified_sources[:5]  
+            
+            # 메타데이터에 is_cited 설정
+            cited_indices = {source['index'] for source in final_sources}
+            for i, meta in enumerate(source_metadata):
+                if i in cited_indices:
+                    meta["is_cited"] = True
                     cited_sources.append(meta)
+                else:
+                    meta["is_cited"] = False
+            
+            print(f"최종 선별된 출처: {len(cited_sources)}개 (하이라이트O + 표/이미지 + 고스코어)")
+            for source in final_sources:
+                meta = source['meta']
+                element_type = meta.get("element_type", "text")
+                type_desc = "표" if element_type in ["table_row", "table"] else "이미지" if meta.get("has_images") else "텍스트"
+                print(f"  📑 {meta.get('display_name', 'unknown')} - 스코어: {source['score']:.3f} ({type_desc})")
+                
         else:
-            print("유효한 응답이 없어 인용 처리를 건너뜁니다.")
-            # 모든 메타데이터에 is_cited = False 설정
+            print("유효한 응답이 없어 출처 처리를 건너뜁니다.")
+            # 응답이 없으면 출처도 표시하지 않음
             for meta in source_metadata:
                 meta["is_cited"] = False
 
@@ -664,12 +710,34 @@ def get_sqlcoder_model():
         traceback.print_exc()
         return None, None
 
-# 모델 초기화
-es_client = get_elasticsearch_client()
-embedding_function = get_embedding_function()
-llm_model, tokenizer = get_llm_model_and_tokenizer()
-reranker_model = get_reranker_model()
-sqlcoder_model, sqlcoder_tokenizer = get_sqlcoder_model()
+# 전역 변수 선언 (초기화는 startup에서)
+es_client = None
+embedding_function = None
+llm_model = None
+tokenizer = None
+reranker_model = None
+sqlcoder_model = None
+sqlcoder_tokenizer = None
+
+@app.on_event("startup")
+async def startup_event():
+    """서버 시작 시 모델 초기화"""
+    global es_client, embedding_function, llm_model, tokenizer, reranker_model, sqlcoder_model, sqlcoder_tokenizer
+    
+    print("🚀 서버 시작 - 모델 초기화 중...")
+    
+    # 모델 초기화 (한 번만 실행됨)
+    es_client = get_elasticsearch_client()
+    embedding_function = get_embedding_function()
+    llm_model, tokenizer = get_llm_model_and_tokenizer()
+    reranker_model = get_reranker_model()
+    sqlcoder_model, sqlcoder_tokenizer = get_sqlcoder_model()
+    
+    # indexing_utils에 모델 전달 (캡션 생성용)
+    from app.utils.indexing_utils import set_shared_models
+    set_shared_models(llm_model, tokenizer)
+    
+    print("✅ 모든 모델 초기화 완료!")
 
 
 
@@ -892,47 +960,170 @@ async def source_preview_endpoint(request: SourcePreviewRequest = Body(...)):
                 "content": None,
             }
         
-        # retriever 인스턴스 생성 (search_and_combine과 동일한 방식)
-        retriever = ElasticsearchRetriever(
-            es_client=es_client,
-            index_name=ES_INDEX_NAME,
-            embedding_function=embedding_function,
-            category="default",  # 또는 적절한 카테고리
-            k=5,
-            llm_model=llm_model,
-            tokenizer=tokenizer
-        )
+        print(f"🔍 소스 미리보기 요청 - 파일: {request.path}, 페이지: {request.page}, chunk_id: {request.chunk_id}")
         
-        # 이제 retriever 호출 가능
-        result = await retriever.get_source_preview_document(
-            source_path=request.path,
-            page=request.page,
-            chunk_id=request.chunk_id,
-            original_query=getattr(request, 'answer_text', None),
-            keywords=getattr(request, 'keywords', [])
-        )
-        
-         # 성공한 경우에만 하이라이트 추가
-        if result.get("status") == "success" and result.get("content"):
-            # 키워드 추출
-            keywords = getattr(request, 'keywords', []) or []
-            if not keywords and hasattr(request, 'answer_text') and request.answer_text:
-                keywords = extract_keywords_from_query(request.answer_text)
+        # 1. 해당 페이지의 모든 chunk들 가져오기 (전체 페이지 재구성용)
+        try:
+            all_chunks_query = {
+                "size": 100,  # 한 페이지에 충분한 chunk 수
+                "_source": {"excludes": ["embedding"]},
+                "query": {
+                    "bool": {
+                        "must": [
+                            {"term": {"source": request.path}},
+                            {"term": {"page": request.page}}
+                        ]
+                    }
+                },
+                "sort": [
+                    {"chunk_id": {"order": "asc"}},  # chunk_id 순서대로 정렬
+                    {"row_index": {"order": "asc", "missing": "_last"}}  # 테이블 행 순서
+                ]
+            }
             
-            # 하이라이트 적용
-            if keywords:
-                result["content"] = apply_highlighting(
-                    result["content"], 
-                    keywords, 
-                    getattr(request, 'answer_text', None)
+            response = es_client.search(index=ES_INDEX_NAME, body=all_chunks_query)
+            all_chunks = response.get("hits", {}).get("hits", [])
+            
+            if not all_chunks:
+                return {
+                    "status": "error",
+                    "message": "해당 페이지의 문서를 찾을 수 없습니다.",
+                    "content": None
+                }
+            
+            print(f"📄 찾은 총 chunk 수: {len(all_chunks)}")
+            
+            # 2. 전체 페이지 내용 재구성 및 Hit chunk 정보 수집
+            page_content_parts = []
+            hit_chunks_info = []  # 실제 Hit된 chunk 정보
+            
+            # 검색된 chunk_id와 일치하는 chunk 찾기
+            target_chunk_id = str(request.chunk_id) if request.chunk_id else None
+            
+            for chunk_hit in all_chunks:
+                chunk_source = chunk_hit["_source"]
+                chunk_text = chunk_source.get("text", "")
+                chunk_id = str(chunk_source.get("chunk_id", ""))
+                element_type = chunk_source.get("element_type", "text")
+                
+                # 현재 chunk가 검색된 Hit인지 확인
+                is_hit_chunk = (target_chunk_id and chunk_id == target_chunk_id)
+                
+                if is_hit_chunk:
+                    # Hit chunk 정보 저장
+                    hit_info = {
+                        "content": chunk_text,
+                        "element_type": element_type,
+                        "chunk_id": chunk_id,
+                        "table_id": chunk_source.get("table_id"),
+                        "row_no": chunk_source.get("row_no"),
+                        "row_index": chunk_source.get("row_index")
+                    }
+                    hit_chunks_info.append(hit_info)
+                    print(f"✅ Hit chunk 발견: {element_type}, chunk_id: {chunk_id}")
+                
+                # 모든 chunk는 일반 텍스트로 추가 (마킹 없이)
+                page_content_parts.append(chunk_text)
+            
+            # 3. 전체 페이지 내용 결합
+            full_page_content = "\n\n".join(page_content_parts)
+            
+            # 4. apply_highlighting 함수를 사용한 하이라이트 적용
+            if request.answer_text and len(hit_chunks_info) > 0:
+                # Hit된 chunk의 내용을 기반으로 키워드 추출
+                hit_keywords = []
+                for hit_info in hit_chunks_info:
+                    chunk_keywords = extract_keywords_from_query(hit_info["content"])
+                    hit_keywords.extend(chunk_keywords)
+                
+                # 중복 제거
+                unique_hit_keywords = list(set(hit_keywords))
+                
+                # 답변 텍스트에서도 키워드 추출
+                answer_keywords = extract_keywords_from_query(request.answer_text)
+                
+                # 공통 키워드 찾기 (유연한 매칭으로 개선)
+                common_keywords = []
+                
+                # 1. 정확한 일치 (기존 로직)
+                exact_matches = [k for k in unique_hit_keywords if k.lower() in [ak.lower() for ak in answer_keywords]]
+                common_keywords.extend(exact_matches)
+                
+                # 2. 부분 문자열 매칭 (새 로직 추가)
+                for hit_keyword in unique_hit_keywords:
+                    if hit_keyword.lower() not in [k.lower() for k in common_keywords]:  # 중복 방지
+                        for answer_keyword in answer_keywords:
+                            # 3글자 이상의 의미있는 부분 문자열 매칭
+                            if (len(hit_keyword) >= 3 and len(answer_keyword) >= 3 and
+                                (hit_keyword.lower() in answer_keyword.lower() or 
+                                 answer_keyword.lower() in hit_keyword.lower())):
+                                common_keywords.append(hit_keyword)
+                                break
+                
+                # 3. Hit 키워드가 충분하지 않으면 답변 키워드도 사용
+                if len(common_keywords) < 3:
+                    for answer_keyword in answer_keywords[:5]:  # 상위 5개만
+                        if (len(answer_keyword) >= 3 and 
+                            answer_keyword.lower() not in [k.lower() for k in common_keywords]):
+                            common_keywords.append(answer_keyword)
+                            if len(common_keywords) >= 5:  # 최대 5개로 제한
+                                break
+                
+                # 중복 제거 및 정리
+                common_keywords = list(dict.fromkeys(common_keywords))  # 순서 유지하며 중복 제거
+                
+                # apply_highlighting 함수 사용
+                if common_keywords:
+                    full_page_content, _ = apply_highlighting(
+                        content=full_page_content,
+                        keywords=common_keywords,
+                        original_query=request.answer_text
+                    )
+                
+                print(f"🔍 Hit 키워드: {unique_hit_keywords}")
+                print(f"💬 답변 키워드: {answer_keywords}")
+                print(f"✨ 공통 키워드: {common_keywords}")
+            elif request.keywords:
+                # 직접 제공된 키워드가 있으면 사용
+                full_page_content, _ = apply_highlighting(
+                    content=full_page_content,
+                    keywords=request.keywords
                 )
-                result["keywords"] = keywords
-        
-        return result
+            
+            # 5. 성공 응답 반환
+            return {
+                "status": "success",
+                "message": f"Hit chunk {len(hit_chunks_info)}개가 포함된 페이지를 성공적으로 찾았습니다.",
+                "content": full_page_content,
+                "hit_info": {
+                    "total_chunks": len(all_chunks),
+                    "hit_chunks": len(hit_chunks_info),
+                    "hit_details": hit_chunks_info
+                },
+                "source_metadata": {
+                    "filename": os.path.basename(request.path),
+                    "page": request.page,
+                    "target_chunk_id": target_chunk_id
+                }
+            }
+            
+        except Exception as search_error:
+            print(f"Elasticsearch 검색 오류: {search_error}")
+            traceback.print_exc()
+            return {
+                "status": "error",
+                "message": f"문서 검색 중 오류 발생: {str(search_error)}",
+                "content": None
+            }
         
     except Exception as e:
-        # 기존 에러 처리
-        return {"status": "error", "message": str(e), "content": None}
+        print(f"소스 미리보기 처리 중 오류 발생: {e}")
+        traceback.print_exc()
+        return {
+            "status": "error", 
+            "message": f"소스 미리보기 처리 중 오류 발생: {str(e)}", 
+            "content": None
+        }
 
 
 @app.get("/api/indexed-files")
@@ -1277,9 +1468,35 @@ async def upload_files(
         file_extension = Path(file.filename).suffix.lower()
         is_ocr_candidate = file_extension in ocr_supported_extensions or file_extension == '.pdf'
         
-        # 임시 파일 저장
+        # 임시 파일 저장 - 한글 파일명 인코딩 문제 해결
         unique_id = uuid.uuid4()
-        file_path = f"app/static/uploads/{unique_id}_{file.filename}"
+        
+        # 파일명 인코딩 안전하게 처리
+        safe_filename = file.filename
+        if safe_filename:
+            try:
+                # UTF-8로 인코딩된 파일명을 안전하게 디코딩
+                if isinstance(safe_filename, bytes):
+                    safe_filename = safe_filename.decode('utf-8', errors='replace')
+                elif isinstance(safe_filename, str):
+                    # 이미 문자열인 경우 Latin-1로 인코딩 후 UTF-8로 디코딩 시도
+                    try:
+                        safe_filename = safe_filename.encode('latin1').decode('utf-8')
+                    except (UnicodeEncodeError, UnicodeDecodeError):
+                        # 디코딩 실패 시 원본 사용
+                        pass
+                        
+                # 파일명에서 위험한 문자 제거
+                safe_filename = re.sub(r'[<>:"/\\|?*]', '_', safe_filename)
+                logger.info(f"원본 파일명: {file.filename} -> 안전한 파일명: {safe_filename}")
+                
+            except Exception as encoding_error:
+                logger.warning(f"파일명 인코딩 처리 실패: {encoding_error}, 원본 파일명 사용")
+                safe_filename = file.filename
+        else:
+            safe_filename = "unnamed_file"
+            
+        file_path = f"app/static/uploads/{unique_id}_{safe_filename}"
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         try:
             with open(file_path, "wb") as f:
@@ -1342,8 +1559,14 @@ async def upload_files(
                         logger.info(f"OCR 처리 시작: {file.filename}")
                     
                     success = await process_and_index_file(
-                        es_client, embedding_function, file_path, category
-                    )
+                    es_client=es_client,
+                    embedding_function=embedding_function,
+                    uploaded_file_path=file_path,
+                    category=category,
+                    shared_llm_model=llm_model,
+                    shared_tokenizer=tokenizer,
+                    reindex=False  # 새 업로드는 해시 접두어 붙여서 저장
+                )
                     
                     processing_time = time.time() - processing_start
                     logger.info(f"파일 처리 소요 시간: {processing_time:.2f}초")
@@ -2279,3 +2502,120 @@ async def test_reindex():
 async def quick_reindex():
     from api.reindex import reindex_all_files
     return await reindex_all_files()
+
+# 중복 UUID 파일명 정리 엔드포인트
+@app.post("/api/clean-duplicate-uuid")
+async def clean_duplicate_uuid():
+    """중복 UUID가 붙은 잘못된 파일명들을 정리합니다."""
+    start_time = time.time()
+    logger.info("중복 UUID 파일명 정리 작업 시작")
+    
+    # 정리할 디렉토리들
+    directories_to_clean = [
+        os.path.join(STATIC_DIR, "uploads"),
+        "backend/temp_conversions"
+    ]
+    
+    # 중복 UUID 패턴: uuid1_uuid2_파일명.확장자
+    duplicate_uuid_pattern = re.compile(r'^([a-f0-9]{8,12})_([a-f0-9-]{8,36})_(.+)$', re.IGNORECASE)
+    
+    cleaned_files = []
+    errors = []
+    total_files_checked = 0
+    
+    try:
+        for directory in directories_to_clean:
+            if not os.path.exists(directory):
+                logger.info(f"디렉토리 존재하지 않음: {directory}")
+                continue
+                
+            logger.info(f"디렉토리 스캔 중: {directory}")
+            files = os.listdir(directory)
+            total_files_checked += len(files)
+            
+            for filename in files:
+                file_path = os.path.join(directory, filename)
+                
+                # 파일인지 확인
+                if not os.path.isfile(file_path):
+                    continue
+                
+                # 중복 UUID 패턴 매칭
+                match = duplicate_uuid_pattern.match(filename)
+                if match:
+                    uuid1, uuid2, clean_filename = match.groups()
+                    
+                    # 새 파일명: 첫 번째 UUID만 유지
+                    new_filename = f"{uuid1}_{clean_filename}"
+                    new_file_path = os.path.join(directory, new_filename)
+                    
+                    # 파일명 변경
+                    try:
+                        # 동일한 이름의 파일이 이미 존재하는지 확인
+                        if os.path.exists(new_file_path):
+                            logger.warning(f"타겟 파일이 이미 존재함: {new_filename}")
+                            # 기존 파일 삭제 (중복 파일이므로)
+                            os.remove(file_path)
+                            cleaned_files.append({
+                                "original": filename,
+                                "action": "deleted_duplicate",
+                                "reason": f"동일한 파일({new_filename})이 이미 존재하여 중복 파일 삭제"
+                            })
+                        else:
+                            # 파일명 변경
+                            os.rename(file_path, new_file_path)
+                            cleaned_files.append({
+                                "original": filename,
+                                "new": new_filename,
+                                "action": "renamed",
+                                "removed_uuid": uuid2
+                            })
+                        
+                        logger.info(f"파일 정리 완료: {filename}")
+                        
+                    except Exception as e:
+                        error_msg = f"파일 정리 실패 ({filename}): {str(e)}"
+                        logger.error(error_msg)
+                        errors.append(error_msg)
+        
+        # 결과 반환
+        execution_time = round(time.time() - start_time, 2)
+        
+        if cleaned_files:
+            logger.info(f"중복 UUID 정리 완료: {len(cleaned_files)}개 파일 처리")
+            return {
+                "status": "success",
+                "message": f"{len(cleaned_files)}개 파일의 중복 UUID를 정리했습니다.",
+                "cleaned_files": cleaned_files,
+                "errors": errors,
+                "stats": {
+                    "total_files_checked": total_files_checked,
+                    "cleaned_count": len(cleaned_files),
+                    "error_count": len(errors),
+                    "execution_time": execution_time
+                }
+            }
+        else:
+            logger.info("중복 UUID가 붙은 파일이 없습니다.")
+            return {
+                "status": "success",
+                "message": "중복 UUID가 붙은 파일이 없습니다. 모든 파일명이 정상입니다.",
+                "cleaned_files": [],
+                "errors": errors,
+                "stats": {
+                    "total_files_checked": total_files_checked,
+                    "cleaned_count": 0,
+                    "error_count": len(errors),
+                    "execution_time": execution_time
+                }
+            }
+            
+    except Exception as e:
+        logger.error(f"중복 UUID 정리 중 오류 발생: {e}")
+        traceback.print_exc()
+        return {
+            "status": "error",
+            "message": f"중복 UUID 정리 중 오류 발생: {str(e)}",
+            "cleaned_files": cleaned_files,
+            "errors": errors + [str(e)]
+        }

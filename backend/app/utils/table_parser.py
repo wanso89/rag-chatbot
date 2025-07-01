@@ -40,11 +40,14 @@ def detect_table_in_text(text: str) -> bool:
         >>> detect_table_in_text(text)
         True
     """
-    if not text or len(text.strip()) < 20:
+    
+    if not text or len(text.strip()) < 10:  # 20 → 10으로 완화
         return False
     
+    # 원본 텍스트 그대로 사용 (휴리스틱 처리 없이)
     lines = [line.strip() for line in text.split('\n') if line.strip()]
-    if len(lines) < 2:  # 표는 최소 2줄 이상이어야 함
+    # 한 줄짜리도 허용 (파이프나 탭이 있으면 표일 가능성)
+    if len(lines) < 1:
         return False
     
     table_indicators = 0  # 표 지표 점수 시스템
@@ -134,9 +137,10 @@ def detect_table_in_text(text: str) -> bool:
         table_indicators += 2
     
     # === 최종 판단 ===
-    # 점수가 3점 이상이면 표로 판단
-    # 이 임계값은 실험을 통해 최적화된 값입니다
-    return table_indicators >= 3
+    # 점수가 2점 이상이면 표로 판단 (기존 3점에서 완화)
+    # 더 많은 테이블을 감지하도록 임계값 조정
+    print(f"DEBUG TABLE SCORE ▸ 표 감지 점수: {table_indicators}점")
+    return table_indicators >= 2
 
 
 def parse_ocr_table(text: str) -> List[Document]:

@@ -5,10 +5,16 @@ IMAGE_DIR = Path("app/static/document_images")
 
 def extract_images_from_pdf(pdf_path: str, doc_id: str) -> list[str]:
     """
-    PDF에서 모든 이미지를 추출해 IMAGE_DIR/doc_id 에 저장
+    PDF에서 모든 이미지를 추출해 IMAGE_DIR/clean_doc_id 에 저장
     반환값: 저장된 이미지 파일들의 상대경로 리스트
     """
-    img_dir = IMAGE_DIR / doc_id           # 문서별 하위 폴더
+    # UUID 제거된 clean doc_id 사용
+    from .indexing_utils import strip_uuid_prefix
+    clean_doc_id = strip_uuid_prefix(doc_id) if doc_id else "unknown"
+    if '.' in clean_doc_id:
+        clean_doc_id = clean_doc_id.rsplit('.', 1)[0]
+    
+    img_dir = IMAGE_DIR / clean_doc_id     # 문서별 하위 폴더 (UUID 제거됨)
     img_dir.mkdir(parents=True, exist_ok=True)
 
     image_paths: list[str] = []

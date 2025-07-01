@@ -11,10 +11,18 @@ import { FiBookmark, FiFileText, FiFile, FiExternalLink } from 'react-icons/fi';
  * @param {boolean} props.isReference - 참고 문서인지 여부
  */
 const SourceItem = ({ source, onClick, isFiltered = false, isCited = false, isReference = false }) => {
-  // 파일명 정제
+  // 파일명 정제 - display_name 우선 사용, 없으면 UUID 제거 후 사용
+  const getCleanFileName = (filePath) => {
+    if (!filePath) return '알 수 없는 출처';
+    
+    const fileName = filePath.split('/').pop();
+    // UUID 패턴 제거 (UUID_파일명.확장자 형식)
+    const uuidPattern = /^[a-f0-9]{8,}-?[a-f0-9-]*_/i;
+    return fileName.replace(uuidPattern, '');
+  };
+  
   const displayName = source.display_name || 
-    (source.path ? source.path.split('/').pop() : 
-    (source.source ? source.source.split('/').pop() : '알 수 없는 출처'));
+    getCleanFileName(source.path || source.source) || '알 수 없는 출처';
   
   // 페이지 정보
   const pageInfo = source.page && source.page > 0 ? `p.${source.page}` : '';
@@ -46,10 +54,10 @@ const SourceItem = ({ source, onClick, isFiltered = false, isCited = false, isRe
           <FiFile size={14} />
         )}
       </div>
-      <div className="flex-grow truncate">
-        <span className={`font-medium ${isCited ? 'text-gray-800 dark:text-gray-200' : 'text-gray-600 dark:text-gray-300'}`}>
+      <div className="flex-grow min-w-0">
+        <p className={`text-sm font-medium ${isCited ? 'text-gray-800 dark:text-gray-200' : 'text-gray-600 dark:text-gray-300'} truncate`}>
           {displayName}
-        </span>
+        </p>
         {pageInfo && (
           <span className="ml-1 text-gray-500 dark:text-gray-500">
             {pageInfo}
@@ -63,4 +71,4 @@ const SourceItem = ({ source, onClick, isFiltered = false, isCited = false, isRe
   );
 };
 
-export default SourceItem; 
+export default SourceItem;

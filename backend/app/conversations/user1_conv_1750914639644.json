@@ -1,0 +1,143 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1750914639644",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "중앙보훈병원 제안서에서 VDI 평가 항목 중 정성 평가에서 기능성에 해당하는 세부 항목 알려줘",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "제공된 문서에서 관련 정보를 찾을 수 없습니다.",
+      "sources": [
+        {
+          "path": "AIH 재기동 매뉴얼.pptx",
+          "display_name": "AIH 재기동 매뉴얼.pptx",
+          "page": 1,
+          "chunk_id": "batch1_0",
+          "score": 30.46711439434936,
+          "is_cited": false
+        },
+        {
+          "path": "NDT User Guide(Win).pdf",
+          "display_name": "NDT User Guide(Win).pdf",
+          "page": 35,
+          "chunk_id": "batch1_34",
+          "score": 4.818950068833489,
+          "is_cited": false
+        },
+        {
+          "path": "IV. 프로젝트관리 부문.pdf",
+          "display_name": "IV. 프로젝트관리 부문.pdf",
+          "page": 1,
+          "chunk_id": "batch1_0",
+          "score": 4.683951383315719,
+          "is_cited": false
+        },
+        {
+          "path": "3S소프트 회사소개-250514.pdf",
+          "display_name": "3S소프트 회사소개-250514.pdf",
+          "page": 14,
+          "chunk_id": "batch1_13",
+          "score": 4.6112382714606825,
+          "is_cited": false
+        },
+        {
+          "path": "[NDT4]Rocky 8.10 설치.pdf",
+          "display_name": "[NDT4]Rocky 8.10 설치.pdf",
+          "page": 2,
+          "chunk_id": "batch1_1",
+          "score": 4.590144847226289,
+          "is_cited": false
+        },
+        {
+          "path": "VDI_RPA_일일보고_VDI 점검 리포트.pdf",
+          "display_name": "VDI_RPA_일일보고_VDI 점검 리포트.pdf",
+          "page": 1,
+          "chunk_id": "batch1_0",
+          "score": 4.510389413981937,
+          "is_cited": false
+        },
+        {
+          "path": "AIH 사용자 가이드_v1.1.pptx",
+          "display_name": "AIH 사용자 가이드_v1.1.pptx",
+          "page": 6,
+          "chunk_id": "batch1_10",
+          "score": 4.430874370861273,
+          "is_cited": false
+        },
+        {
+          "path": "20220408_장애결과보고_VDI_한국전자인증.pdf",
+          "display_name": "20220408_장애결과보고_VDI_한국전자인증.pdf",
+          "page": 2,
+          "chunk_id": "batch1_1",
+          "score": 4.412668211133134,
+          "is_cited": false
+        },
+        {
+          "path": "NDT 이미지만 있는 문서.pdf",
+          "display_name": "NDT 이미지만 있는 문서.pdf",
+          "page": 35,
+          "chunk_id": "batch1_34",
+          "score": 4.379119146796828,
+          "is_cited": false
+        },
+        {
+          "path": "3S소프트 회사소개-250514.pdf",
+          "display_name": "3S소프트 회사소개-250514.pdf",
+          "page": 17,
+          "chunk_id": "batch1_16",
+          "score": 4.466030120780925,
+          "is_cited": false
+        },
+        {
+          "path": "[NDT4]Windows11 Template VM 생성 가이드.pdf",
+          "display_name": "[NDT4]Windows11 Template VM 생성 가이드.pdf",
+          "page": 16,
+          "chunk_id": "batch1_12",
+          "score": 4.287357143027038,
+          "is_cited": false
+        },
+        {
+          "path": "IV. 프로젝트관리 부문.pdf",
+          "display_name": "IV. 프로젝트관리 부문.pdf",
+          "page": 6,
+          "chunk_id": "batch1_5",
+          "score": 4.41874595021509,
+          "is_cited": false
+        },
+        {
+          "path": "3S소프트 회사소개-250514.pdf",
+          "display_name": "3S소프트 회사소개-250514.pdf",
+          "page": 12,
+          "chunk_id": "batch1_11",
+          "score": 4.380783117864483,
+          "is_cited": false
+        },
+        {
+          "path": "[NDT4]Rocky 8.10 설치.pdf",
+          "display_name": "[NDT4]Rocky 8.10 설치.pdf",
+          "page": 17,
+          "chunk_id": "batch1_16",
+          "score": 4.331792805949174,
+          "is_cited": false
+        },
+        {
+          "path": "NDT 이미지만 있는 문서.pdf",
+          "display_name": "NDT 이미지만 있는 문서.pdf",
+          "page": 37,
+          "chunk_id": "batch1_36",
+          "score": 4.3167926662615494,
+          "is_cited": false
+        }
+      ]
+    }
+  ],
+  "timestamp": "2025-06-26T14:10:44.047249"
+}

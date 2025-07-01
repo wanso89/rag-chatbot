@@ -7,7 +7,8 @@ echo "===== RAG Chatbot 서비스 시작 중... ====="
 echo "$(date '+%Y-%m-%d %H:%M:%S')"
 
 # 작업 디렉토리 설정
-cd /home/test_code/test01/rag-chatbot
+WORKSPACE_DIR="/home/test_code/test01/rag-chatbot"
+cd $WORKSPACE_DIR
 source .venv/bin/activate
 
 # 로그 디렉토리 생성
@@ -57,20 +58,26 @@ fi
 
 # 백엔드 서버 시작 (백그라운드로 실행)
 echo "백엔드 서버 시작 중..."
-cd backend
-nohup python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 > ../logs/backend.log 2>&1 &
+cd $WORKSPACE_DIR/backend
+nohup python -m uvicorn app.main:app \
+      --host 0.0.0.0 --port 8000 \
+      --reload \
+      --log-level info \
+      --access-log \
+      >> ../logs/backend.log 2>&1 &
 BACKEND_PID=$!
-echo $BACKEND_PID > ../backend.pid
-cd ..
+echo $BACKEND_PID > $WORKSPACE_DIR/backend.pid
+cd $WORKSPACE_DIR
 
-# 백엔드 서버 시작 확인
+# 백엔드 서버 시작 확인 (단순 HTTP 응답 확인)
 echo "백엔드 서버 시작 확인 중..."
 BACKEND_RETRY=0
 BACKEND_MAX_RETRY=60
 BACKEND_READY=false
 
 while [ $BACKEND_RETRY -lt $BACKEND_MAX_RETRY ]; do
-  if curl -s http://localhost:8000/api/health-check | grep -q "status"; then
+  # 단순히 HTTP 응답 코드 확인 (200 또는 404 등 응답이 오면 서버가 실행 중인 것으로 간주)
+  if curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/ | grep -q -E "^[2-5][0-9][0-9]$"; then
     echo "백엔드 서버 시작 완료!"
     BACKEND_READY=true
     break
@@ -85,21 +92,22 @@ if [ "$BACKEND_READY" = false ]; then
   exit 1
 fi
 
-# Redis와 백엔드 연결 확인
-echo "Redis와 백엔드 연결 확인 중..."
-if curl -s http://localhost:8000/api/debug/redis-status | grep -q "connected"; then
-  echo "Redis와 백엔드 연결 성공!"
+# 백엔드 API 테스트
+echo "백엔드 API 테스트 중..."
+if curl -s http://localhost:8000/api/categories > /dev/null; then
+  echo "백엔드 API 테스트 성공!"
 else
-  echo "경고: Redis와 백엔드 연결 확인 실패. 파일 기반 저장소로 폴백됩니다."
+  echo "경고: 백엔드 API 테스트 실패. 서버는 실행 중이지만 API가 응답하지 않습니다."
+  echo "계속 진행합니다..."
 fi
 
 # 프론트엔드 서버 시작 (백그라운드로 실행)
 echo "프론트엔드 서버 시작 중..."
-cd frontend
-nohup npm run dev > ../logs/frontend.log 2>&1 &
+cd $WORKSPACE_DIR/frontend
+nohup npm run dev > $WORKSPACE_DIR/logs/frontend.log 2>&1 &
 FRONTEND_PID=$!
-echo $FRONTEND_PID > ../frontend.pid
-cd ..
+echo $FRONTEND_PID > $WORKSPACE_DIR/frontend.pid
+cd $WORKSPACE_DIR
 
 echo "===== 모든 서비스 시작 완료! ====="
 echo "백엔드 서버: http://localhost:8000"

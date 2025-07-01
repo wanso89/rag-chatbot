@@ -13,7 +13,7 @@ import torch
 from langchain.schema import Document
 from app.utils.feedback_analyzer import SearchQualityOptimizer
 from app.utils.indexing_utils import ES_INDEX_NAME
-from app.utils.qwen3_prompts import create_query_optimization_prompt, create_chat_messages
+from app.utils.qwen3_prompts import create_chat_messages
 import logging
 
 
@@ -77,110 +77,207 @@ class ElasticsearchRetriever:
         return asyncio.run(self.async_get_relevant_documents(query))
 
     async def async_get_relevant_documents(self, query: str) -> List[Document]:
-        """비동기 검색 함수"""
+        """2단계 검색 방식: 1차 검색 후 히트된 문서 내에서 추가 검색"""
         
         if not self.es_client or not self.embedding_function:
             return []
 
-        print(f"🔍 검색 시작: {query[:30]}...")
-
-        # 쿼리 최적화
-        search_queries = [query]
-        if self.query_optimizer_enabled:
-            optimized_queries = await self._optimize_query_with_qwen(query)
-            if optimized_queries and len(optimized_queries) > 1:
-                search_queries = optimized_queries
-                print(f"📝 구조화된 쿼리들: {search_queries}")
-            else:
-                print("⚠️ 쿼리 최적화 실패, 원본 사용")
-                search_queries = [query]
+        print(f"🔍 1단계 검색 시작: {query[:30]}...")
         
-        # 다중 쿼리 검색
-        all_docs = []
-        for i, search_query in enumerate(search_queries):
-            boost_factor = 1.0 if i == 0 else 0.7
-            docs = await self._search_single_query(search_query, boost_factor)
-            all_docs.extend(docs)
+        # 1단계: 기본 검색
+        primary_docs = await self._search_single_query(query, boost_factor=1.0)
         
-        # 결과 정리
-        if len(search_queries) > 1:
-            unique_docs = self._deduplicate_results(all_docs)
-            unique_docs.sort(key=lambda x: x.metadata.get('relevance_score', 0), reverse=True)
-            result = unique_docs[:self.k]
-        else:
-            result = all_docs[:self.k]
+        if not primary_docs:
+            print("❌ 1단계 검색 결과 없음")
+            return []
         
-        print(f"✅ 검색 완료: {len(result)}개 문서")
+        print(f"✅ 1단계 검색 완료: {len(primary_docs)}개 문서")
+        
+        # 2단계: 히트된 문서들 내에서 추가 검색
+        secondary_docs = await self._search_within_hit_documents(query, primary_docs)
+        
+        # 결과 결합 및 중복 제거
+        all_docs = primary_docs + secondary_docs
+        unique_docs = self._deduplicate_results(all_docs)
+        
+        # 점수 기준 정렬
+        unique_docs.sort(key=lambda x: x.metadata.get('relevance_score', 0), reverse=True)
+        result = unique_docs[:self.k]
+        
+        print(f"✅ 2단계 검색 완료: 총 {len(result)}개 문서 (1단계: {len(primary_docs)}, 2단계: {len(secondary_docs)})")
         return result
     
-    async def _optimize_query_with_qwen(self, query: str) -> List[str]:
-        """Qwen 쿼리 최적화 - 구조화된 분해 방식"""
-        prompt = create_query_optimization_prompt(query, self.category)
-
-        # 1) 프롬프트 토크나이즈
-        enc = self.tokenizer(
-            prompt,
-            return_tensors="pt",
-            truncation=True,
-            max_length=1000,
-        )
-
-        # 2) 모델 디바이스 확인 → 입력도 맞춰서 이동
-        device = next(self.llm_model.parameters()).device   # ex) cuda:0
-        enc = {k: v.to(device) for k, v in enc.items()}     # 중요!
-
-        # 3) 생성
-        with torch.no_grad():
-            out_ids = self.llm_model.generate(
-                **enc,
-                max_new_tokens=120,
-                temperature=0.1,
-                do_sample=True,
-                top_p=0.8,
-                eos_token_id=self.tokenizer.eos_token_id,
-                pad_token_id=self.tokenizer.eos_token_id,
-            )[0]
-
-        # 4) 디코딩(입력 길이 이후만)
-        gen_ids = out_ids[enc["input_ids"].shape[1]:].cpu().tolist()
-        response = self.tokenizer.decode(gen_ids, skip_special_tokens=True)
-
-        return self._parse_qwen_response(response, query)
+    async def _search_within_hit_documents(self, original_query: str, hit_docs: List[Document]) -> List[Document]:
+        """2단계: 히트된 문서들 내에서 추가 키워드 검색"""
+        
+        if not hit_docs:
+            return []
+        
+        print(f"🔍 2단계 검색 시작: {len(hit_docs)}개 히트 문서 내 추가 검색")
+        
+        # 히트된 문서들에서 소스 파일과 페이지 정보 추출
+        hit_sources = set()
+        for doc in hit_docs:
+            source = doc.metadata.get("source")
+            page = doc.metadata.get("page", 1)
+            if source:
+                hit_sources.add((source, page))
+        
+        # 쿼리에서 키워드 추출 및 확장
+        expanded_keywords = self._extract_and_expand_keywords(original_query)
+        
+        if not expanded_keywords:
+            print("⚠️ 확장 키워드 없음, 2단계 검색 스킵")
+            return []
+        
+        print(f"📝 확장된 키워드: {expanded_keywords}")
+        
+        # 각 히트 문서의 소스/페이지에서 추가 청크 검색
+        secondary_docs = []
+        
+        for source, page in hit_sources:
+            # 동일 문서/페이지 내 다른 청크들 검색
+            additional_chunks = await self._search_same_document_chunks(
+                source, page, expanded_keywords, original_query
+            )
+            secondary_docs.extend(additional_chunks)
+        
+        # 점수 조정 (2단계 검색 결과는 약간 낮은 점수)
+        for doc in secondary_docs:
+            current_score = doc.metadata.get("relevance_score", 0)
+            doc.metadata["relevance_score"] = current_score * 0.8  # 2단계 페널티
+            doc.metadata["search_stage"] = "secondary"
+        
+        print(f"✅ 2단계 검색 완료: {len(secondary_docs)}개 추가 문서")
+        return secondary_docs
     
-    def _parse_qwen_response(self, response: str, original_query: str) -> List[str]:
-        """Qwen 응답 파싱 - 더 다양한 쿼리 생성"""
+    def _extract_and_expand_keywords(self, query: str) -> List[str]:
+        """쿼리에서 키워드 추출 및 확장"""
+        
+        # 1. 기본 키워드 추출 (한글, 영문, 숫자 3글자 이상)
+        base_keywords = []
+        words = re.findall(r'[가-힣a-zA-Z0-9]{3,}', query)
+        
+        # 불용어 제거
+        stopwords = {
+            '이것', '그것', '저것', '무엇', '어떤', '어떻게', '왜', '어디서', '언제', 
+            '누구', '어느', '얼마', '없는', '있는', '되는', '하는', '같은', '다른',
+            '때문', '위해', '통해', '따라', '의해', '관련', '부분', '내용', '정보',
+            '방법', '경우', '때는', '있습니다', '없습니다', '됩니다', '합니다'
+        }
+        
+        for word in words:
+            if word.lower() not in stopwords and len(word) >= 3:
+                base_keywords.append(word)
+        
+        # 2. 키워드 확장 (동의어, 유사어)
+        expanded = set(base_keywords)
+        
+        # 기술 용어 확장 사전
+        tech_synonyms = {
+            '설치': ['install', '인스톨', '설정', 'setup'],
+            '오류': ['error', '에러', '문제', '장애', 'bug'],
+            '서버': ['server', 'host', '호스트', '시스템'],
+            '데이터베이스': ['database', 'db', 'DB', '디비'],
+            '네트워크': ['network', '망', '통신'],
+            '보안': ['security', '암호화', '인증'],
+            '백업': ['backup', '복구', 'restore'],
+            '모니터링': ['monitoring', '감시', '추적'],
+            '로그': ['log', 'logs', '기록'],
+            '성능': ['performance', '속도', 'speed'],
+            '용량': ['capacity', '크기', 'size', '저장공간'],
+            '버전': ['version', 'ver', 'v'],
+            '업데이트': ['update', '갱신', 'upgrade'],
+            '구성': ['config', 'configuration', '설정'],
+            '연결': ['connection', 'connect', '접속'],
+        }
+        
+        # 동의어 확장
+        for keyword in base_keywords:
+            keyword_lower = keyword.lower()
+            for main_term, synonyms in tech_synonyms.items():
+                if keyword_lower == main_term or keyword_lower in synonyms:
+                    expanded.update([main_term] + synonyms)
+                    break
+        
+        # 3. 부분 매칭용 키워드 (접두사, 접미사)
+        partial_keywords = []
+        for keyword in base_keywords:
+            if len(keyword) >= 5:
+                # 앞 3글자, 뒤 3글자
+                partial_keywords.append(keyword[:3])
+                partial_keywords.append(keyword[-3:])
+        
+        # 4. 최종 키워드 목록 (중복 제거, 길이 순 정렬)
+        final_keywords = list(expanded) + partial_keywords
+        final_keywords = [kw for kw in final_keywords if len(kw) >= 2]
+        final_keywords = sorted(set(final_keywords), key=len, reverse=True)
+        
+        return final_keywords[:15]  # 최대 15개
+    
+    async def _search_same_document_chunks(
+        self, source: str, page: int, keywords: List[str], original_query: str
+    ) -> List[Document]:
+        """동일 문서/페이지 내에서 키워드로 추가 청크 검색"""
+        
         try:
-            json_match = re.search(r'\{[^{}]*\}', response, re.DOTALL)
-            if not json_match:
-                return [original_query]
-
-            data      = json.loads(json_match.group(0))
-            keywords  = [k.strip() for k in data.get("keywords", []) if k.strip()]
-            if not keywords:
-                return [original_query]
-
-            # ────────── 1. 대안 쿼리 만들기 ──────────
-            alts = []
-
-            # (a) 키워드 AND 결합  → 가장 높은 boost 를 주고 싶으므로 첫 번째
-            alts.append(" AND ".join(keywords[:3]))       # ndt4 AND ceph AND 설치
-
-            # (b) 두 핵심 키워드만 공백 결합
-            alts.append(" ".join(keywords[:2]))           # ndt4 ceph
-
-            # ────────── 2. 최종 순서 결정 ──────────
-            # ① 자연어를 뒤에 두고 싶으면 ↓
-            result = alts + [original_query]
-
-            # ② 자연어를 아예 빼고 싶으면 ↓
-            # result = alts
-
-            print(f"🔍 최종 생성된 쿼리들: {result}")
-            return result
-
+            # 키워드들로 should 쿼리 구성
+            should_clauses = []
+            
+            for keyword in keywords[:10]:  # 상위 10개 키워드만 사용
+                should_clauses.extend([
+                    {"match": {"text": {"query": keyword, "boost": 2.0}}},
+                    {"wildcard": {"text": {"value": f"*{keyword}*", "boost": 1.0}}}
+                ])
+            
+            # 동일 문서/페이지 필터
+            must_clauses = [
+                {"term": {"source": source}},
+                {"term": {"page": page}},
+                {"term": {"category": self.category}}
+            ]
+            
+            query = {
+                "size": 8,  # 추가로 가져올 청크 수
+                "_source": {"excludes": ["embedding"]},
+                "query": {
+                    "bool": {
+                        "must": must_clauses,
+                        "should": should_clauses,
+                        "minimum_should_match": 1
+                    }
+                }
+            }
+            
+            response = self.es_client.search(index=self.index_name, body=query, request_timeout=15)
+            
+            # 결과 처리
+            docs = []
+            for hit in response["hits"]["hits"]:
+                meta_src = hit["_source"]
+                metadata = {k: v for k, v in meta_src.items() if k not in ["text", "embedding"]}
+                metadata.update({
+                    "document_id": hit["_id"],
+                    "relevance_score": hit["_score"],
+                    "source": meta_src.get("source", source),
+                    "page": meta_src.get("page", page),
+                    "table_id": meta_src.get("table_id"),
+                    "row_no": meta_src.get("row_no"),
+                    "row_index": meta_src.get("row_index"),
+                    "hit_content": meta_src.get("text", ""),
+                    "element_type": meta_src.get("element_type", "text"),
+                })
+                
+                if chunk_id := meta_src.get("chunk_id"):
+                    metadata["chunk_id"] = str(chunk_id)
+                
+                docs.append(Document(page_content=meta_src.get("text", ""), metadata=metadata))
+            
+            return docs
+            
         except Exception as e:
-            print(f"⚠️ 파싱 오류: {e}")
-            return [original_query]
+            print(f"⚠️ 동일 문서 내 검색 오류: {e}")
+            return []
     
     async def _search_single_query(self, query: str, boost_factor: float = 1.0) -> List[Document]:
         TABLE_KWS = ["표", "table", "도표", "차트"]
@@ -271,6 +368,10 @@ class ElasticsearchRetriever:
                     # table_row일 경우 위치 추적용
                     "table_id": meta_src.get("table_id"),
                     "row_no": meta_src.get("row_no"),
+                    "row_index": meta_src.get("row_index"),  # 테이블 행 인덱스 추가
+                    # 정확한 hit 내용 저장 (하이라이트용)
+                    "hit_content": meta_src.get("text", ""),  # 검색된 정확한 chunk 내용
+                    "element_type": meta_src.get("element_type", "text"),  # chunk 타입
                 }
             )
             if chunk_id := meta_src.get("chunk_id"):
@@ -385,12 +486,9 @@ class ElasticsearchRetriever:
         }
     
 def extract_clean_filename(file_path: str) -> str:
-    filename = os.path.basename(file_path)
-    if '_' in filename:
-        parts = filename.split('_', 1)
-        if len(parts) > 1 and len(parts[0]) >= 8:
-            return parts[1]
-    return filename
+    """파일명에서 UUID/해시 접두어를 제거 (indexing_utils의 strip_uuid_prefix와 동일한 로직)"""
+    from app.utils.indexing_utils import strip_uuid_prefix
+    return strip_uuid_prefix(file_path)
 
 
 async def generate_llm_response(

@@ -1,0 +1,143 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1750900804942",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "특별청원휴가 중 자녀 출산에 따라 받을 수 있는 휴가 개수 알려줘.",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "[B-1001_취업규칙_20230109.pdf p.38]: 제 78 조 (특별청원휴가) 회사는 직원이 다음 각호에 해당하는 경우 직원이 소정의 절차에 의하여 청원하면 특별유급휴가를 부여한다. 경조구분 경조사 적용 대상 휴가일수 결혼 1. 본인 7 2. 자녀 2 출산/기타 1. 자녀출산 3\n\n따라서, 자녀 출산에 따라 직원은 최대 3일의 특별유급휴가를 받을 수 있습니다.",
+      "sources": [
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 38,
+          "chunk_id": "batch1_36",
+          "score": 158.89823024940785,
+          "is_cited": true
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 22,
+          "chunk_id": "batch1_20",
+          "score": 51.491168844900784,
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 28,
+          "chunk_id": "batch1_26",
+          "score": 50.11375216760895,
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 29,
+          "chunk_id": "batch1_27",
+          "score": 39.545762595334836,
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 27,
+          "chunk_id": "batch1_25",
+          "score": 37.7031084725603,
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 30,
+          "chunk_id": "batch1_28",
+          "score": 21.504255504451805,
+          "is_cited": true
+        },
+        {
+          "path": "사내규정모음집20100129_개정.pdf",
+          "display_name": "사내규정모음집20100129_개정.pdf",
+          "page": 19,
+          "chunk_id": "batch1_18",
+          "score": 4.31536974621238,
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 8,
+          "chunk_id": "batch1_6",
+          "score": 4.151225170401582,
+          "is_cited": false
+        },
+        {
+          "path": "그라파나 구성_V1.pptx",
+          "display_name": "그라파나 구성_V1.pptx",
+          "page": 25,
+          "chunk_id": "batch1_48",
+          "score": 3.9672197493966768,
+          "is_cited": false
+        },
+        {
+          "path": "사내규정모음집20100129_개정.pdf",
+          "display_name": "사내규정모음집20100129_개정.pdf",
+          "page": 25,
+          "chunk_id": "batch1_24",
+          "score": 4.056970047680918,
+          "is_cited": false
+        },
+        {
+          "path": "그라파나 구성_V1.pptx",
+          "display_name": "그라파나 구성_V1.pptx",
+          "page": 11,
+          "chunk_id": "batch1_20",
+          "score": 3.962660820214669,
+          "is_cited": false
+        },
+        {
+          "path": "그라파나 구성_V1.pptx",
+          "display_name": "그라파나 구성_V1.pptx",
+          "page": 14,
+          "chunk_id": "batch1_26",
+          "score": 3.926348886220298,
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 14,
+          "chunk_id": "batch1_12",
+          "score": 3.921722167479725,
+          "is_cited": false
+        },
+        {
+          "path": "그라파나 구성_V1.pptx",
+          "display_name": "그라파나 구성_V1.pptx",
+          "page": 17,
+          "chunk_id": "batch1_33",
+          "score": 3.8956391129042816,
+          "is_cited": false
+        },
+        {
+          "path": "그라파나 구성_V1.pptx",
+          "display_name": "그라파나 구성_V1.pptx",
+          "page": 40,
+          "chunk_id": "batch1_78",
+          "score": 3.8938219149871838,
+          "is_cited": false
+        }
+      ]
+    }
+  ],
+  "timestamp": "2025-06-26T10:20:15.713436"
+}

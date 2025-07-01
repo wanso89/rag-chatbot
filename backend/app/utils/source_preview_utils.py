@@ -85,60 +85,110 @@ def extract_keywords_from_content(content: str) -> List[str]:
 
 
 
-def apply_highlighting(content: str, keywords: List[str], original_query: str = None) -> str:
-    if not keywords or not content:
-        return content
-
-    # 하이라이팅 중복 방지용 마스킹: 마크된 부분 보호
-    PLACEHOLDER = "___HIGHLIGHTED___"
-    mark_spans = []
-
-    content = re.sub(r'\n+', ' ', content)  # 연속 개행을 공백으로
-    content = re.sub(r'\s+', ' ', content)  # 연속 공백을 하나로
-    content = content.strip()
-
-    # 임시 마스크 적용 (존재하는 <mark> 보호)
-    def mask_existing_marks(text: str):
-        def replacer(match):
-            mark_spans.append(match.group(0))
-            return PLACEHOLDER
-        # mark와 span 태그 모두 보호
-        text = re.sub(r'<mark.*?>.*?</mark>', replacer, text, flags=re.IGNORECASE)
-        text = re.sub(r'<span.*?>.*?</span>', replacer, text, flags=re.IGNORECASE)
-        return text
-
-    def unmask(text: str):
-        for span in mark_spans:
-            text = text.replace(PLACEHOLDER, span, 1)
-        return text
-
-    masked_content = mask_existing_marks(content)
-
-    priority_keywords = []
-    regular_keywords = []
-
-    if original_query:
-        query_words = set(original_query.lower().split())
-        for keyword in keywords:
-            if keyword.lower() in query_words:
-                priority_keywords.append(keyword)
-            else:
-                regular_keywords.append(keyword)
-    else:
-        regular_keywords = keywords
-
-    def highlight(text, keyword, css_class):
-        pattern = re.compile(re.escape(keyword), re.IGNORECASE)
-        return pattern.sub(lambda m: f'<span class="{css_class}">{m.group()}</span>', text)
+def apply_highlighting(content: str, keywords: List[str], original_query: str = None) -> tuple:
+    """
+    Semantic similarity 기반으로 답변과 관련된 문장을 하이라이트합니다.
     
-    for keyword in priority_keywords:
-        masked_content = highlight(masked_content, keyword, "highlight-strong")
+    Returns:
+        tuple: (하이라이트된_내용, 하이라이트_여부)
+    """
+    if not content:
+        return content, False
+    
+    has_highlights = False
+    
+    # 1. 간단한 접근: 답변 텍스트에서 중요한 정보가 포함된 문장 찾기
+    if not original_query:
+        # 답변 텍스트가 없으면 기존 키워드 하이라이트 방식 사용
+        highlighted_content = _apply_keyword_highlighting(content, keywords)
+        has_highlights = '<span class="highlight-keyword">' in highlighted_content
+        return highlighted_content, has_highlights
+    
+    # 2. 답변에서 핵심 정보 추출 (NER 스타일)
+    answer_entities = _extract_key_entities(original_query)
+    
+    # 3. 내용을 문장 단위로 분리
+    sentences = _split_into_sentences(content)
+    
+    # 4. 각 문장의 중요도 점수 계산
+    highlighted_sentences = []
+    for sentence in sentences:
+        if not sentence.strip():
+            continue
+            
+        importance_score = _calculate_sentence_importance(sentence, answer_entities, keywords)
+        
+        # 점수가 높은 문장은 하이라이트
+        if importance_score > 0.6:  # 임계값
+            highlighted_sentence = f'<mark class="line-highlight">{sentence.strip()}</mark>'
+            highlighted_sentences.append(highlighted_sentence)
+            has_highlights = True
+            print(f"🔍 하이라이트: '{sentence.strip()[:50]}...' (점수: {importance_score:.2f})")
+        else:
+            highlighted_sentences.append(sentence.strip())
+    
+    result_content = '. '.join([s for s in highlighted_sentences if s])
+    return result_content, has_highlights
 
 
-    for keyword in regular_keywords:
-        masked_content = highlight(masked_content, keyword, "highlight-keyword")
-    # 기존 mark 태그 복구
-    return unmask(masked_content)
+def _extract_key_entities(text: str) -> Dict[str, List[str]]:
+    """답변 텍스트에서 중요한 엔티티들을 추출합니다."""
+    entities = {
+        'numbers': re.findall(r'\d+(?:[일개월년원달러주차회번째])?', text),
+        'dates': re.findall(r'\d{4}[-./]\d{1,2}[-./]\d{1,2}|\d{1,2}[-./]\d{1,2}', text),
+        'periods': re.findall(r'\d+[일개월년주]', text),
+        'parenthetical': re.findall(r'\(([^)]+)\)', text),
+        'quoted': re.findall(r'[\'"]([^\'"]+)[\'"]', text),
+    }
+    return entities
+
+
+def _split_into_sentences(content: str) -> List[str]:
+    """텍스트를 문장 단위로 분리합니다."""
+    # 마침표, 느낌표, 물음표, 줄바꿈 기준으로 분리
+    sentences = re.split(r'[.\n!?]+', content)
+    return [s.strip() for s in sentences if s.strip()]
+
+
+def _calculate_sentence_importance(sentence: str, answer_entities: Dict, keywords: List[str]) -> float:
+    """문장의 중요도 점수를 계산합니다."""
+    score = 0.0
+    
+    # 1. 답변 엔티티와의 일치도 (가장 중요)
+    for entity_type, entities in answer_entities.items():
+        for entity in entities:
+            if entity.strip() and entity.strip() in sentence:
+                if entity_type == 'numbers':
+                    score += 0.4  # 숫자는 매우 중요
+                elif entity_type == 'periods':
+                    score += 0.3  # 기간도 중요
+                else:
+                    score += 0.2
+    
+    # 2. 키워드 밀도
+    matching_keywords = sum(1 for k in keywords if k.lower() in sentence.lower())
+    if keywords:
+        keyword_density = matching_keywords / len(keywords)
+        score += keyword_density * 0.3
+    
+    # 3. 문장 길이 보정 (너무 짧거나 긴 문장은 덜 중요)
+    sentence_length = len(sentence.split())
+    if 5 <= sentence_length <= 30:  # 적절한 길이
+        score += 0.1
+    
+    return min(score, 1.0)  # 최대 1.0으로 제한
+
+
+def _apply_keyword_highlighting(content: str, keywords: List[str]) -> str:
+    """기본 키워드 하이라이트 (fallback)"""
+    if not keywords:
+        return content
+        
+    for keyword in keywords:
+        pattern = re.compile(re.escape(keyword), re.IGNORECASE)
+        content = pattern.sub(f'<span class="highlight-keyword">{keyword}</span>', content)
+    
+    return content
 
 
 def format_source_metadata(metadata: Dict[str, Any], doc_source: Dict[str, Any] = None) -> Dict[str, Any]:

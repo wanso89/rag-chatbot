@@ -132,6 +132,7 @@ const KOREAN_STOPWORDS = new Set([
   "알고싶어",
 ]);
 
+
 // 타이핑 효과 애니메이션 컴포넌트
 const TypeWriter = ({ text, speed = 2, onComplete }) => {
   const [displayText, setDisplayText] = useState('');
@@ -515,6 +516,8 @@ const FeedbackModal = ({ isOpen, onClose, messageContent, onSubmit, feedbackType
   );
 };
 
+
+
 // 피드백 결과 토스트 컴포넌트
 const FeedbackToast = ({ isVisible, message, type, onClose }) => {
   useEffect(() => {
@@ -552,6 +555,16 @@ const FeedbackToast = ({ isVisible, message, type, onClose }) => {
   );
 };
 
+// UUID 제거 함수 정의
+const getCleanFileName = (filePath) => {
+  if (!filePath) return '알 수 없는 출처';
+  
+  const fileName = filePath.split('/').pop();
+  // UUID 패턴 제거 (UUID_파일명.확장자 형식)
+  const uuidPattern = /^([a-f0-9]{8,}-?[a-f0-9-]*_|[a-f0-9]{8,}_)/i;
+  return fileName.replace(uuidPattern, '');
+};
+
 // 출처 미리보기 모달 컴포넌트
 const SourcePreviewModal = ({ isOpen, onClose, source, content, image, isLoading, keywords }) => {
   if (!isOpen) return null;
@@ -560,7 +573,7 @@ const SourcePreviewModal = ({ isOpen, onClose, source, content, image, isLoading
   
   // 오류 메시지인지 확인하는 함수
   const isErrorMessage = (text) => {
-    if (!text) return false;
+    if (!text || typeof text !== 'string') return false;
     return text.startsWith("소스를 불러오는 중 오류") || 
            text.startsWith("내용을 불러올 수 없습니다") ||
            text.includes("오류가 발생했습니다");
@@ -648,26 +661,30 @@ const SourcePreviewModal = ({ isOpen, onClose, source, content, image, isLoading
     
     // HTML 태그가 포함된 콘텐츠 처리
     if (hasHtmlTags(content)) {
+      // [object Object] 제거
+      const cleanContent = content?.replace(/\[object Object\]/g, '') || content;
+      
       return (
         <div className="prose prose-sm dark:prose-invert max-w-none">
           <ReactMarkdown 
             remarkPlugins={[remarkGfm]} 
             rehypePlugins={[rehypeHighlight, rehypeRaw]}
           >
-            {content}
+            {cleanContent}
           </ReactMarkdown>
         </div>
       );
-    }
+}
     
     // 일반 마크다운 콘텐츠
+    const cleanContent = content?.replace(/\[object Object\]/g, '') || content;
     return (
       <div className="prose prose-sm dark:prose-invert max-w-none">
         <ReactMarkdown 
           remarkPlugins={[remarkGfm]} 
           rehypePlugins={[rehypeHighlight]}
         >
-          {content}
+          {cleanContent}
         </ReactMarkdown>
       </div>
     );
@@ -683,7 +700,7 @@ const SourcePreviewModal = ({ isOpen, onClose, source, content, image, isLoading
               <FiFile className="text-indigo-400" size={16} />
             </span>
             <h3 className="font-medium text-gray-200 truncate">
-              {source?.title || source?.display_name || (source?.path && source.path.split('/').pop().replace(/^[^_]*_/, ''))}
+              {source?.title || source?.display_name || getCleanFileName(source?.path)}
             </h3>
             {source?.page && (
               <span className="text-xs text-gray-300 bg-gray-700/60 backdrop-blur-sm px-2.5 py-1 rounded-full ml-1">
@@ -735,6 +752,209 @@ const SourcePreviewModal = ({ isOpen, onClose, source, content, image, isLoading
   );
 };
 
+// 표 컴포넌트
+const TableDisplay = ({ tableData, caption }) => {
+  if (!tableData || !Array.isArray(tableData)) return null;
+  
+  // 표 데이터를 파싱하여 헤더와 행 분리
+  const parseTableData = (data) => {
+    const rows = data.map(item => item.text || item.content || '').filter(Boolean);
+    if (rows.length === 0) return { headers: [], rows: [] };
+    
+    // 첫 번째 행을 헤더로 가정하고 파싱
+    const headers = rows[0].split('|').map(h => h.trim()).filter(Boolean);
+    const dataRows = rows.slice(1).map(row => 
+      row.split('|').map(cell => cell.trim()).filter(Boolean)
+    ).filter(row => row.length > 0);
+    
+    return { headers, rows: dataRows };
+  };
+  
+  const { headers, rows } = parseTableData(tableData);
+  
+  if (headers.length === 0 && rows.length === 0) return null;
+  
+  return (
+    <div className="my-4 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+      {caption && (
+        <div className="bg-gray-50 dark:bg-gray-800 px-3 py-2 border-b border-gray-200 dark:border-gray-700">
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{caption}</p>
+        </div>
+      )}
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          {headers.length > 0 && (
+            <thead className="bg-gray-50 dark:bg-gray-800">
+              <tr>
+                {headers.map((header, idx) => (
+                  <th key={idx} className="px-3 py-2 text-left font-medium text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">
+                    {header}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+          )}
+          <tbody>
+            {rows.map((row, rowIdx) => (
+              <tr key={rowIdx} className="border-b border-gray-200 dark:border-gray-700 last:border-b-0">
+                {row.map((cell, cellIdx) => (
+                  <td key={cellIdx} className="px-3 py-2 text-gray-800 dark:text-gray-200">
+                    {cell}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+// 이미지 모달 컴포넌트
+const ImageModal = ({ isOpen, onClose, src, alt, caption }) => {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  
+  useEffect(() => {
+    if (isOpen) {
+      setLoading(true);
+      setError(false);
+    }
+  }, [isOpen, src]);
+  
+  if (!isOpen) return null;
+  
+  return (
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+      <div className="relative max-w-7xl max-h-[90vh] w-full h-full flex items-center justify-center">
+        {/* 닫기 버튼 */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 z-10 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors"
+        >
+          <FiX size={24} />
+        </button>
+        
+        {/* 이미지 컨테이너 */}
+        <div className="relative max-w-full max-h-full flex flex-col">
+          {loading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-900/50 rounded-lg">
+              <div className="flex flex-col items-center text-white">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mb-2"></div>
+                <p className="text-sm">이미지 로딩 중...</p>
+              </div>
+            </div>
+          )}
+          
+          {error ? (
+            <div className="flex items-center justify-center bg-gray-800 rounded-lg p-8 text-white">
+              <div className="text-center">
+                <FiAlertCircle size={48} className="mx-auto mb-4 text-red-400" />
+                <p className="text-lg font-medium mb-2">이미지를 불러올 수 없습니다</p>
+                <p className="text-sm text-gray-400">이미지 파일이 존재하지 않거나 접근할 수 없습니다.</p>
+              </div>
+            </div>
+          ) : (
+            <img
+              src={src}
+              alt={alt}
+              className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
+              onLoad={() => setLoading(false)}
+              onError={() => {
+                setLoading(false);
+                setError(true);
+              }}
+            />
+          )}
+          
+          {/* 캡션 */}
+          {caption && !loading && !error && (
+            <div className="mt-3 bg-black/60 backdrop-blur-sm rounded-lg p-3 text-white text-center">
+              <p className="text-sm">{caption}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// 이미지 표시 컴포넌트
+const ImageDisplay = ({ images, captions }) => {
+  const [selectedImage, setSelectedImage] = useState(null);
+  
+  if (!images || !Array.isArray(images) || images.length === 0) return null;
+  
+  // 문서명 기반 캡션 생성 함수
+  const generateDocumentCaption = (imageData, idx) => {
+    const sourceInfo = imageData.source_info;
+    if (!sourceInfo) return `이미지 ${idx + 1}`;
+    
+    const documentName = sourceInfo.display_name || '문서';
+    const pageInfo = sourceInfo.page ? ` 페이지 ${sourceInfo.page}` : '';
+    
+    return `${documentName}${pageInfo}에서 발췌`;
+  };
+  
+  return (
+    <>
+      <div className="my-4 space-y-3">
+        {images.map((imagePath, idx) => {
+          const captionData = captions && captions[idx] ? captions[idx] : null;
+          const documentCaption = generateDocumentCaption({ source_info: captionData?.source_info }, idx);
+          const fullImagePath = imagePath.startsWith('http') ? imagePath : `/static/${imagePath}`;
+          
+          return (
+            <div key={idx} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
+              <div className="bg-gray-50 dark:bg-gray-800 px-3 py-2 border-b border-gray-200 dark:border-gray-700">
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{documentCaption}</p>
+              </div>
+              <div className="p-3">
+                {/* 썸네일 이미지 */}
+                <div className="relative group cursor-pointer" onClick={() => setSelectedImage({ src: fullImagePath, alt: documentCaption, caption: documentCaption })}>
+                  <img 
+                    src={fullImagePath} 
+                    alt={documentCaption}
+                    className="w-full h-48 object-contain bg-gray-100 dark:bg-gray-800 rounded-md transition-all duration-300 group-hover:scale-105"
+                    loading="lazy"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'flex';
+                    }}
+                  />
+                  {/* 이미지 로딩 실패 시 표시할 대체 요소 */}
+                  <div className="hidden w-full h-48 bg-gray-100 dark:bg-gray-800 rounded-md items-center justify-center text-gray-500 dark:text-gray-400">
+                    <div className="text-center">
+                      <FiImage size={48} className="mx-auto mb-2" />
+                      <p className="text-sm">이미지를 불러올 수 없습니다</p>
+                    </div>
+                  </div>
+                  {/* 호버 오버레이 */}
+                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-md flex items-center justify-center">
+                    <div className="bg-white/90 dark:bg-gray-800/90 rounded-full p-3">
+                      <FiZoomIn size={24} className="text-gray-800 dark:text-gray-200" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      
+      {/* 이미지 모달 */}
+      <ImageModal
+        isOpen={!!selectedImage}
+        onClose={() => setSelectedImage(null)}
+        src={selectedImage?.src}
+        alt={selectedImage?.alt}
+        caption={selectedImage?.caption}
+      />
+    </>
+  );
+};
+
 // 출처 컴포넌트 개선
 const SourceItem = ({ source, onClick, isFiltered = false }) => {
   // source 객체가 없는 경우 기본값 설정
@@ -772,10 +992,42 @@ const SourceItem = ({ source, onClick, isFiltered = false }) => {
     );
   }
   
-  // 파일명에서 UUID 접두사 제거
-  const displayName = sourcePath.includes('_') 
-    ? sourcePath.split('_').slice(1).join('_')
-    : sourcePath;
+  // 파일명에서 UUID 접두사 제거 - 개선된 로직
+  const getDisplayName = (path) => {
+    if (!path) return '알 수 없는 출처';
+    const fileName = path.split('/').pop();
+    // UUID 패턴 제거 (UUID_파일명.확장자 형식)
+    const uuidPattern = /^([a-f0-9]{8,}-?[a-f0-9-]*_|[a-f0-9]{8,}_)/i;
+    return fileName.replace(uuidPattern, '');
+  };
+  
+  const displayName = getDisplayName(sourcePath);
+  
+  // 표나 이미지 타입에 따라 아이콘 변경
+  const getSourceIcon = () => {
+    if (source.element_type === 'table_row') {
+      return <FiList size={16} />;
+    } else if (source.has_images) {
+      return <FiImage size={16} />;
+    } else {
+      return <FiFileText size={16} />;
+    }
+  };
+  
+  // 추가 정보 표시
+  const getAdditionalInfo = () => {
+    const info = [];
+    if (source.page) {
+      info.push(`페이지 ${source.page}`);
+    }
+    if (source.element_type === 'table_row') {
+      info.push('표 데이터');
+    }
+    if (source.has_images) {
+      info.push(`이미지 ${source.images?.length || 1}개`);
+    }
+    return info.join(' • ');
+  };
   
   return (
     <div 
@@ -784,18 +1036,22 @@ const SourceItem = ({ source, onClick, isFiltered = false }) => {
       }`}
       onClick={() => onClick(source)}
     >
-      <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 mr-3 flex-shrink-0">
-        <FiFileText size={16} />
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center mr-3 flex-shrink-0 ${
+        source.element_type === 'table_row' 
+          ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
+          : source.has_images
+          ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400'
+          : 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'
+      }`}>
+        {getSourceIcon()}
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
           {displayName}
         </p>
-        {source.page && (
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            페이지 {source.page}
-          </p>
-        )}
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          {getAdditionalInfo()}
+        </p>
       </div>
       <div className="ml-2 text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors">
         <FiExternalLink size={16} />
@@ -1871,6 +2127,63 @@ function ChatMessage({ message, searchTerm = "", isSearchMode, prevMessage, next
     );
   };
   
+  // 표와 이미지 데이터 추출 함수
+  const extractTableAndImageData = () => {
+    if (!message.sources || !Array.isArray(message.sources)) {
+      return { tables: [], images: [] };
+    }
+
+    const tables = new Map(); // table_id로 그룹핑
+    const images = [];
+
+    message.sources.forEach(source => {
+      // 표 데이터 처리
+      if (source.element_type === 'table_row' && source.table_id) {
+        if (!tables.has(source.table_id)) {
+          tables.set(source.table_id, {
+            caption: source.table_caption || '',
+            rows: [],
+            source_info: {
+              display_name: source.display_name,
+              page: source.page
+            }
+          });
+        }
+        
+        tables.get(source.table_id).rows.push({
+          text: source.text || '',
+          row_index: source.row_index || 0
+        });
+      }
+      
+      // 이미지 데이터 처리
+      if (source.has_images && source.images && Array.isArray(source.images)) {
+        source.images.forEach((imagePath, idx) => {
+          const caption = source.image_captions && source.image_captions[idx] 
+            ? source.image_captions[idx].caption 
+            : null;
+          
+          images.push({
+            path: imagePath,
+            caption: caption,
+            source_info: {
+              display_name: source.display_name,
+              page: source.page
+            }
+          });
+        });
+      }
+    });
+
+    // 표 데이터를 배열로 변환하고 행 정렬
+    const tableArray = Array.from(tables.values()).map(table => ({
+      ...table,
+      rows: table.rows.sort((a, b) => (a.row_index || 0) - (b.row_index || 0))
+    }));
+
+    return { tables: tableArray, images };
+  };
+
   // 메시지 내용 렌더링 함수
   const renderMessageContent = () => {
     if (showTypeWriter && !isUser) {
@@ -1891,90 +2204,132 @@ function ChatMessage({ message, searchTerm = "", isSearchMode, prevMessage, next
       ? highlightSearchTerm(messageContent || "")
       : messageContent || "";
 
+    // 표와 이미지 데이터 추출 (어시스턴트 메시지인 경우에만)
+    const { tables, images } = !isUser ? extractTableAndImageData() : { tables: [], images: [] };
+
     return (
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkMath]}
-        rehypePlugins={[rehypeKatex, rehypeHighlight, rehypeRaw]}
-        components={{
-          code({ node, inline, className, children, ...props }) {
-            const match = /language-(\w+)/.exec(className || "");
-            const language = match && match[1] ? match[1] : "";
-            
-            // 인라인 코드
-            if (inline) {
+      <div className="message-content-wrapper">
+        {/* 기본 마크다운 콘텐츠 */}
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm, remarkMath]}
+          rehypePlugins={[rehypeKatex, rehypeHighlight, rehypeRaw]}
+          components={{
+            code({ node, inline, className, children, ...props }) {
+              const match = /language-(\w+)/.exec(className || "");
+              const language = match && match[1] ? match[1] : "";
+              
+              // 인라인 코드
+              if (inline) {
+                return (
+                  <code
+                    className="px-1.5 py-0.5 rounded-md bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm font-mono"
+                    {...props}
+                  >
+                    {children}
+                  </code>
+                );
+              }
+              
+              // 코드 블록
               return (
-                <code
-                  className="px-1.5 py-0.5 rounded-md bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm font-mono"
+                <div className="relative my-4 rounded-lg overflow-hidden">
+                  {language && (
+                    <div className="absolute top-0 right-0 px-2 py-1 text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-bl">
+                      {language}
+                    </div>
+                  )}
+                  <SyntaxHighlighter
+                    style={oneDark}
+                    language={language}
+                    PreTag="div"
+                    className="!bg-gray-100 dark:!bg-gray-800 !rounded-lg !p-4 !text-sm"
+                  >
+                    {String(children).replace(/\n$/, "")}
+                  </SyntaxHighlighter>
+                </div>
+              );
+            },
+            p({ node, children, ...props }) {
+              return (
+                <p className="mb-4 last:mb-0" {...props}>
+                  {children}
+                </p>
+              );
+            },
+            a({ node, children, href, ...props }) {
+              // 이미지 URL 처리
+              if (href && /\.(jpg|jpeg|png|gif|webp)$/i.test(href)) {
+                return (
+                  <div className="my-4">
+                    <img
+                      src={href}
+                      alt={children}
+                      className="max-w-full h-auto rounded-lg shadow-md"
+                      onClick={() => {
+                        setImageUrl(href);
+                        setShowImagePreview(true);
+                      }}
+                      style={{ cursor: 'pointer' }}
+                    />
+                  </div>
+                );
+              }
+              
+              // 일반 링크
+              return (
+                <a
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-indigo-500 dark:text-indigo-400 hover:underline"
                   {...props}
                 >
                   {children}
-                </code>
+                  <FiExternalLink className="inline-block ml-1 mb-1" size={12} />
+                </a>
               );
             }
-            
-            // 코드 블록
-            return (
-              <div className="relative my-4 rounded-lg overflow-hidden">
-                {language && (
-                  <div className="absolute top-0 right-0 px-2 py-1 text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-bl">
-                    {language}
-                  </div>
-                )}
-                <SyntaxHighlighter
-                  style={oneDark}
-                  language={language}
-                  PreTag="div"
-                  className="!bg-gray-100 dark:!bg-gray-800 !rounded-lg !p-4 !text-sm"
-                >
-                  {String(children).replace(/\n$/, "")}
-                </SyntaxHighlighter>
+          }}
+        >
+          {content}
+        </ReactMarkdown>
+
+        {/* 표 데이터 렌더링 */}
+        {tables.length > 0 && (
+          <div className="tables-section mt-4">
+            <div className="section-header mb-3">
+              <div className="flex items-center text-sm font-medium text-gray-600 dark:text-gray-400">
+                <FiList className="mr-2" size={16} />
+                관련 표 데이터 ({tables.length}개)
               </div>
-            );
-          },
-          p({ node, children, ...props }) {
-            return (
-              <p className="mb-4 last:mb-0" {...props}>
-                {children}
-              </p>
-            );
-          },
-          a({ node, children, href, ...props }) {
-            // 이미지 URL 처리
-            if (href && /\.(jpg|jpeg|png|gif|webp)$/i.test(href)) {
-              return (
-                <div className="my-4">
-                  <img
-                    src={href}
-                    alt={children}
-                    className="max-w-full h-auto rounded-lg shadow-md"
-                    onClick={() => {
-                      setImageUrl(href);
-                      setShowImagePreview(true);
-                    }}
-                    style={{ cursor: 'pointer' }}
-                  />
-                </div>
-              );
-            }
-            
-            // 일반 링크
-            return (
-              <a
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-indigo-500 dark:text-indigo-400 hover:underline"
-                {...props}
-              >
-                {children}
-                <FiExternalLink className="inline-block ml-1 mb-1" size={12} />
-              </a>
-            );
-          }
-        }}
-      >
-        {content}
-      </ReactMarkdown>
+            </div>
+            {tables.map((table, idx) => (
+              <div key={idx} className="mb-4">
+                <TableDisplay 
+                  tableData={table.rows} 
+                  caption={table.caption || `${table.source_info.display_name} (페이지 ${table.source_info.page})`}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* 이미지 데이터 렌더링 */}
+        {images.length > 0 && (
+          <div className="images-section mt-4">
+            <div className="section-header mb-3">
+              <div className="flex items-center text-sm font-medium text-gray-600 dark:text-gray-400">
+                <FiImage className="mr-2" size={16} />
+                관련 이미지 ({images.length}개)
+              </div>
+            </div>
+            <ImageDisplay 
+              images={images.map(img => img.path)} 
+              captions={images.map(img => ({ caption: img.caption || `${img.source_info.display_name} (페이지 ${img.source_info.page})` }))}
+            />
+          </div>
+        )}
+      </div>
     );
   };
   

@@ -104,6 +104,13 @@ shared_tokenizer = None
 llm_model = None
 tokenizer = None
 
+def set_shared_models(llm_model_instance, tokenizer_instance):
+    """전역 모델 인스턴스를 설정합니다."""
+    global shared_llm_model, shared_tokenizer
+    shared_llm_model = llm_model_instance
+    shared_tokenizer = tokenizer_instance
+    print(f"✅ 인덱싱 유틸에 모델 설정 완료: LLM={llm_model_instance is not None}, Tokenizer={tokenizer_instance is not None}")
+
 
 def _route_index(et: str) -> str:
     return ROW_INDEX if et == "table_row" else DOC_INDEX
@@ -214,9 +221,6 @@ async def load_document(file_path_to_load: str, loader_selector_ext: str, llm_mo
                     return ocr_docs
             
             # 기존 로더로 충분한 텍스트 추출에 성공한 경우
-            print(f"DEBUG (load_document): 총 {len(docs)}개의 Document 객체 로드됨 (path: {file_path_to_load})")
-            for i, loaded_doc in enumerate(docs):
-                print(f"  Loaded doc {i} metadata: {loaded_doc.metadata}")
                 
             processed_docs = []
             for doc_idx, doc in enumerate(docs):
@@ -269,22 +273,17 @@ async def load_document(file_path_to_load: str, loader_selector_ext: str, llm_mo
     try:
         docs = loader.load()  # 파일 로드! PyPDFLoader는 페이지별로 Document 객체 생성
 
-        # --- 로드된 문서 디버깅 로그 (매우 중요!) ---
-        print(
-            f"DEBUG (load_document): 총 {len(docs)}개의 Document 객체 로드됨 (path: {file_path_to_load})"
-        )
-        for i, loaded_doc in enumerate(docs):
-            print(f"  Loaded doc {i} metadata: {loaded_doc.metadata}")
-        # --- 디버깅 로그 끝 ---
-
         processed_docs = []
         for doc_idx, doc in enumerate(
             docs
         ):  # doc_idx는 로드된 Document 객체의 순서 (0부터 시작)
-            # 원본 코드의 전처리 로직 적용 (신중하게)
+            # 원본 코드의 전처리 로직 적용 (줄바꿈 보존)
             cleaned_content = doc.page_content
             # cleaned_content = re.sub(r"Cloudera 운영자메뉴얼|Version \d+\.\d+|Page \d+/\d+|네오오토|취업규칙", "", cleaned_content)
-            cleaned_content = re.sub(r"\s+", " ", cleaned_content).strip()
+            # 줄바꿈 보존하면서 과도한 공백만 정리
+            cleaned_content = re.sub(r'[ \t]+', ' ', cleaned_content)  # 탭과 공백만 정리
+            cleaned_content = re.sub(r'\n\s*\n\s*\n', '\n\n', cleaned_content)  # 3개 이상 연속 줄바꿈을 2개로
+            cleaned_content = cleaned_content.strip()
             # cleaned_content = re.sub(r"(습니다|합니다|입니다)\s*", " ", cleaned_content) # 문맥 왜곡 가능성
 
             if cleaned_content:
@@ -359,7 +358,11 @@ async def extract_image_ocr_texts(pdf_path: str, layout_info, doc_id: str = None
     image_paths = {}
     
     if not doc_id:
-        doc_id = Path(pdf_path).stem
+        file_name = Path(pdf_path).name
+        # UUID를 포함한 전체 파일명을 사용하여 실제 디렉토리와 일치시킴
+        doc_id = file_name
+        if '.' in doc_id:
+            doc_id = doc_id.rsplit('.', 1)[0]
         
     img_dir = IMAGE_DIR / doc_id
     img_dir.mkdir(parents=True, exist_ok=True)
@@ -412,7 +415,7 @@ def get_docling_converter():
     return _docling_layout_converter
 
 def extract_pdf_text_fast(file_path: str) -> Dict[int, str]:
-    """빠른 PDF 텍스트 추출 (기존 방식)"""
+    """빠른 PDF 텍스트 추출 (줄바꿈 보존)"""
     pdf_texts = {}
     
     if not PYPDF_AVAILABLE:
@@ -423,12 +426,323 @@ def extract_pdf_text_fast(file_path: str) -> Dict[int, str]:
         for page_num, page in enumerate(reader.pages, 1):
             text = page.extract_text()
             if text and text.strip():
-                cleaned_text = re.sub(r'\s+', ' ', text).strip()
-                pdf_texts[page_num] = cleaned_text
+                # 줄바꿈 보존하면서 과도한 공백만 정리
+                cleaned_text = re.sub(r'[ \t]+', ' ', text)  # 탭과 공백만 정리, 줄바꿈은 보존
+                cleaned_text = re.sub(r'\n\s*\n\s*\n', '\n\n', cleaned_text)  # 3개 이상 연속 줄바꿈을 2개로
+                pdf_texts[page_num] = cleaned_text.strip()
     except Exception as e:
         print(f"⚠️ PDF 텍스트 추출 실패: {e}")
     
     return pdf_texts
+
+async def generate_image_caption_with_qwen(
+    page_text: str,
+    image_index: int,
+    total_images: int,
+    llm_model=None,
+    tokenizer=None,
+    previous_sentences: List[str] = None
+) -> str:
+    """Qwen을 사용하여 검색 친화적인 이미지 캡션 생성"""
+    
+    # Qwen 모델이 없으면 기존 방식 사용
+    if not llm_model or not tokenizer:
+        return create_image_caption_from_context(page_text, image_index, total_images, previous_sentences)
+    
+    # 컨텍스트 텍스트 준비 (페이지 전체 + 이미지 주변 문맥)
+    context_text = ""
+    if page_text and page_text.strip():
+        # 페이지 텍스트 전체를 사용하되, 너무 길면 요약
+        if len(page_text) > 400:
+            context_text = page_text[:200] + " ... " + page_text[-200:]
+        else:
+            context_text = page_text
+    
+    # 이전 문장들 추가 (이미지 바로 앞 문맥)
+    if previous_sentences:
+        prev_context = " ".join(previous_sentences[-3:])[:150]
+        context_text = f"{prev_context}\n\n{context_text}"
+    
+    if not context_text.strip():
+        return f"문서 내 이미지 {image_index + 1}"
+    
+    # 범용적인 프롬프트 - 문서 내용을 이해하고 자연스러운 캡션 생성
+    prompt = f"""다음은 문서의 일부입니다. 이 문서에 포함된 이미지에 대해 사용자가 자연어로 검색할 때 쉽게 찾을 수 있도록 설명하는 캡션을 만들어주세요.
+
+문서 내용:
+{context_text}
+
+이미지 위치: {image_index + 1}번째 이미지 (총 {total_images}개)
+
+캡션 생성 규칙:
+1. 사용자가 "~에 대한 이미지", "~를 보여주는 그림", "~이 있는 페이지" 등으로 검색할 때 매치되도록 작성
+2. 문서의 주제, 내용, 목적을 반영한 자연스러운 설명
+3. 20자 이내로 간결하게
+4. 구체적이고 검색 가능한 키워드 포함
+5. "이미지", "그림", "도표", "차트" 등의 단어는 생략
+
+예시:
+- "회계 감사 결과 요약표"
+- "서명란과 담당자 정보"  
+- "시스템 구성도"
+- "월별 매출 현황"
+
+캡션:"""
+
+    try:
+        inputs = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=600)
+        inputs = {k: v.to(llm_model.device) for k, v in inputs.items()}
+        
+        with torch.no_grad():
+            outputs = llm_model.generate(
+                **inputs,
+                max_new_tokens=30,
+                temperature=0.1,  # 더 일관된 결과를 위해 낮은 온도
+                do_sample=True,
+                eos_token_id=tokenizer.eos_token_id,
+                pad_token_id=tokenizer.eos_token_id,
+            )
+        
+        generated_text = tokenizer.decode(
+            outputs[0][inputs["input_ids"].shape[1]:], 
+            skip_special_tokens=True
+        )
+        
+        # 생성된 캡션 정리
+        caption = generated_text.strip().replace("\n", " ")
+        caption = re.sub(r'\s+', ' ', caption)  # 연속 공백 제거
+        
+        # 따옴표나 불필요한 문자 제거
+        caption = caption.strip('"\'""''')
+        
+        # 길이 및 품질 검증
+        if caption and 3 <= len(caption) <= 25:
+            # 불필요한 접두어 제거
+            for prefix in ["캡션:", "설명:", "이미지:", "그림:", "도표:"]:
+                if caption.startswith(prefix):
+                    caption = caption[len(prefix):].strip()
+            
+            # 최종 검증
+            if len(caption) >= 3:
+                return caption
+                
+    except Exception as e:
+        print(f"Qwen 이미지 캡션 생성 실패: {e}")
+    
+    # 실패 시 간단한 대체 캡션
+    return create_simple_fallback_caption(page_text, image_index)
+
+def create_simple_fallback_caption(page_text: str, image_index: int) -> str:
+    """간단한 대체 캡션 생성"""
+    
+    if not page_text:
+        return f"문서 이미지 {image_index + 1}"
+    
+    # 문서 유형 추론
+    text_lower = page_text.lower()
+    
+    if any(word in text_lower for word in ['보고서', 'report']):
+        return "보고서 관련 내용"
+    elif any(word in text_lower for word in ['점검', 'check', '검사']):
+        return "점검 결과 내용"
+    elif any(word in text_lower for word in ['서명', 'sign', '담당자']):
+        return "서명 및 담당자 정보"
+    elif any(word in text_lower for word in ['표', 'table', '목록', 'list']):
+        return "표 및 목록 데이터"
+    elif any(word in text_lower for word in ['그래프', 'graph', '차트', 'chart']):
+        return "차트 및 그래프"
+    elif any(word in text_lower for word in ['구성', 'config', '설정', '시스템']):
+        return "시스템 구성 정보"
+    else:
+        return "문서 주요 내용"
+
+async def generate_table_caption_with_qwen(
+    table_text: str,
+    page_text: str = "",
+    llm_model=None,
+    tokenizer=None
+) -> str:
+    """Qwen을 사용하여 검색 친화적인 표 캡션 생성"""
+    
+    if not llm_model or not tokenizer or not table_text:
+        return create_smart_table_caption(table_text, page_text)
+    
+    # 표 데이터 분석 및 요약
+    table_summary = analyze_table_content(table_text)
+    
+    # 페이지 컨텍스트 포함
+    context_text = ""
+    if page_text:
+        context_text = f"문서 내용: {page_text[:200]}"
+    
+    # 범용적인 프롬프트 - 표의 실제 내용을 기반으로 캡션 생성
+    prompt = f"""다음 표의 내용을 분석하여 사용자가 검색할 때 쉽게 찾을 수 있는 캡션을 만들어주세요.
+
+{context_text}
+
+표 데이터 분석:
+- 헤더: {table_summary.get('headers', [])}
+- 행 수: {table_summary.get('row_count', 0)}
+- 주요 데이터 유형: {table_summary.get('data_types', [])}
+- 샘플 데이터: {table_summary.get('sample_rows', [])}
+
+캡션 생성 규칙:
+1. 표의 실제 내용과 목적을 반영
+2. "~목록", "~현황", "~결과", "~정보" 등 자연스러운 표현 사용  
+3. 20자 이내로 간결하게
+4. 사용자가 "~에 대한 표", "~를 보여주는 데이터" 등으로 검색할 때 매치되도록
+5. "표", "데이터" 등의 단어는 생략 가능
+
+예시:
+- "직원 정보 목록"
+- "월별 매출 현황"
+- "시스템 설정 값"
+- "점검 결과 요약"
+
+캡션:"""
+
+    try:
+        inputs = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=500)
+        inputs = {k: v.to(llm_model.device) for k, v in inputs.items()}
+        
+        with torch.no_grad():
+            outputs = llm_model.generate(
+                **inputs,
+                max_new_tokens=50,
+                temperature=0.1,  # 일관된 결과를 위해 낮은 온도
+                do_sample=True,
+                eos_token_id=tokenizer.eos_token_id,
+                pad_token_id=tokenizer.eos_token_id,
+            )
+        
+        generated_text = tokenizer.decode(
+            outputs[0][inputs["input_ids"].shape[1]:], 
+            skip_special_tokens=True
+        )
+        
+        # 생성된 캡션 정리
+        caption = generated_text.strip().replace("\n", " ")
+        caption = re.sub(r'\s+', ' ', caption)
+        
+        # 따옴표 제거
+        caption = caption.strip('"\'""''')
+        
+        # 길이 및 품질 검증
+        if caption and 3 <= len(caption) <= 22:
+            # 불필요한 접두어 제거
+            for prefix in ["캡션:", "제목:", "표:"]:
+                if caption.startswith(prefix):
+                    caption = caption[len(prefix):].strip()
+            
+            if len(caption) >= 3:
+                return caption
+                
+    except Exception as e:
+        print(f"Qwen 표 캡션 생성 실패: {e}")
+    
+    # 실패 시 스마트 대체 캡션
+    return create_smart_table_caption(table_text, page_text)
+
+def analyze_table_content(table_text: str) -> Dict[str, Any]:
+    """표 내용을 분석하여 구조와 데이터 유형 파악"""
+    
+    if not table_text:
+        return {}
+    
+    lines = [line.strip() for line in table_text.split('\n') if line.strip()]
+    
+    analysis = {
+        'headers': [],
+        'row_count': len(lines),
+        'data_types': [],
+        'sample_rows': []
+    }
+    
+    if lines:
+        # 첫 번째 줄을 헤더로 간주 (마크다운 테이블 또는 구조화된 텍스트)
+        first_line = lines[0]
+        
+        # 파이프로 구분된 마크다운 테이블 헤더 추출
+        if '|' in first_line:
+            headers = [h.strip() for h in first_line.split('|') if h.strip()]
+            analysis['headers'] = headers[:5]  # 최대 5개 헤더만
+        else:
+            # 콜론이나 다른 구분자로 된 경우
+            if ':' in first_line:
+                parts = first_line.split(':')
+                if len(parts) >= 2:
+                    analysis['headers'] = [parts[0].strip()]
+        
+        # 샘플 행 추출 (처음 3행)
+        sample_rows = []
+        for line in lines[:3]:
+            # 너무 길면 자르기
+            if len(line) > 100:
+                line = line[:100] + "..."
+            sample_rows.append(line)
+        analysis['sample_rows'] = sample_rows
+        
+        # 데이터 유형 추론
+        data_types = set()
+        text_sample = ' '.join(lines[:5])  # 처음 5줄 샘플
+        
+        if re.search(r'\d{4}[-/]\d{1,2}[-/]\d{1,2}', text_sample):
+            data_types.add('날짜')
+        if re.search(r'\d+[,.]?\d*\s*원', text_sample):
+            data_types.add('금액')
+        if re.search(r'\d+[%％]', text_sample):
+            data_types.add('비율')
+        if re.search(r'[가-힣]{2,4}\s+[가-힣]{2,4}', text_sample):
+            data_types.add('인명')
+        if re.search(r'(주소|위치|지역)', text_sample):
+            data_types.add('위치')
+        if re.search(r'(상태|결과|완료|진행|대기)', text_sample):
+            data_types.add('상태')
+        
+        analysis['data_types'] = list(data_types)
+    
+    return analysis
+
+def create_smart_table_caption(table_text: str, page_text: str = "") -> str:
+    """표 내용 분석 기반 스마트 캡션 생성"""
+    
+    if not table_text:
+        return "테이블 데이터"
+    
+    # 표 내용에서 키워드 추출
+    combined_text = f"{table_text} {page_text}".lower()
+    
+    # 도메인별 패턴 매칭
+    if any(word in combined_text for word in ['직원', '사원', '인사', '담당자', '성명']):
+        return "직원 정보 목록"
+    elif any(word in combined_text for word in ['매출', '수익', '금액', '원', '비용']):
+        return "재무 데이터 현황"
+    elif any(word in combined_text for word in ['점검', '검사', '테스트', '결과', '상태']):
+        return "점검 결과 정보"
+    elif any(word in combined_text for word in ['설정', 'config', '구성', '파라미터']):
+        return "시스템 설정 정보"
+    elif any(word in combined_text for word in ['일정', '스케줄', '날짜', '시간']):
+        return "일정 관리 정보"
+    elif any(word in combined_text for word in ['버전', 'version', '업데이트']):
+        return "버전 관리 정보"
+    elif any(word in combined_text for word in ['서버', 'server', 'ip', '포트']):
+        return "서버 정보 목록"
+    elif any(word in combined_text for word in ['사용자', 'user', '계정', '권한']):
+        return "사용자 계정 정보"
+    elif any(word in combined_text for word in ['데이터베이스', 'database', 'db', '테이블']):
+        return "데이터베이스 정보"
+    elif any(word in combined_text for word in ['로그', 'log', '기록', '이력']):
+        return "로그 기록 정보"
+    else:
+        # 기본적인 패턴 분석
+        if '목록' in combined_text or 'list' in combined_text:
+            return "목록 데이터"
+        elif '현황' in combined_text or 'status' in combined_text:
+            return "현황 정보"
+        elif '결과' in combined_text or 'result' in combined_text:
+            return "결과 데이터"
+        else:
+            return "데이터 테이블"
 
 def create_image_caption_from_context(
     page_text: str, 
@@ -436,7 +750,7 @@ def create_image_caption_from_context(
     total_images: int,
     previous_sentences: List[str] = None
 ) -> str:
-    """이미지 캡션을 주변 텍스트에서 생성 (LLAVA 대신)"""
+    """이미지 캡션을 주변 텍스트에서 생성 (기존 방식)"""
     
     # 기본 캡션
     base_caption = f"이미지 {image_index + 1}"
@@ -513,7 +827,6 @@ def split_table_rows(table_text: str, meta_base: dict) -> list[Document]:
             },
         )
         docs.append(doc)
-    print(f"DEBUG MERGE ▸ table_row created = {idx}")
     return docs
 
 
@@ -550,7 +863,7 @@ def merge_table_chunks(docs: list[Document]) -> list[Document]:
     merged_docs = merged_tables  # ← 기존 반환 리스트
     row_cnt = sum(d.metadata.get("element_type") == "table_row"
                   for d in merged_docs)
-    print(f"DEBUG MERGE END ▸ table_row count = {row_cnt}")
+
     return merged_tables
 
 
@@ -564,17 +877,17 @@ async def load_document_with_ocr(file_path: str) -> List["Document"]:
             return await load_document_with_ocr_original(file_path)
 
         start = time.time()
-        # 1) Docling 레이아웃
+        # 1) Docling 레이아웃 - GPU 오류로 임시 비활성화
         layout_info = None
-        if DOCLING_AVAILABLE:
-            try:
-                converter = get_docling_converter()
-                if converter is not None:
-                    layout_result = await asyncio.to_thread(converter.convert, file_path)
-                    layout_info = layout_result.document
-                    logger.info("✅ 레이아웃 분석 완료")
-            except Exception as e:
-                logger.warning(f"Docling 레이아웃 분석 실패 → 무시: {e}")
+        # if DOCLING_AVAILABLE:
+        #     try:
+        #         converter = get_docling_converter()
+        #         if converter is not None:
+        #             layout_result = await asyncio.to_thread(converter.convert, file_path)
+        #             layout_info = layout_result.document
+        #             logger.info("✅ 레이아웃 분석 완료")
+        #     except Exception as e:
+        #         logger.warning(f"Docling 레이아웃 분석 실패 → 무시: {e}")
         # 2) 텍스트 레이어 추출
         pdf_texts = extract_pdf_text_fast(file_path)
         # 3) 텍스트 없으면 기존 OCR Fallback
@@ -651,20 +964,22 @@ async def create_hybrid_documents(
                 docling_table_pages.add(page_num)
 
     # === 2단계: 이미지 OCR 처리 (기존 유지) ===
-    print("DEBUG ▸ image OCR 호출:", file_path)
     image_ocr_texts, image_paths = await extract_images_from_pdf_with_layout(file_path, doc_id)
-    print("DEBUG ▸ image_paths keys =", list(image_paths.keys())[:5])
 
     # === 3단계: 각 페이지별 표 추출 전략 결정 ===
     ocr_tables = []
     
     for page_num, page_text in pdf_texts.items():
         if not page_text.strip():
-            continue
-        
-        # 텍스트에서 표 감지 시도 (모든 페이지에서 시도)
+            continue           
         if detect_table_in_text(page_text):
+            print(f"DEBUG TABLE ▸ 페이지 {page_num} 표 감지됨!")
             page_table_docs = parse_ocr_table(page_text)
+            print(f"DEBUG TABLE ▸ 페이지 {page_num} 파싱된 표 행 수: {len(page_table_docs)}")
+            for i, doc in enumerate(page_table_docs):
+                print(f"DEBUG TABLE ▸ 행 {i} element_type: {doc.metadata.get('element_type')}")
+        else:
+            print(f"DEBUG TABLE ▸ 페이지 {page_num} 표 감지 실패 - 감지 조건 미충족")
             
             # Docling 결과와 비교하여 더 나은 결과 선택
             if page_num in docling_table_pages:
@@ -706,7 +1021,7 @@ async def create_hybrid_documents(
     # 표 페이지의 인접 페이지도 제외 (기존 로직 유지하되 실제 표 페이지 기준)
     extended_table_pages = actual_table_pages | {p + 1 for p in actual_table_pages}
 
-    # === 5단계: 본문 + 이미지 처리 (기존 로직 유지) ===
+    # === 5단계: 본문 + 이미지 처리 + Qwen 캡션 생성 ===
     for page_num, page_text in pdf_texts.items():
         if page_num in extended_table_pages or not page_text.strip():
             continue
@@ -723,7 +1038,7 @@ async def create_hybrid_documents(
             page_images = image_paths[page_num]
 
         # 단락 분할
-        for para in re.split(r"\n\s*\n", combined):
+        for para_idx, para in enumerate(re.split(r"\n\s*\n", combined)):
             p = para.strip()
             if len(p) < 10:
                 continue
@@ -734,9 +1049,47 @@ async def create_hybrid_documents(
                 "loaded_at": datetime.now().isoformat(),
             }
             
+            # 이미지가 있는 경우 캡션 생성
             if page_images:
                 metadata["images"] = page_images
                 metadata["has_images"] = True
+                
+                # Qwen을 사용한 이미지 캡션 생성
+                image_captions = []
+                previous_sentences = re.split(r'[.!?]', p)[:3]  # 앞 3문장을 컨텍스트로 사용
+                
+                for img_idx, img_path in enumerate(page_images):
+                    try:
+                        caption = await generate_image_caption_with_qwen(
+                            page_text=p,
+                            image_index=img_idx,
+                            total_images=len(page_images),
+                            llm_model=llm_model,
+                            tokenizer=tokenizer,
+                            previous_sentences=previous_sentences
+                        )
+                        image_captions.append({
+                            "image_path": img_path,
+                            "caption": caption,
+                            "image_index": img_idx
+                        })
+                        print(f"📷 이미지 캡션 생성: {img_path} -> {caption}")
+                    except Exception as e:
+                        print(f"⚠️ 이미지 캡션 생성 실패 ({img_path}): {e}")
+                        image_captions.append({
+                            "image_path": img_path,
+                            "caption": f"이미지 {img_idx + 1}",
+                            "image_index": img_idx
+                        })
+                
+                metadata["image_captions"] = image_captions
+                
+                # 전체 캡션을 하나로 결합 (검색 성능 향상)
+                all_captions = " ".join([cap["caption"] for cap in image_captions])
+                metadata["caption"] = all_captions
+                
+                # 캡션을 본문에도 추가하여 검색 성능 향상
+                p += f"\n\n[이미지 정보: {all_captions}]"
                 
             documents.append(
                 Document(page_content=p, metadata=metadata)
@@ -872,6 +1225,10 @@ async def index_chunks_to_elasticsearch(
                     # 이미지 메타
                     "images":     chunk_doc.metadata.get("images", []),
                     "has_images": chunk_doc.metadata.get("has_images", False),
+                    # 캡션 필드 추가
+                    "caption":    chunk_doc.metadata.get("caption", ""),
+                    "image_captions": chunk_doc.metadata.get("image_captions", []),
+                    "table_caption": chunk_doc.metadata.get("table_caption", ""),
                 }
 
                 actions_for_bulk.append(
@@ -924,15 +1281,15 @@ async def check_file_exists(es_client: Any, file_path: str) -> Tuple[bool, str]:
     Returns:
         Tuple[bool, str]: (파일 존재 여부, 파일 해시값)
     """
-    # 파일 해시값 계산 - 메모리 효율적인 방식으로 업데이트
+    # 파일 해시값 계산 - SHA1으로 통일 (저장할 때와 동일한 알고리즘)
     file_hash = ""
     try:
         # 큰 파일을 처리할 때 메모리 사용량을 줄이기 위해 청크 단위로 읽음
-        hash_md5 = hashlib.md5()
+        hash_sha1 = hashlib.sha1()
         with open(file_path, "rb") as f:
             for chunk in iter(lambda: f.read(4096), b""):
-                hash_md5.update(chunk)
-        file_hash = hash_md5.hexdigest()
+                hash_sha1.update(chunk)
+        file_hash = hash_sha1.hexdigest()
         
         # 파일 크기도 로깅 (디버깅용)
         file_size = os.path.getsize(file_path)
@@ -1005,7 +1362,7 @@ async def process_and_index_file(
     temp_conversion_output_dir: str | None = None
     # ──────────────────────────────
 
-    # ── 1) 저장 경로 결정 ──────────────────────────────────────
+    # ── 1) 중복 검사 및 저장 경로 결정 ──────────────────────────────
     HASH_PREFIX_RE = re.compile(r"^[0-9a-f]{12}_")
 
     # case A: reindex 모드이거나 이미 our-hash_ 가 붙어 있는 파일
@@ -1014,17 +1371,33 @@ async def process_and_index_file(
         # 해시는 파일명에서 바로 추출(없으면 나중에 계산)
         match = HASH_PREFIX_RE.match(src_path.name)
         file_hash = match.group(0)[:-1] if match else None
-    # case B: 새 업로드 — 해시 계산 후 복사
+        
+        if file_hash is None:  # reindex + 정상 이름이지만 해시 미포함
+            file_hash = hashlib.sha1(Path(saved_path).read_bytes()).hexdigest()
+    
+    # case B: 새 업로드 — 중복 검사 후 결정
     else:
         content_bytes = src_path.read_bytes()
-        file_hash     = hashlib.sha1(content_bytes).hexdigest()
-        saved_name    = f"{file_hash[:12]}_{src_path.name}"
-        saved_path    = uploads_dir / saved_name
-        if not saved_path.exists():
+        file_hash = hashlib.sha1(content_bytes).hexdigest()
+        
+        # 🔍 중복 검사 실행
+        file_exists, existing_hash = await check_file_exists(es_client, str(src_path))
+        
+        if file_exists:
+            print(f"🔄 중복 파일 발견: {src_path.name} (해시: {file_hash[:8]}...)")
+            print(f"📋 기존 ES 인덱스에 이미 존재하므로 업로드를 건너뜁니다.")
+            return True  # 이미 인덱싱된 것으로 간주
+        
+        # 중복이 아닌 경우에만 새로 저장
+        saved_name = f"{file_hash[:12]}_{src_path.name}"
+        saved_path = uploads_dir / saved_name
+        
+        # 동일한 해시로 이미 저장된 파일이 있는지 확인
+        if saved_path.exists():
+            print(f"📁 동일한 파일이 이미 업로드 폴더에 존재: {saved_name}")
+        else:
             saved_path.write_bytes(content_bytes)
-
-    if file_hash is None:               # (reindex + 정상 이름이지만 해시 미포함)
-        file_hash = hashlib.sha1(Path(saved_path).read_bytes()).hexdigest()
+            print(f"💾 새 파일 저장: {saved_name}")
 
     # ── 2) 문서 로드 · 청킹 ────────────────────────────────────
     ext = saved_path.suffix.lower()
@@ -1035,8 +1408,9 @@ async def process_and_index_file(
 
     for doc in documents:
         clean_name = strip_uuid_prefix(saved_path.name)
-        doc.metadata["source"]    = clean_name        # 파일명만 저장
+        doc.metadata["source"]    = clean_name        # UUID 제거된 깔끔한 파일명
         doc.metadata["file_hash"] = file_hash
+        doc.metadata["source_path"] = str(saved_path)  # 원본 경로 (필요시)
 
     # ── 3) ES 인덱싱 ─────────────────────────────────────────
     success = await index_chunks_to_elasticsearch(
@@ -1076,6 +1450,27 @@ async def markdown_to_row_chunks(
         if m:
             caption = m.group(0).strip()
 
+    # ── 0-1) Qwen을 사용한 표 캡션 자동 생성 (기존 캡션이 없을 때) ──
+    if not caption and llm_model and tokenizer:
+        try:
+            # 마크다운 표 텍스트를 일반 텍스트로 변환
+            table_text = re.sub(r'\|', ' ', md)  # 파이프 제거
+            table_text = re.sub(r'-+', '', table_text)  # 구분선 제거
+            table_text = re.sub(r'\s+', ' ', table_text).strip()  # 공백 정리
+            
+            qwen_caption = await generate_table_caption_with_qwen(
+                table_text=table_text,
+                page_text="",  # 페이지 컨텍스트는 여기서는 생략
+                llm_model=llm_model,
+                tokenizer=tokenizer
+            )
+            
+            if qwen_caption and qwen_caption != "표":
+                caption = qwen_caption
+                print(f"📊 표 캡션 자동 생성: {caption}")
+        except Exception as e:
+            print(f"⚠️ Qwen 표 캡션 생성 실패: {e}")
+
     # ── 1) md → HTML → DataFrame ─────────────────────
     html = markdown.markdown(md, extensions=["tables"])
     dfs  = pd.read_html(StringIO(html))
@@ -1105,20 +1500,26 @@ async def markdown_to_row_chunks(
 
         page_content = (one_liner + "\n" if one_liner else "") + raw_row_text
 
-        docs.append(
-            Document(
-                page_content=page_content,
-                metadata={
-                    "source": file_path,
-                    "page": page,
-                    "element_type": "table_row",
-                    "table_id": tid,       # ★ 같은 표라면 행마다 동일
-                    "row_index": ridx,
-                    "n_rows": n_rows,
-                    **({"caption": caption} if caption else {}),
-                },
-            )
-        )
+        # 메타데이터 구성
+        metadata = {
+            "source": file_path,
+            "page": page,
+            "element_type": "table_row",
+            "table_id": tid,       # ★ 같은 표라면 행마다 동일
+            "row_index": ridx,
+            "n_rows": n_rows,
+        }
+        
+        # 캡션 메타데이터 추가
+        if caption:
+            metadata["table_caption"] = caption
+            metadata["caption"] = caption  # 통합 캡션 필드
+            
+            # 첫 번째 행에만 캡션을 페이지 콘텐츠에 포함
+            if ridx == 0:
+                page_content = f"[표 제목: {caption}]\n{page_content}"
+
+        docs.append(Document(page_content=page_content, metadata=metadata))
     return docs
 
 
@@ -1146,16 +1547,13 @@ async def summarize_row_one_liner(text, llm_model, tokenizer):
     )
     return summary.strip().replace("\n", " ")[:80]
 
-UUID_PREFIX = re.compile(
-    r'(?:(?:[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}'
-    r'|[0-9a-fA-F]{32}'
-    r'|[0-9a-fA-F]{12})[_-]?)+',
-    re.I
-)
+UUID_PREFIX = re.compile(r'^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|[0-9a-fA-F]{32}|[0-9a-fA-F]{12})[_-]', re.I)
 
 def strip_uuid_prefix(filename: str) -> str:
-    """파일명에서 UUID/해시 접두어('_' 또는 '-')를 모두 제거"""
-    return UUID_PREFIX.sub('', os.path.basename(filename))
+    """파일명에서 UUID/해시 접두어('_' 또는 '-')를 파일명 시작 부분에서만 제거"""
+    base_name = os.path.basename(filename)
+    result = UUID_PREFIX.sub('', base_name)
+    return result
 
 def clean_html_tags(text: str) -> str:
     """HTML 태그 제거 및 테이블 정리"""
@@ -1247,5 +1645,3 @@ async def convert_office_to_pdf(office_path: str, output_dir: str) -> Optional[s
     return await loop.run_in_executor(
         None, convert_office_to_pdf_sync, office_path, output_dir
     )
-
-

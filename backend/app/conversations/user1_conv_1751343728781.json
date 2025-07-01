@@ -1,0 +1,22 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1751343728781",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "3S소프트의 오너비용 지급 기준 알려줘",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "sources": []
+    }
+  ],
+  "timestamp": "2025-07-01T13:22:25.883535"
+}

@@ -828,11 +828,11 @@ body {
 
   /* 출처 문서 하이라이트 스타일 */
   .highlight-strong {
-    @apply bg-yellow-300/60 dark:bg-yellow-500/40 p-1 rounded-sm block my-1 border-l-4 border-yellow-400 dark:border-yellow-500;
+    @apply bg-yellow-300/60 dark:bg-yellow-500/40 p-1 rounded-sm inline-block my-1 border-l-4 border-yellow-400 dark:border-yellow-500;
   }
 
   .highlight-medium {
-    @apply bg-yellow-200/40 dark:bg-yellow-600/20 p-1 rounded-sm block my-1 border-l-2 border-yellow-300 dark:border-yellow-600;
+    @apply bg-yellow-200/40 dark:bg-yellow-600/20 p-1 rounded-sm inline-block my-1 border-l-2 border-yellow-300 dark:border-yellow-600;
   }
   
   /* 키워드 하이라이트 스타일 */
