@@ -7,6 +7,7 @@ import time
 from typing import List, Dict, Any, Optional, Tuple, Set
 import numpy as np
 from langchain.schema import Document
+from app.utils.synonym_builder import get_qwen_synonym_builder
 
 
 class QueryExpander:
@@ -40,41 +41,131 @@ class QueryExpander:
         
     def expand_query(self, query: str) -> Dict[str, Any]:
         """
-        쿼리 확장 및 변형 생성
+        쿼리 확장 및 변형 생성 (동의어 사전 활용)
         """
         cleaned_query = self.clean_query(query)
         keywords = self.extract_keywords(cleaned_query)
+        
+        # 동의어 빌더 가져오기
+        try:
+            synonym_builder = get_qwen_synonym_builder()
+        except Exception as e:
+            print(f"동의어 빌더 로드 실패: {e}")
+            synonym_builder = None
         
         # 확장된 쿼리 생성
         expanded_variants = []
         
         # 1. 원본 쿼리 (항상 포함)
-        expanded_variants.append(query)
+        expanded_variants.append(query.strip())
         
-        # 2. 핵심 키워드만 포함한 쿼리
-        if len(keywords) >= 2:
-            keyword_query = " ".join(keywords)
-            if keyword_query != query:
-                expanded_variants.append(keyword_query)
+        # 2. 동의어 기반 쿼리 변형 (가장 중요)
+        if synonym_builder and keywords:
+            # 각 키워드의 동의어 찾기
+            keyword_synonyms = {}
+            for keyword in keywords:
+                synonyms = synonym_builder.get_synonyms(keyword)
+                if len(synonyms) > 1:  # 동의어가 실제로 있는 경우
+                    keyword_synonyms[keyword] = [s for s in synonyms if s != keyword][:3]  # 최대 3개
+            
+            # 동의어로 치환한 쿼리 생성
+            if keyword_synonyms:
+                # 각 키워드를 동의어로 치환한 버전들 생성
+                for original_keyword, synonyms in keyword_synonyms.items():
+                    for synonym in synonyms:
+                        # 원본 쿼리에서 키워드를 동의어로 치환
+                        synonym_query = re.sub(
+                            rf'\b{re.escape(original_keyword)}\b', 
+                            synonym, 
+                            query, 
+                            flags=re.IGNORECASE
+                        )
+                        if synonym_query != query and synonym_query.strip():
+                            expanded_variants.append(synonym_query.strip())
+                
+                # 여러 키워드를 동시에 치환한 조합 생성
+                if len(keyword_synonyms) >= 2:
+                    # 가장 중요한 2개 키워드의 첫 번째 동의어로 치환
+                    combination_query = query
+                    replacement_count = 0
+                    for original_keyword, synonyms in list(keyword_synonyms.items())[:2]:
+                        if synonyms:
+                            combination_query = re.sub(
+                                rf'\b{re.escape(original_keyword)}\b', 
+                                synonyms[0], 
+                                combination_query, 
+                                flags=re.IGNORECASE
+                            )
+                            replacement_count += 1
+                    
+                    if replacement_count >= 2 and combination_query != query:
+                        expanded_variants.append(combination_query.strip())
         
-        # 3. 키워드 조합 쿼리 (키워드가 3개 이상인 경우)
-        if len(keywords) >= 3:
-            # 주요 키워드 조합 (처음 2개 + 마지막 1개)
-            keyword_combo = " ".join([keywords[0], keywords[1], keywords[-1]])
-            expanded_variants.append(keyword_combo)
+        # 3. 핵심 키워드만 포함한 쿼리 (동의어 확장된 키워드 포함)
+        if keywords:
+            # 원본 키워드 + 동의어 조합
+            expanded_keywords = []
+            if synonym_builder:
+                for keyword in keywords:
+                    synonyms = synonym_builder.get_synonyms(keyword)
+                    expanded_keywords.extend(synonyms[:2])  # 각 키워드당 최대 2개 동의어
+            else:
+                expanded_keywords = keywords
+            
+            # 중복 제거하고 키워드 쿼리 생성
+            unique_keywords = list(dict.fromkeys(expanded_keywords))
+            if len(unique_keywords) >= 2:
+                keyword_query = " ".join(unique_keywords[:4])  # 최대 4개 키워드
+                if keyword_query != query.strip():
+                    expanded_variants.append(keyword_query)
         
         # 4. 질문 형태 변환 (의문문 -> 평서문)
-        if query.endswith("?") or query.endswith("까?"):
-            # 의문문 -> 평서문 변환
-            statement_query = re.sub(r'\?$', '', query)
-            statement_query = re.sub(r'까\?$', '', statement_query)
-            expanded_variants.append(statement_query)
+        transformed_queries = []
+        for variant in expanded_variants:
+            if "?" in variant:
+                # 다양한 질문 패턴 처리
+                statement_query = variant
+                statement_query = re.sub(r'\?+$', '', statement_query)
+                statement_query = re.sub(r'까\?*$', '', statement_query)
+                statement_query = re.sub(r'니\?*$', '', statement_query)
+                statement_query = re.sub(r'나\?*$', '', statement_query)
+                statement_query = statement_query.strip()
+                
+                if statement_query and statement_query != variant:
+                    transformed_queries.append(statement_query)
+        
+        expanded_variants.extend(transformed_queries)
+        
+        # 5. 어미 변형 (추가 변형)
+        morphology_variants = []
+        for variant in expanded_variants[:3]:  # 처음 3개 변형에 대해서만
+            # 높임말 -> 평어 변환
+            morphed = variant
+            morphed = re.sub(r'해주세요$', '', morphed)
+            morphed = re.sub(r'해주니$', ' 지급', morphed)
+            morphed = re.sub(r'습니다$', '다', morphed)
+            morphed = re.sub(r'니까$', '', morphed)
+            morphed = morphed.strip()
+            
+            if morphed and morphed != variant and len(morphed) > 2:
+                morphology_variants.append(morphed)
+        
+        expanded_variants.extend(morphology_variants)
+        
+        # 중복 제거 및 빈 문자열 제거
+        unique_variants = []
+        seen = set()
+        for variant in expanded_variants:
+            variant = variant.strip()
+            if variant and variant not in seen and len(variant) > 1:
+                unique_variants.append(variant)
+                seen.add(variant)
         
         return {
             "original": query,
             "cleaned": cleaned_query,
             "keywords": keywords,
-            "variants": list(set(expanded_variants))  # 중복 제거
+            "variants": unique_variants[:5]  # 최대 5개 변형만 사용
         }
 
 
@@ -272,4 +363,4 @@ class EnhancedSearchPipeline:
         # 3. 컨텍스트 기반 리랭킹
         reranked_results = self.contextual_reranker.rerank_with_diversity(enhanced_results, query_info)
         
-        return query_info, reranked_results 
+        return query_info, reranked_results

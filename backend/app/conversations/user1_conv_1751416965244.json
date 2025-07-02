@@ -1,0 +1,22 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1751416965244",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "한국전자인증 2022년 4월에 있었던 장애와 장애원인이 뭐였지?",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "sources": []
+    }
+  ],
+  "timestamp": "2025-07-02T09:42:54.661953"
+}

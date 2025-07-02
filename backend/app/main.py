@@ -123,7 +123,10 @@ app.add_middleware(
 )
 
 # 정적 파일 서빙 설정
+from fastapi.staticfiles import StaticFiles
+
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
 
 
 
@@ -157,98 +160,100 @@ class EnhancedLocalReranker:
         self.batch_size = 24  # 배치 크기 증가 (16 → 24)
 
     def rerank(self, query: str, docs: List[Document]) -> List[Document]:
-        # 리랭킹 비활성화 - 원본 문서 그대로 반환
-        print(f"리랭킹 스킵: 원본 {len(docs)}개 문서 그대로 사용")
-        return docs[:self.top_n]  # 상위 top_n개만 반환
+        # 리랭킹 활성화 - 리랭커로 문서 재정렬
+        print(f"🔄 리랭킹 시작: {len(docs)}개 문서 처리")
 
-        # # 캐시 키 생성 (쿼리와 문서 ID 조합)
-        # # chunk_id를 명시적으로 문자열로 변환하여 에러 방지
-        # query_normalized = query.lower().strip()
-        # cache_key = f"{query_normalized}:{','.join([str(d.metadata.get('chunk_id', i)) for i, d in enumerate(docs[:10])])}"
+        # 캐시 키 생성 (쿼리와 문서 ID 조합)
+        # chunk_id를 명시적으로 문자열로 변환하여 에러 방지
+        query_normalized = query.lower().strip()
+        cache_key = f"{query_normalized}:{','.join([str(d.metadata.get('chunk_id', i)) for i, d in enumerate(docs[:10])])}"
 
-        # # 캐시에서 결과 확인
-        # current_time = time.time()
-        # if cache_key in self._cache:
-        #     cache_entry = self._cache[cache_key]
-        #     if current_time - cache_entry["timestamp"] < self._cache_ttl:
-        #         print(f"리랭킹 캐시 적중: '{query[:30]}...'")
-        #         return cache_entry["results"]
+        # 캐시에서 결과 확인
+        current_time = time.time()
+        if cache_key in self._cache:
+            cache_entry = self._cache[cache_key]
+            if current_time - cache_entry["timestamp"] < self._cache_ttl:
+                print(f"리랭킹 캐시 적중: '{query[:30]}...'")
+                return cache_entry["results"]
 
-        # # 캐시 정리 (필요시) - LRU 방식 최적화
-        # if len(self._cache) >= self._cache_size:
-        #     oldest_keys = sorted(
-        #         self._cache.keys(), 
-        #         key=lambda k: self._cache[k]["timestamp"]
-        #     )[:len(self._cache) // 3]  # 1/3 정도 삭제 (1/4에서 증가)
-        #     for old_key in oldest_keys:
-        #         del self._cache[old_key]
+        # 캐시 정리 (필요시) - LRU 방식 최적화
+        if len(self._cache) >= self._cache_size:
+            oldest_keys = sorted(
+                self._cache.keys(), 
+                key=lambda k: self._cache[k]["timestamp"]
+            )[:len(self._cache) // 3]  # 1/3 정도 삭제 (1/4에서 증가)
+            for old_key in oldest_keys:
+                del self._cache[old_key]
 
-        # try:
-        #     # 메모리 최적화를 위한 캐시 정리
-        #     if torch.cuda.is_available():
-        #         torch.cuda.empty_cache()
+        try:
+            # 메모리 최적화를 위한 캐시 정리
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
 
-        #     # 상위 12개 문서 리랭킹 (원래 10개에서 상향) → 12개 그대로 유지
-        #     docs_to_rerank = docs[:12]
-        #     pairs = [(query_normalized, doc.page_content) for doc in docs_to_rerank]
+            # 상위 12개 문서 리랭킹 (원래 10개에서 상향) → 12개 그대로 유지
+            docs_to_rerank = docs[:12]
+            pairs = [(query_normalized, doc.page_content) for doc in docs_to_rerank]
 
-        #     # 배치 처리로 성능 최적화
-        #     scores = []
-        #     for i in range(0, len(pairs), self.batch_size):
-        #         batch_pairs = pairs[i:i + self.batch_size]
-        #         # torch CUDA 설정으로 성능 최적화
-        #         with torch.no_grad(), torch.cuda.amp.autocast(enabled=True):
-        #             batch_scores = self.reranker.predict(batch_pairs)
-        #             scores.extend(batch_scores)
+            # 배치 처리로 성능 최적화
+            scores = []
+            for i in range(0, len(pairs), self.batch_size):
+                batch_pairs = pairs[i:i + self.batch_size]
+                # torch CUDA 설정으로 성능 최적화
+                with torch.no_grad(), torch.cuda.amp.autocast(enabled=True):
+                    batch_scores = self.reranker.predict(batch_pairs)
+                    scores.extend(batch_scores)
 
-        #     # 메타데이터에 점수 추가 및 정규화
-        #     for doc, score in zip(docs_to_rerank, scores):
-        #         # 점수 범위를 0~1로 정규화 (-1~1 범위에서)
-        #         normalized_score = min(max((score + 1) / 2, 0), 1)
-        #         doc.metadata["rerank_score"] = float(normalized_score)
-        #         doc.metadata["raw_rerank_score"] = float(score)  # 원본 점수도 저장
+            # ES score 대신 리랭커 점수로 교체 - 메타데이터에 점수 추가 및 정규화
+            for doc, score in zip(docs_to_rerank, scores):
+                # 점수 범위를 0~1로 정규화 (-1~1 범위에서)
+                normalized_score = min(max((score + 1) / 2, 0), 1)
+                doc.metadata["rerank_score"] = float(normalized_score)
+                doc.metadata["raw_rerank_score"] = float(score)  # 원본 점수도 저장
+                # 기존 ES relevance_score를 리랭커 점수로 교체
+                doc.metadata["relevance_score"] = float(normalized_score)
 
-        #     # 리랭킹된 문서와 나머지 문서 결합
-        #     sorted_docs = sorted(
-        #         docs_to_rerank,
-        #         key=lambda x: x.metadata.get("rerank_score", 0.0),
-        #         reverse=True,
-        #     )
+            # 리랭킹된 문서를 리랭커 점수 기준으로 정렬
+            sorted_docs = sorted(
+                docs_to_rerank,
+                key=lambda x: x.metadata.get("rerank_score", 0.0),
+                reverse=True,
+            )
 
-        #     # 나머지 문서 추가 (이미 포함된 문서 제외)
-        #     remaining_docs = [doc for doc in docs[12:] if doc not in docs_to_rerank]
-        #     sorted_docs.extend(remaining_docs)
+            # 나머지 문서 추가 (이미 포함된 문서 제외)
+            remaining_docs = [doc for doc in docs[12:] if doc not in docs_to_rerank]
+            sorted_docs.extend(remaining_docs)
 
-        #     # 임계값 필터링 - 점수가 낮은 문서 제외 (임계값 하향으로 더 많은 문서 포함)
-        #     threshold = 0.52  # 임계값 하향 (0.6 → 0.52)
-        #     filtered_docs = [
-        #         doc
-        #         for doc in sorted_docs
-        #         if doc.metadata.get("rerank_score", 0.0) >= threshold
-        #     ]
+            # 임계값 필터링 - 점수가 낮은 문서 제외 (임계값 하향으로 더 많은 문서 포함)
+            threshold = 0.52  # 임계값 하향 (0.6 → 0.52)
+            filtered_docs = [
+                doc
+                for doc in sorted_docs
+                if doc.metadata.get("rerank_score", 0.0) >= threshold
+            ]
 
-        #     # 필터링 결과가 최소 개수 미만이면 상위 문서 추가
-        #     min_docs = 3  # 최소 3개 문서 보장
-        #     if len(filtered_docs) < min_docs and sorted_docs:
-        #         additional_docs = [
-        #             doc for doc in sorted_docs 
-        #             if doc not in filtered_docs
-        #         ][:min_docs - len(filtered_docs)]
-        #         filtered_docs.extend(additional_docs)
+            # 필터링 결과가 최소 개수 미만이면 상위 문서 추가
+            min_docs = 3  # 최소 3개 문서 보장
+            if len(filtered_docs) < min_docs and sorted_docs:
+                additional_docs = [
+                    doc for doc in sorted_docs 
+                    if doc not in filtered_docs
+                ][:min_docs - len(filtered_docs)]
+                filtered_docs.extend(additional_docs)
 
-        #     # 결과 캐싱
-        #     result_docs = filtered_docs[:self.top_n]
-        #     self._cache[cache_key] = {
-        #         "results": result_docs,
-        #         "timestamp": current_time
-        #     }
+            # 결과 캐싱
+            result_docs = filtered_docs[:self.top_n]
+            self._cache[cache_key] = {
+                "results": result_docs,
+                "timestamp": current_time
+            }
 
-        #     return result_docs
+            print(f"✅ 리랭킹 완료: {len(result_docs)}개 문서 (점수 임계값: {threshold:.2f})")
+            return result_docs
 
-        # except Exception as e:
-        #     print(f"Reranking 중 오류 발생: {e}")
-        #     traceback.print_exc()
-        #     return docs
+        except Exception as e:
+            print(f"Reranking 중 오류 발생: {e}")
+            traceback.print_exc()
+            return docs[:self.top_n]  # 오류 시 원본 문서 상위 n개 반환
 
 
 
@@ -504,9 +509,10 @@ async def search_and_combine(
             outputs = llm_model.generate(
                 **inputs,
                 max_new_tokens=1024,
-                temperature=0.1,
+                temperature=0.2,
                 do_sample=True,
-                eos_token_id=tokenizer.eos_token_id, #토큰으로 끝나면 자동종료
+                repetition_penalty=1.1,  # 반복 억제를 위한 페널티 추가
+                eos_token_id=tokenizer.eos_token_id,  # 토큰으로 끝나면 자동 종료
                 pad_token_id=tokenizer.eos_token_id
             )
 
@@ -564,65 +570,134 @@ async def search_and_combine(
             print("정제된 응답이 비어있어 원본 응답을 사용합니다.")
             cleaned_answer = "안녕하세요! 어떻게 도와드릴까요?"
         
-        # 유효한 응답이 있는 경우 스코어+하이라이트 기반으로 출처 선별
+        # 유효한 응답이 있는 경우 LLM 인용 우선 출처 선별
         if cleaned_answer and isinstance(cleaned_answer, str) and cleaned_answer.strip():
-            print(f"스코어+하이라이트 기반 출처 선별 시작: 총 {len(source_metadata)}개 문서")
+            print(f"LLM 인용 우선 출처 선별 시작: 총 {len(source_metadata)}개 문서")
             
-            # 각 문서의 하이라이트 여부 확인
+            # 1. LLM 응답에서 직접 인용된 파일명 추출 (예: [파일명 p.페이지])
+            import re
+            citation_pattern = r'\[([^[\]]+?)(?:\s+p\.(\d+))?\]'
+            cited_files = re.findall(citation_pattern, cleaned_answer)
+            directly_cited_files = set()
+            
+            for file_part, page_part in cited_files:
+                # 파일명만 추출 
+                clean_file = file_part.strip()
+                if clean_file:
+                    directly_cited_files.add(clean_file.lower())
+                    print(f"🎯 응답에서 직접 인용된 파일: '{clean_file}'")
+            
+            # 2. 먼저 직접 인용된 문서들을 우선 선택
             qualified_sources = []
             for i, meta in enumerate(source_metadata):
-                source_text = context_chunks[i] if i < len(context_chunks) else ""
+                display_name = meta.get('display_name', 'unknown')
+                score = meta.get("score", 0)
                 element_type = meta.get("element_type", "text")
                 
-                # 표/이미지 요소는 무조건 포함 (하이라이트 검사 생략)
-                if element_type in ["table_row", "table"] or meta.get("has_images"):
-                    score = meta.get("score", 0)
-                    qualified_sources.append({
-                        'meta': meta,
-                        'score': score,
-                        'index': i
-                    })
-                    element_desc = "표 데이터" if element_type in ["table_row", "table"] else "이미지"
-                    print(f"  ✅ 출처 후보: {meta.get('display_name', 'unknown')} (스코어: {score:.3f}, {element_desc})")
-                    continue
+                # 직접 인용 여부 확인 (더 유연한 매칭)
+                is_directly_cited = False
+                for cited_file in directly_cited_files:
+                    # 파일명의 일부분이라도 매칭되면 인용된 것으로 판단
+                    if (cited_file in display_name.lower() or 
+                        display_name.lower() in cited_file or
+                        any(part in display_name.lower() for part in cited_file.split('_') if len(part) > 3)):
+                        is_directly_cited = True
+                        print(f"  🎯 직접 인용 매칭: '{cited_file}' ↔ '{display_name}'")
+                        break
                 
-                # 일반 텍스트는 하이라이트 적용해보고 하이라이트가 있는지 확인
-                try:
-                    from app.utils.source_preview_utils import apply_highlighting, extract_keywords_from_query
-                    
-                    # 답변에서 키워드 추출
-                    answer_keywords = extract_keywords_from_query(cleaned_answer)
-                    
-                    # 하이라이트 적용 및 여부 확인
-                    _, has_highlights = apply_highlighting(
-                        content=source_text,
-                        keywords=answer_keywords,
-                        original_query=cleaned_answer
-                    )
-                    
-                    if has_highlights:
-                        score = meta.get("score", 0)
-                        qualified_sources.append({
-                            'meta': meta,
-                            'score': score,
-                            'index': i
-                        })
-                        print(f"  ✅ 출처 후보: {meta.get('display_name', 'unknown')} (스코어: {score:.3f}, 하이라이트: O)")
-                    else:
-                        print(f"  ❌ 제외: {meta.get('display_name', 'unknown')} (하이라이트: X)")
-                        
-                except Exception as e:
-                    print(f"  ⚠️ 하이라이트 확인 오류: {e}")
-                    # 오류 시 기본적으로 포함
+                if is_directly_cited:
                     qualified_sources.append({
                         'meta': meta,
-                        'score': meta.get("score", 0),
-                        'index': i
+                        'score': max(score, 0.95),  # 직접 인용된 경우 최고 점수 부여
+                        'index': i,
+                        'directly_cited': True,
+                        'reason': 'direct_citation'
                     })
+                    print(f"  ✅ 직접 인용 문서: {display_name} (스코어: {score:.3f} → 0.95)")
             
-            # 스코어 기준으로 정렬하여 상위 5개 선택 
-            qualified_sources.sort(key=lambda x: x['score'], reverse=True)
-            final_sources = qualified_sources[:5]  
+            # 3. 직접 인용된 문서가 부족한 경우에만 추가 선별
+            if len(qualified_sources) < 3:
+                print(f"  📋 직접 인용 문서 {len(qualified_sources)}개 부족, 추가 선별 시작...")
+                
+                for i, meta in enumerate(source_metadata):
+                    if any(source['index'] == i for source in qualified_sources):
+                        continue  # 이미 선택된 문서는 스킵
+                    
+                    source_text = context_chunks[i] if i < len(context_chunks) else ""
+                    element_type = meta.get("element_type", "text")
+                    display_name = meta.get('display_name', 'unknown')
+                    score = meta.get("score", 0)
+                    
+                    # 표/이미지는 스코어 기준만 적용
+                    if element_type in ["table_row", "table"] or meta.get("has_images"):
+                        if score >= 0.6:  # 높은 임계값
+                            qualified_sources.append({
+                                'meta': meta,
+                                'score': score,
+                                'index': i,
+                                'directly_cited': False,
+                                'reason': 'high_score_table'
+                            })
+                            element_desc = "표 데이터" if element_type in ["table_row", "table"] else "이미지"
+                            print(f"  ✅ 추가 선별: {display_name} (스코어: {score:.3f}, {element_desc})")
+                        continue
+                    
+                    # 일반 텍스트는 매우 엄격한 관련성 검사
+                    try:
+                        from app.utils.source_preview_utils import extract_keywords_from_query
+                        
+                        # 답변의 핵심 키워드 추출 (상위 5개만)
+                        answer_keywords = extract_keywords_from_query(cleaned_answer)[:5]
+                        
+                        # 문서 텍스트에서 답변 키워드 직접 검색 (대소문자 무시)
+                        source_lower = source_text.lower()
+                        direct_matches = [kw for kw in answer_keywords if kw.lower() in source_lower]
+                        
+                        # 매우 엄격한 기준: 최소 3개 키워드 매칭 + 높은 스코어
+                        if len(direct_matches) >= 3 and score >= 0.7:
+                            qualified_sources.append({
+                                'meta': meta,
+                                'score': score,
+                                'index': i,
+                                'directly_cited': False,
+                                'reason': f'strict_match({len(direct_matches)}개)'
+                            })
+                            print(f"  ✅ 엄격 매칭: {display_name} (키워드: {len(direct_matches)}개, 스코어: {score:.3f})")
+                            print(f"    매칭된 키워드: {direct_matches[:3]}")
+                        else:
+                            reason = f"키워드 부족({len(direct_matches)}개)" if len(direct_matches) < 3 else f"스코어 낮음({score:.3f})"
+                            print(f"  ❌ 제외: {display_name} ({reason})")
+                            
+                    except Exception as e:
+                        print(f"  ⚠️ 관련성 검사 오류: {e}")
+                        # 오류 시에는 매우 높은 스코어만 허용
+                        if score >= 0.8:
+                            qualified_sources.append({
+                                'meta': meta,
+                                'score': score,
+                                'index': i,
+                                'directly_cited': False,
+                                'reason': 'fallback_very_high_score'
+                            })
+                    
+                    # 최대 3개까지만
+                    if len(qualified_sources) >= 3:
+                        break
+            
+            # 정렬: 직접 인용 > 스코어 순
+            qualified_sources.sort(key=lambda x: (x.get('directly_cited', False), x['score']), reverse=True)
+            final_sources = []
+            
+            # 상위 3개까지 선택 (직접 인용된 것 우선)
+            for source in qualified_sources:
+                if len(final_sources) < 3:
+                    final_sources.append(source)
+                    reason = source.get('reason', 'unknown')
+                    score = source['score']
+                    display_name = source['meta'].get('display_name', 'unknown')
+                    print(f"  ✅ 최종 출처: {display_name} (이유: {reason}, 스코어: {score:.3f})")
+                else:
+                    break
             
             # 메타데이터에 is_cited 설정
             cited_indices = {source['index'] for source in final_sources}
@@ -633,12 +708,13 @@ async def search_and_combine(
                 else:
                     meta["is_cited"] = False
             
-            print(f"최종 선별된 출처: {len(cited_sources)}개 (하이라이트O + 표/이미지 + 고스코어)")
+            print(f"최종 선별된 출처: {len(cited_sources)}개 (직접 인용 우선 + 키워드 매칭 + 고스코어)")
             for source in final_sources:
                 meta = source['meta']
                 element_type = meta.get("element_type", "text")
                 type_desc = "표" if element_type in ["table_row", "table"] else "이미지" if meta.get("has_images") else "텍스트"
-                print(f"  📑 {meta.get('display_name', 'unknown')} - 스코어: {source['score']:.3f} ({type_desc})")
+                reason = source.get('reason', 'unknown')
+                print(f"  📑 {meta.get('display_name', 'unknown')} - 스코어: {source['score']:.3f} ({type_desc}, {reason})")
                 
         else:
             print("유효한 응답이 없어 출처 처리를 건너뜁니다.")
@@ -735,7 +811,12 @@ async def startup_event():
     
     # indexing_utils에 모델 전달 (캡션 생성용)
     from app.utils.indexing_utils import set_shared_models
+    from app.utils.synonym_builder import set_qwen_models_for_synonyms
     set_shared_models(llm_model, tokenizer)
+    
+    # 동의어 빌더에 Qwen 모델 설정 (자동 동의어 사전 구축용)
+    set_qwen_models_for_synonyms(llm_model, tokenizer)
+    print("✅ Qwen 동의어 빌더 연결 완료")
     
     print("✅ 모든 모델 초기화 완료!")
 
@@ -1095,6 +1176,7 @@ async def source_preview_endpoint(request: SourcePreviewRequest = Body(...)):
                 "status": "success",
                 "message": f"Hit chunk {len(hit_chunks_info)}개가 포함된 페이지를 성공적으로 찾았습니다.",
                 "content": full_page_content,
+                "keywords": common_keywords if 'common_keywords' in locals() else [],
                 "hit_info": {
                     "total_chunks": len(all_chunks),
                     "hit_chunks": len(hit_chunks_info),
@@ -1268,7 +1350,29 @@ async def query_stats_endpoint(request: StatsQueryRequest = Body(...)):
         raise HTTPException(status_code=500, detail=f"통계 조회 중 오류 발생: {str(e)}")
 
 
-UPLOAD_DIR = Path(STATIC_DIR) / "uploads" 
+UPLOAD_DIR = Path(STATIC_DIR) / "uploads"
+IMAGE_DIR_PATH = Path(STATIC_DIR) / "document_images"
+
+@app.get("/api/image-viewer/{filename:path}")
+async def get_image_for_viewer(filename: str):
+    """문서 이미지를 반환합니다."""
+    if ".." in filename or filename.startswith("/"):
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    # 이미지 경로는 app/static/document_images/ 하위
+    abs_path = IMAGE_DIR_PATH / filename
+    if not abs_path.is_file():
+        # UUID 접두사가 있는 경우도 고려하여 탐색
+        pattern = str(IMAGE_DIR_PATH / f"*_{filename}")
+        matches = glob.glob(pattern)
+        if not matches:
+            raise HTTPException(status_code=404, detail=f"Image not found at {abs_path}")
+        abs_path = Path(matches[0])
+
+    mime, _ = mimetypes.guess_type(abs_path)
+    return FileResponse(abs_path, media_type=mime or "image/jpeg")
+
+
 @app.get("/api/file-viewer/{filename:path}")
 async def get_file_for_viewer(filename: str):
     # UUID가 포함된 전체 파일명을 사용한다고 가정
@@ -2352,7 +2456,7 @@ def highlight_keywords(content, keywords, answer_text=None):
                         break
             
             # 관련성 높은 문단 선택 (키워드 일치 또는 직접 매칭)
-            is_relevant = keyword_score > 0.3 or direct_match
+            is_relevant = keyword_score > 0.5 or direct_match
             
             # 하이라이트 적용 및 관련 문단 표시
             if is_relevant:
@@ -2425,8 +2529,10 @@ if __name__ == "__main__":
 # 기타 라우터 등록
 from stats.dashboard_api import router as dashboard_router
 from api.reindex import router as reindex_router
+from app.api.synonyms import router as synonyms_router
 app.include_router(dashboard_router, prefix="", tags=["dashboard"])
 app.include_router(reindex_router, prefix="/api/reindex", tags=["reindex"])
+app.include_router(synonyms_router, prefix="", tags=["synonyms"])
 
 # 개선된 중복 제거 함수 (Python 버전) - 마크다운 섹션 기반 구조적 중복 제거
 def deduplicate_markdown_sections_py(markdown_text: str) -> str:

@@ -36,6 +36,7 @@ from .ocr_utils import (
         extract_text_from_pdf_with_ocr,
         extract_images_from_pdf_with_layout,
 )
+from .synonym_builder import update_synonyms_from_indexing
 try:
     from docling.document_converter import DocumentConverter
     from docling.datamodel.base_models import InputFormat
@@ -381,25 +382,153 @@ async def extract_image_ocr_texts(pdf_path: str, layout_info, doc_id: str = None
         with open(img_path, "wb") as f:
             f.write(img_data)
 
-        relative = f"document_images/{doc_id}/{img_name}"
+        relative = f"{doc_id}/{img_name}"
         image_paths.setdefault(page_num, []).append(relative)
     
     return image_texts, image_paths
 
 
+async def extract_images_from_docling_layout(
+    pdf_path: str, 
+    layout_info, 
+    doc_id: str = None,
+    llm_model=None,
+    tokenizer=None
+) -> Tuple[Dict[int, List[str]], Dict[int, List[str]]]:
+    """Docling 레이아웃 정보를 기반으로 이미지 영역 추출 및 OCR + AI 캡셔닝"""
+    
+    image_texts = {}
+    image_paths = {}
+    
+    if not layout_info:
+        print("⚠️ Docling 레이아웃 정보 없음")
+        return image_texts, image_paths
+    
+    # Clean doc_id 처리
+    if not doc_id:
+        file_name = Path(pdf_path).name
+        doc_id = strip_uuid_prefix(file_name)
+        if '.' in doc_id:
+            doc_id = doc_id.rsplit('.', 1)[0]
+    
+    img_dir = Path("app/static/document_images") / doc_id
+    img_dir.mkdir(parents=True, exist_ok=True)
+    
+    print(f"📄 Docling 레이아웃 기반 이미지 처리 시작: {doc_id}")
+    
+    try:
+        # Docling layout_info에서 figures(이미지) 추출
+        figures = getattr(layout_info, 'figures', [])
+        
+        print(f"🖼️ Docling에서 감지된 이미지: {len(figures)}개")
+        
+        # 이미지 영역 처리
+        for idx, figure in enumerate(figures):
+            try:
+                page_num = getattr(figure, 'page', 1) 
+                bbox = getattr(figure, 'bbox', None)
+                
+                if not bbox:
+                    continue
+                
+                # PDF 영역 크롭
+                img_data = crop_pdf_region(pdf_path, page_num, bbox)
+                
+                # 이미지 저장
+                img_name = f"page_{page_num}_docling_fig_{idx+1}.png"
+                img_path = img_dir / img_name
+                
+                with open(img_path, "wb") as f:
+                    f.write(img_data)
+                
+                print(f"🖼️ Docling 이미지 영역 저장: {img_name}")
+                
+                # OCR 텍스트 추출
+                ocr_text = ""
+                try:
+                    from .ocr_utils import get_paddle_ocr
+                    ocr = get_paddle_ocr()
+                    ocr_result = ocr.ocr(str(img_path), cls=True)
+                    
+                    if ocr_result and ocr_result[0]:
+                        ocr_texts = []
+                        for line in ocr_result[0]:
+                            if line and len(line) >= 2:
+                                text = line[1][0] if isinstance(line[1], (list, tuple)) else str(line[1])
+                                confidence = line[1][1] if isinstance(line[1], (list, tuple)) and len(line[1]) > 1 else 0.0
+                                
+                                if confidence > 0.6 and text.strip():
+                                    ocr_texts.append(text.strip())
+                        
+                        ocr_text = " ".join(ocr_texts)
+                        print(f"📝 Docling 이미지 OCR: {ocr_text[:50]}...")
+                
+                except Exception as ocr_e:
+                    print(f"⚠️ Docling 이미지 OCR 실패: {ocr_e}")
+                
+                # AI 캡션 생성
+                ai_caption = ""
+                if llm_model and tokenizer:
+                    try:
+                        # 페이지 텍스트를 컨텍스트로 사용 (추후 개선 가능)
+                        page_context = f"PDF 문서 페이지 {page_num}의 이미지 영역"
+                        
+                        ai_caption = await generate_image_caption_with_qwen(
+                            page_text=page_context,
+                            image_index=idx,
+                            total_images=len(figures),
+                            llm_model=llm_model,
+                            tokenizer=tokenizer
+                        )
+                        print(f"🤖 Docling 이미지 AI 캡션: {ai_caption}")
+                        
+                    except Exception as ai_e:
+                        print(f"⚠️ Docling 이미지 AI 캡션 실패: {ai_e}")
+                        ai_caption = f"문서 이미지 {idx + 1}"
+                
+                # 결과 저장
+                relative_path = f"document_images/{doc_id}/{img_name}"
+                image_paths.setdefault(page_num, []).append(relative_path)
+                
+                # OCR + AI 캡션 통합
+                combined_text = []
+                if ocr_text.strip():
+                    combined_text.append(f"텍스트: {ocr_text}")
+                if ai_caption.strip():
+                    combined_text.append(f"설명: {ai_caption}")
+                
+                if combined_text:
+                    image_texts.setdefault(page_num, []).append(" | ".join(combined_text))
+                
+            except Exception as fig_e:
+                print(f"⚠️ Docling 이미지 {idx} 처리 실패: {fig_e}")
+                continue
+        
+        print(f"✅ Docling 이미지 처리 완료: {len(image_texts)} 페이지")
+        return image_texts, image_paths
+        
+    except Exception as e:
+        print(f"⚠️ Docling 레이아웃 이미지 처리 실패: {e}")
+        return image_texts, image_paths
+
+
 def get_docling_converter():
-    """Docling 컨버터 싱글톤 (메모리 효율)"""
+    """Docling 컨버터 싱글톤 (CPU 모드, GPU 오류 방지)"""
     global _docling_layout_converter, _last_docling_init_time
     if not DOCLING_AVAILABLE:
         return None
     
     if _docling_layout_converter is None:
         try:
-            # 레이아웃 분석만 (OCR 없이)
+            # GPU 사용 강제 비활성화
+            import os
+            os.environ["CUDA_VISIBLE_DEVICES"] = ""  # GPU 숨기기
+            
+            # 레이아웃 분석만 (OCR 없이, CPU 모드)
             pdf_options = PdfPipelineOptions()
-            pdf_options.do_ocr = True  # 속도를 위해 OCR 비활성화
+            pdf_options.do_ocr = False  # OCR 완전 비활성화 (GPU 의존성 제거)
             pdf_options.do_table_structure = True  # 테이블 구조만
-            pdf_options.table_structure_options.do_cell_matching = True
+            pdf_options.table_structure_options.do_cell_matching = False  # GPU 의존성 제거
             
             _docling_layout_converter = DocumentConverter(
                 format_options={
@@ -407,9 +536,9 @@ def get_docling_converter():
                 }
             )
             _last_docling_init_time = datetime.now()
-            print(f"✅ Docling 레이아웃 분석기 초기화 완료")
+            print(f"✅ Docling 레이아웃 분석기 초기화 완료 (CPU 모드)")
         except Exception as e:
-            print(f"⚠️ Docling 초기화 실패: {e}")
+            print(f"⚠️ Docling 초기화 실패 (CPU 모드에서도): {e}")
             _docling_layout_converter = None
     
     return _docling_layout_converter
@@ -877,17 +1006,17 @@ async def load_document_with_ocr(file_path: str) -> List["Document"]:
             return await load_document_with_ocr_original(file_path)
 
         start = time.time()
-        # 1) Docling 레이아웃 - GPU 오류로 임시 비활성화
+        # 1) Docling 레이아웃 분석 - CPU 모드로 이미지/표 영역 감지
         layout_info = None
-        # if DOCLING_AVAILABLE:
-        #     try:
-        #         converter = get_docling_converter()
-        #         if converter is not None:
-        #             layout_result = await asyncio.to_thread(converter.convert, file_path)
-        #             layout_info = layout_result.document
-        #             logger.info("✅ 레이아웃 분석 완료")
-        #     except Exception as e:
-        #         logger.warning(f"Docling 레이아웃 분석 실패 → 무시: {e}")
+        if DOCLING_AVAILABLE:
+            try:
+                converter = get_docling_converter()
+                if converter is not None:
+                    layout_result = await asyncio.to_thread(converter.convert, file_path)
+                    layout_info = layout_result.document
+                    logger.info("✅ Docling 레이아웃 분석 완료 (CPU 모드)")
+            except Exception as e:
+                logger.warning(f"Docling 레이아웃 분석 실패 → 텍스트만 처리: {e}")
         # 2) 텍스트 레이어 추출
         pdf_texts = extract_pdf_text_fast(file_path)
         # 3) 텍스트 없으면 기존 OCR Fallback
@@ -963,8 +1092,17 @@ async def create_hybrid_documents(
                 docling_tables.extend(row_docs)
                 docling_table_pages.add(page_num)
 
-    # === 2단계: 이미지 OCR 처리 (기존 유지) ===
-    image_ocr_texts, image_paths = await extract_images_from_pdf_with_layout(file_path, doc_id)
+    # === 2단계: 이미지 처리 - Docling vs PP-Structure 선택 ===
+    if layout_info is not None:
+        # Docling 레이아웃 정보가 있으면 Docling 기반 이미지 처리
+        print("🔍 Docling 레이아웃 정보 활용하여 이미지 처리")
+        image_ocr_texts, image_paths = await extract_images_from_docling_layout(
+            file_path, layout_info, doc_id, llm_model, tokenizer
+        )
+    else:
+        # Docling 정보가 없으면 기존 PP-Structure 방식 사용
+        print("🔍 PP-Structure 방식으로 이미지 처리 (Docling 정보 없음)")
+        image_ocr_texts, image_paths = await extract_images_from_pdf_with_layout(file_path, doc_id)
 
     # === 3단계: 각 페이지별 표 추출 전략 결정 ===
     ocr_tables = []
@@ -1021,17 +1159,18 @@ async def create_hybrid_documents(
     # 표 페이지의 인접 페이지도 제외 (기존 로직 유지하되 실제 표 페이지 기준)
     extended_table_pages = actual_table_pages | {p + 1 for p in actual_table_pages}
 
-    # === 5단계: 본문 + 이미지 처리 + Qwen 캡션 생성 ===
+    # === 5단계: 본문 + 이미지 처리 (OCR + AI 캡션 모두 활용) ===
     for page_num, page_text in pdf_texts.items():
         if page_num in extended_table_pages or not page_text.strip():
             continue
             
         combined = page_text.strip()
         page_images = []
+        page_ocr_texts = image_ocr_texts.get(page_num, [])
         
-        # 이미지 OCR 성공분 추가
-        if page_num in image_ocr_texts:
-            combined += "\n\n" + "\n".join(image_ocr_texts[page_num])
+        # 이미지 OCR 텍스트도 본문에 포함 (검색 성능 향상)
+        if page_ocr_texts:
+            combined += "\n\n[이미지 텍스트]\n" + "\n".join(page_ocr_texts)
         
         # 이미지 경로 수집
         if page_num in image_paths:
@@ -1049,47 +1188,76 @@ async def create_hybrid_documents(
                 "loaded_at": datetime.now().isoformat(),
             }
             
-            # 이미지가 있는 경우 캡션 생성
+            # 이미지가 있는 경우 다중 캡션 전략
             if page_images:
                 metadata["images"] = page_images
                 metadata["has_images"] = True
                 
-                # Qwen을 사용한 이미지 캡션 생성
-                image_captions = []
+                # 1. OCR 텍스트 원본 수집
+                ocr_texts = []
+                for img_idx in range(len(page_images)):
+                    if img_idx < len(page_ocr_texts):
+                        ocr_text = clean_ocr_text(page_ocr_texts[img_idx])
+                        ocr_texts.append(ocr_text if ocr_text.strip() else "")
+                    else:
+                        ocr_texts.append("")
+                
+                # 2. AI 캡션 생성
+                ai_captions = []
                 previous_sentences = re.split(r'[.!?]', p)[:3]  # 앞 3문장을 컨텍스트로 사용
                 
                 for img_idx, img_path in enumerate(page_images):
                     try:
-                        caption = await generate_image_caption_with_qwen(
-                            page_text=p,
+                        ai_caption = await generate_image_caption_with_qwen(
+                            page_text=page_text,  # 원본 페이지 텍스트 사용
                             image_index=img_idx,
                             total_images=len(page_images),
                             llm_model=llm_model,
                             tokenizer=tokenizer,
                             previous_sentences=previous_sentences
                         )
-                        image_captions.append({
-                            "image_path": img_path,
-                            "caption": caption,
-                            "image_index": img_idx
-                        })
-                        print(f"📷 이미지 캡션 생성: {img_path} -> {caption}")
+                        ai_captions.append(ai_caption)
+                        print(f"🤖 AI 캡션 생성: {img_path} -> {ai_caption}")
                     except Exception as e:
-                        print(f"⚠️ 이미지 캡션 생성 실패 ({img_path}): {e}")
-                        image_captions.append({
-                            "image_path": img_path,
-                            "caption": f"이미지 {img_idx + 1}",
-                            "image_index": img_idx
-                        })
+                        print(f"⚠️ AI 캡션 생성 실패 ({img_path}): {e}")
+                        ai_captions.append(f"이미지 {img_idx + 1}")
+                
+                # 3. 통합 이미지 정보 구성
+                image_captions = []
+                for img_idx, img_path in enumerate(page_images):
+                    ocr_text = ocr_texts[img_idx] if img_idx < len(ocr_texts) else ""
+                    ai_caption = ai_captions[img_idx] if img_idx < len(ai_captions) else ""
+                    
+                    image_captions.append({
+                        "image_path": img_path,
+                        "image_index": img_idx,
+                        "ocr_text": ocr_text,        # OCR 원본 텍스트
+                        "ai_caption": ai_caption,    # AI 생성 캡션
+                        "has_ocr": bool(ocr_text.strip())
+                    })
+                    
+                    print(f"📷 이미지 정보 통합: {img_path}")
+                    print(f"   OCR: {ocr_text[:50]}..." if ocr_text else "   OCR: 없음")
+                    print(f"   AI: {ai_caption}")
                 
                 metadata["image_captions"] = image_captions
                 
-                # 전체 캡션을 하나로 결합 (검색 성능 향상)
-                all_captions = " ".join([cap["caption"] for cap in image_captions])
-                metadata["caption"] = all_captions
+                # 4. 기존 caption 필드 개선 (OCR + AI 캡션 통합)
+                all_ocr_texts = " ".join([ocr for ocr in ocr_texts if ocr.strip()])
+                all_ai_captions = " ".join([cap for cap in ai_captions if cap.strip()])
                 
-                # 캡션을 본문에도 추가하여 검색 성능 향상
-                p += f"\n\n[이미지 정보: {all_captions}]"
+                # 기존 caption 필드에 OCR + AI 캡션 통합하여 저장
+                combined_parts = []
+                if all_ocr_texts:
+                    combined_parts.append(f"텍스트: {all_ocr_texts}")
+                if all_ai_captions:
+                    combined_parts.append(f"설명: {all_ai_captions}")
+                
+                if combined_parts:
+                    metadata["caption"] = " | ".join(combined_parts)
+                    
+                    # 본문에도 검색 성능 향상을 위해 추가
+                    p += f"\n\n[이미지 정보: {metadata['caption']}]"
                 
             documents.append(
                 Document(page_content=p, metadata=metadata)
@@ -1222,13 +1390,15 @@ async def index_chunks_to_elasticsearch(
                     "element_type": chunk_doc.metadata.get("element_type", "text"),
                     # 표 파싱 실패 시 원문을 row_text 에 그대로 둠
                     "row_text":   chunk_doc.metadata.get("row_text"),
-                    # 이미지 메타
+                    # 이미지 메타 (기존)
                     "images":     chunk_doc.metadata.get("images", []),
                     "has_images": chunk_doc.metadata.get("has_images", False),
-                    # 캡션 필드 추가
-                    "caption":    chunk_doc.metadata.get("caption", ""),
-                    "image_captions": chunk_doc.metadata.get("image_captions", []),
-                    "table_caption": chunk_doc.metadata.get("table_caption", ""),
+                    # 캡션 필드들 (확장)
+                    "caption":        chunk_doc.metadata.get("caption", ""),           # 통합 캡션
+                    "ocr_text":       chunk_doc.metadata.get("ocr_text", ""),          # OCR 텍스트만
+                    "ai_caption":     chunk_doc.metadata.get("ai_caption", ""),        # AI 캡션만
+                    "image_captions": chunk_doc.metadata.get("image_captions", []),    # 상세 이미지 정보 배열
+                    "table_caption":  chunk_doc.metadata.get("table_caption", ""),     # 표 캡션
                 }
 
                 actions_for_bulk.append(

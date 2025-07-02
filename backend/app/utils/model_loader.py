@@ -10,6 +10,13 @@ _cached_tokenizer = None
 
 def get_llm_model_and_tokenizer():
     global _cached_model, _cached_tokenizer
+    
+    # 캐시된 모델이 있으면 바로 반환
+    if _cached_model is not None and _cached_tokenizer is not None:
+        print("기존 모델 재사용!")
+        return _cached_model, _cached_tokenizer
+    
+    print("새 모델 로딩...")
     try:
         torch.cuda.empty_cache()  # 메모리 정리
 
@@ -71,13 +78,8 @@ def get_llm_model_and_tokenizer():
         # 모델 메모리 사용 정보 출력 (옵션)
         if torch.cuda.is_available():
             print(f"GPU 메모리 사용량: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
-        if _cached_model is not None and _cached_tokenizer is not None:
-            print("기존 모델 재사용!")
-            return _cached_model, _cached_tokenizer
-        
-        print("새 모델 로딩...")
-        # 기존 로딩 코드...
             
+        # 캐시에 저장하고 반환
         _cached_model = model
         _cached_tokenizer = tokenizer
         return model, tokenizer

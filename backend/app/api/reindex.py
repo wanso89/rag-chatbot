@@ -227,4 +227,3 @@ async def reindex_files(file_paths: List[str], es_client, embedding_function) ->
             logger.error(f"재인덱싱 중 오류 발생: {os.path.basename(file_path)} - {str(e)}")
             
     return {"success": success_count, "failed": failed_count}
-

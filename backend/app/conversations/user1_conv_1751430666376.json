@@ -1,0 +1,122 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1751430666376",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "특별청원 아버지 회갑의 경우 휴가일 수는?",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "[취업규칙_test.pdf p.38]에 따르면, 특별청원 아버지 회갑의 경우 휴가일 수는 1일입니다.",
+      "sources": [
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 38,
+          "chunk_id": "batch1_36",
+          "score": 113.98538096870284,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "사내규정모음집20100129_개정.pdf",
+          "display_name": "사내규정모음집20100129_개정.pdf",
+          "page": 20,
+          "chunk_id": "batch1_19",
+          "score": 70.04414447867961,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 30,
+          "chunk_id": "batch1_28",
+          "score": 66.76114201604811,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 37,
+          "chunk_id": "batch1_35",
+          "score": 54.60610843032059,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 33,
+          "chunk_id": "batch1_31",
+          "score": 52.8460584327849,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 26,
+          "chunk_id": "batch1_24",
+          "score": 52.26194346414713,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 22,
+          "chunk_id": "batch1_20",
+          "score": 51.77154605657545,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 29,
+          "chunk_id": "batch1_27",
+          "score": 51.5086407297126,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 13,
+          "chunk_id": "batch1_11",
+          "score": 51.41838225853816,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 27,
+          "chunk_id": "batch1_25",
+          "score": 50.78576564142568,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 6,
+          "chunk_id": "batch1_4",
+          "score": 50.62278396719861,
+          "element_type": "text",
+          "is_cited": false
+        }
+      ]
+    }
+  ],
+  "timestamp": "2025-07-02T13:31:30.665667"
+}

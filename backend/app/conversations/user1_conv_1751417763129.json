@@ -1,0 +1,149 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1751417763129",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "아버지 회갑인데 회사에서 지급하는 금액이 얼마야?",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "아버지 회갑에 대한 경조금은 [사내규정모음집20100129_개정.pdf p.24]에 따라 30만원이 지급됩니다.",
+      "sources": [
+        {
+          "path": "사내규정모음집20100129_개정.pdf",
+          "display_name": "사내규정모음집20100129_개정.pdf",
+          "page": 27,
+          "chunk_id": "batch1_26",
+          "score": 64.33436802652184,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 32,
+          "chunk_id": "batch1_30",
+          "score": 62.07382663460991,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "사내규정모음집20100129_개정.pdf",
+          "display_name": "사내규정모음집20100129_개정.pdf",
+          "page": 8,
+          "chunk_id": "batch1_7",
+          "score": 58.08073827794864,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 8,
+          "chunk_id": "batch1_6",
+          "score": 57.828735936000584,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 30,
+          "chunk_id": "batch1_28",
+          "score": 55.91772033838433,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "사내규정모음집20100129_개정.pdf",
+          "display_name": "사내규정모음집20100129_개정.pdf",
+          "page": 24,
+          "chunk_id": "batch1_23",
+          "score": 53.208677774544,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 28,
+          "chunk_id": "batch1_26",
+          "score": 50.355843434281844,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 31,
+          "chunk_id": "batch1_29",
+          "score": 50.09743707942801,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 19,
+          "chunk_id": "batch1_17",
+          "score": 47.66995993045711,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "사내규정모음집20100129_개정.pdf",
+          "display_name": "사내규정모음집20100129_개정.pdf",
+          "page": 14,
+          "chunk_id": "batch1_13",
+          "score": 45.9940556801929,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 10,
+          "chunk_id": "batch1_8",
+          "score": 45.738389049065226,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 38,
+          "chunk_id": "batch1_36",
+          "score": 44.68817320591829,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 33,
+          "chunk_id": "batch1_31",
+          "score": 42.7816529194586,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 27,
+          "chunk_id": "batch1_25",
+          "score": 41.807341277871714,
+          "element_type": "text",
+          "is_cited": false
+        }
+      ]
+    }
+  ],
+  "timestamp": "2025-07-02T09:56:31.960624"
+}

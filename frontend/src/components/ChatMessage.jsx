@@ -826,7 +826,7 @@ const ImageModal = ({ isOpen, onClose, src, alt, caption }) => {
   if (!isOpen) return null;
   
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4" onClick={onClose}>
       <div className="relative max-w-7xl max-h-[90vh] w-full h-full flex items-center justify-center">
         {/* 닫기 버튼 */}
         <button
@@ -884,6 +884,9 @@ const ImageModal = ({ isOpen, onClose, src, alt, caption }) => {
 const ImageDisplay = ({ images, captions }) => {
   const [selectedImage, setSelectedImage] = useState(null);
   
+  console.log("ImageDisplay received images:", images);
+  console.log("ImageDisplay received captions:", captions);
+
   if (!images || !Array.isArray(images) || images.length === 0) return null;
   
   // 문서명 기반 캡션 생성 함수
@@ -903,7 +906,9 @@ const ImageDisplay = ({ images, captions }) => {
         {images.map((imagePath, idx) => {
           const captionData = captions && captions[idx] ? captions[idx] : null;
           const documentCaption = generateDocumentCaption({ source_info: captionData?.source_info }, idx);
-          const fullImagePath = imagePath.startsWith('http') ? imagePath : `/static/${imagePath}`;
+          // 백엔드에서 'document_images/' 접두사를 포함하여 경로를 보내는 문제에 대한 임시 해결책
+          const cleanImagePath = imagePath.replace(/^document_images\//, '');
+          const fullImagePath = imagePath.startsWith('http') ? imagePath : `/api/image-viewer/${cleanImagePath}`;
           
           return (
             <div key={idx} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
@@ -919,8 +924,11 @@ const ImageDisplay = ({ images, captions }) => {
                     className="w-full h-48 object-contain bg-gray-100 dark:bg-gray-800 rounded-md transition-all duration-300 group-hover:scale-105"
                     loading="lazy"
                     onError={(e) => {
+                       // 이미지 로딩 실패 로그 제거
                       e.target.style.display = 'none';
-                      e.target.nextSibling.style.display = 'flex';
+                      if (e.target.nextSibling) {
+                        e.target.nextSibling.style.display = 'flex';
+                      }
                     }}
                   />
                   {/* 이미지 로딩 실패 시 표시할 대체 요소 */}
@@ -928,6 +936,7 @@ const ImageDisplay = ({ images, captions }) => {
                     <div className="text-center">
                       <FiImage size={48} className="mx-auto mb-2" />
                       <p className="text-sm">이미지를 불러올 수 없습니다</p>
+                      <p className="text-xs mt-1 text-gray-400">경로: {fullImagePath}</p>
                     </div>
                   </div>
                   {/* 호버 오버레이 */}
@@ -1624,22 +1633,25 @@ function ChatMessage({ message, searchTerm = "", isSearchMode, prevMessage, next
             },
             // 볼드체 텍스트 처리 (키워드 하이라이트용)
             strong({ node, children, ...props }) {
-              // 키워드가 존재하고 텍스트 내용이 키워드 중 하나와 일치하는지 확인
-              if (highlightKeywords.some(kw => {
-                // 대소문자 구분 없이 비교
-                const kwRegex = new RegExp(`^${String(kw).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
-                return typeof children === 'string' && kwRegex.test(children);
-              })) {
-                return (
-                  <span 
-                    className="highlight-keyword animate-highlight-pulse"
-                    {...props}
-                  >
-                    {children}
-                  </span>
-                );
-              }
-              return <strong {...props}>{children}</strong>;
+              return (
+                <span 
+                  className="highlight-keyword animate-highlight-pulse"
+                  {...props}
+                >
+                  {children}
+                </span>
+              );
+            },
+            // mark 태그 처리 (line-highlight 스타일 적용)
+            mark({ node, children, ...props }) {
+              return (
+                <mark 
+                  className="bg-yellow-500/30 text-gray-800 dark:text-gray-200"
+                  {...props}
+                >
+                  {children}
+                </mark>
+              );
             },
             // 일반 텍스트 노드에 대한 처리 추가
             text({ node, ...props }) {
@@ -1948,7 +1960,7 @@ function ChatMessage({ message, searchTerm = "", isSearchMode, prevMessage, next
     
     // 비정상 패턴이 있는 경우에만 escapeHtmlTags 함수 적용 (성능 최적화)
     if (hasAbnormalPatterns(processedContent)) {
-      console.log("비정상 패턴 감지, HTML 태그 이스케이프 처리 적용");
+       // 비정상 패턴 감지 로그 제거
       processedContent = escapeHtmlTags(processedContent);
     }
     
@@ -2138,7 +2150,7 @@ function ChatMessage({ message, searchTerm = "", isSearchMode, prevMessage, next
 
     message.sources.forEach(source => {
       // 표 데이터 처리
-      if (source.element_type === 'table_row' && source.table_id) {
+      if (source.element_type === 'table_row' && source.table_id && source.is_cited === true) {
         if (!tables.has(source.table_id)) {
           tables.set(source.table_id, {
             caption: source.table_caption || '',
@@ -2156,8 +2168,8 @@ function ChatMessage({ message, searchTerm = "", isSearchMode, prevMessage, next
         });
       }
       
-      // 이미지 데이터 처리
-      if (source.has_images && source.images && Array.isArray(source.images)) {
+      // 이미지 데이터 처리 - 인용된 출처만 표시
+      if (source.is_cited === true && source.has_images && source.images && Array.isArray(source.images)) {
         source.images.forEach((imagePath, idx) => {
           const caption = source.image_captions && source.image_captions[idx] 
             ? source.image_captions[idx].caption 

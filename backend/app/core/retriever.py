@@ -152,68 +152,131 @@ class ElasticsearchRetriever:
         return secondary_docs
     
     def _extract_and_expand_keywords(self, query: str) -> List[str]:
-        """쿼리에서 키워드 추출 및 확장"""
+        """쿼리에서 키워드 추출 및 확장 (Qwen 동의어 사전 + 기본 확장)"""
         
-        # 1. 기본 키워드 추출 (한글, 영문, 숫자 3글자 이상)
+        # 1. 기본 키워드 추출
         base_keywords = []
-        words = re.findall(r'[가-힣a-zA-Z0-9]{3,}', query)
+        words = re.findall(r'[가-힣a-zA-Z0-9]{2,}', query)
         
         # 불용어 제거
         stopwords = {
             '이것', '그것', '저것', '무엇', '어떤', '어떻게', '왜', '어디서', '언제', 
             '누구', '어느', '얼마', '없는', '있는', '되는', '하는', '같은', '다른',
             '때문', '위해', '통해', '따라', '의해', '관련', '부분', '내용', '정보',
-            '방법', '경우', '때는', '있습니다', '없습니다', '됩니다', '합니다'
+            '방법', '경우', '때는', '있습니다', '없습니다', '됩니다', '합니다', '대한'
         }
         
         for word in words:
-            if word.lower() not in stopwords and len(word) >= 3:
+            if word.lower() not in stopwords and len(word) >= 2:
                 base_keywords.append(word)
         
-        # 2. 키워드 확장 (동의어, 유사어)
-        expanded = set(base_keywords)
+        # 2. Qwen 동의어 사전으로 키워드 확장
+        try:
+            from app.utils.synonym_builder import get_qwen_synonym_builder
+            synonym_builder = get_qwen_synonym_builder()
+            
+            # Qwen 동의어 사전 활용
+            qwen_expanded = synonym_builder.get_expanded_keywords(base_keywords)
+            print(f"🔍 Qwen 동의어 확장: {len(base_keywords)} → {len(qwen_expanded)}개")
+            expanded = set(qwen_expanded)
+            
+        except Exception as e:
+            print(f"⚠️ Qwen 동의어 확장 실패, 기본 확장 사용: {e}")
+            expanded = set(base_keywords)
+        
+        # 3. 기본 확장 사전 추가 (Qwen 동의어가 없는 경우 백업)
+        company_synonyms={
+            '쓰리에스': ['3s', '3S', '삼에스', '3s소프트', '3S소프트', 'threess'],
+            '3s': ['쓰리에스', '삼에스', '3S', '3s소프트', '3S소프트', 'threess'],
+            '전자': ['electronics', 'elec'],
+            '한국전력': ['한전', 'kepco', 'KEPCO', '한국전력공사'],
+            '국세청': ['nts', 'NTS', '세무청'],
+            '사회보장': ['사보', '사회보장정보원'],
+            '신용보증': ['신보', '신용보증기금'],
+            '국가철도': ['코레일', 'korail', 'KORAIL', '철도공단'],
+            '대구': ['daegu', 'DAEGU', '대구광역시'],
+            '지사': ['branch', '지점', '사업소'],
+        }
         
         # 기술 용어 확장 사전
         tech_synonyms = {
             '설치': ['install', '인스톨', '설정', 'setup'],
-            '오류': ['error', '에러', '문제', '장애', 'bug'],
-            '서버': ['server', 'host', '호스트', '시스템'],
-            '데이터베이스': ['database', 'db', 'DB', '디비'],
-            '네트워크': ['network', '망', '통신'],
-            '보안': ['security', '암호화', '인증'],
-            '백업': ['backup', '복구', 'restore'],
-            '모니터링': ['monitoring', '감시', '추적'],
-            '로그': ['log', 'logs', '기록'],
-            '성능': ['performance', '속도', 'speed'],
-            '용량': ['capacity', '크기', 'size', '저장공간'],
-            '버전': ['version', 'ver', 'v'],
-            '업데이트': ['update', '갱신', 'upgrade'],
-            '구성': ['config', 'configuration', '설정'],
-            '연결': ['connection', 'connect', '접속'],
+            '오류': ['error', '에러', '문제', '장애', 'bug', '실패'],
+            '서버': ['server', 'host', '호스트', '시스템', 'sys'],
+            '데이터베이스': ['database', 'db', 'DB', '디비', 'mysql', 'oracle'],
+            '네트워크': ['network', '망', '통신', 'net'],
+            '보안': ['security', '암호화', '인증', 'auth'],
+            '백업': ['backup', '복구', 'restore', '복원'],
+            '모니터링': ['monitoring', '감시', '추적', 'monitor'],
+            '로그': ['log', 'logs', '기록', 'logging'],
+            '성능': ['performance', '속도', 'speed', 'perf'],
+            '용량': ['capacity', '크기', 'size', '저장공간', 'storage'],
+            '버전': ['version', 'ver', 'v', '버젼'],
+            '업데이트': ['update', '갱신', 'upgrade', '업그레이드'],
+            '구성': ['config', 'configuration', '설정', 'setup'],
+            '연결': ['connection', 'connect', '접속', 'conn'],
+            '조직': ['organization', 'org', '조직도', '구성', '체계'],
+            '직원': ['employee', 'staff', '사원', '인력', '담당자'],
+            '점검': ['check', 'inspect', '검사', '테스트', 'test'],
+            '장애': ['trouble', 'issue', '문제', '오류', 'error'],
+            '보고': ['report', '리포트', '보고서'],
+            '매뉴얼': ['manual', '메뉴얼', '설명서', 'guide'],
+            '운영': ['operation', 'ops', 'operate', '관리'],
+            '시스템': ['system', 'sys', '체계', '구성'],
         }
+        
+        # 모든 확장 사전 결합
+        all_synonyms = {**company_synonyms, **tech_synonyms}
         
         # 동의어 확장
         for keyword in base_keywords:
             keyword_lower = keyword.lower()
-            for main_term, synonyms in tech_synonyms.items():
-                if keyword_lower == main_term or keyword_lower in synonyms:
+            for main_term, synonyms in all_synonyms.items():
+                if keyword_lower == main_term or keyword_lower in [s.lower() for s in synonyms]:
                     expanded.update([main_term] + synonyms)
                     break
         
-        # 3. 부분 매칭용 키워드 (접두사, 접미사)
-        partial_keywords = []
+        # 3. 특수 패턴 확장
         for keyword in base_keywords:
+            # 한글 회사명 패턴 (예: "쓰리에스소프트" -> "쓰리에스", "소프트")
+            if len(keyword) > 4 and re.match(r'^[가-힣]+$', keyword):
+                # 회사명 분리 시도
+                if '소프트' in keyword:
+                    company_part = keyword.replace('소프트', '')
+                    if len(company_part) >= 2:
+                        expanded.add(company_part)
+                        expanded.add('소프트')
+                
+                # 숫자-한글 변환 (예: "삼에스" <-> "3에스")
+                num_map = {'일': '1', '이': '2', '삼': '3', '사': '4', '오': '5'}
+                for kor_num, eng_num in num_map.items():
+                    if keyword.startswith(kor_num):
+                        expanded.add(eng_num + keyword[1:])
+                    elif keyword.startswith(eng_num):
+                        expanded.add(kor_num + keyword[1:])
+        
+        # 4. 부분 매칭용 키워드 (중요한 키워드만)
+        partial_keywords = []
+        important_keywords = [kw for kw in base_keywords if len(kw) >= 4]
+        for keyword in important_keywords:
             if len(keyword) >= 5:
                 # 앞 3글자, 뒤 3글자
                 partial_keywords.append(keyword[:3])
                 partial_keywords.append(keyword[-3:])
         
-        # 4. 최종 키워드 목록 (중복 제거, 길이 순 정렬)
+        # 5. 최종 키워드 목록 정리
         final_keywords = list(expanded) + partial_keywords
-        final_keywords = [kw for kw in final_keywords if len(kw) >= 2]
+        
+        # 길이가 너무 짧거나 숫자만인 것 제외
+        final_keywords = [
+            kw for kw in final_keywords 
+            if len(kw) >= 2 and not (kw.isdigit() and len(kw) == 1)
+        ]
+        
+        # 중복 제거 후 길이 순 정렬 (긴 것부터)
         final_keywords = sorted(set(final_keywords), key=len, reverse=True)
         
-        return final_keywords[:15]  # 최대 15개
+        return final_keywords[:20]  # 최대 20개로 확장
     
     async def _search_same_document_chunks(
         self, source: str, page: int, keywords: List[str], original_query: str
@@ -226,7 +289,9 @@ class ElasticsearchRetriever:
             
             for keyword in keywords[:10]:  # 상위 10개 키워드만 사용
                 should_clauses.extend([
-                    {"match": {"text": {"query": keyword, "boost": 2.0}}},
+                    {"match": {"text": {"query": keyword, "boost": 2.5}}},
+                    {"match": {"caption": {"query": keyword, "boost": 2.2}}},
+                    {"match": {"table_caption": {"query": keyword, "boost": 2.0}}},
                     {"wildcard": {"text": {"value": f"*{keyword}*", "boost": 1.0}}}
                 ])
             
@@ -301,13 +366,22 @@ class ElasticsearchRetriever:
         # 임베딩 생성
         query_embedding = self.embedding_function([query_normalized])[0]
 
-        # 하이브리드 검색 쿼리 구성
+        # 하이브리드 검색 쿼리 구성 (이미지 검색 필드 추가)
         base_should = [
-            # BM25 / phrase match
+            # BM25 / phrase match (기존)
             {"match_phrase": {"text": {"query": query, "boost": 6.0 * boost_factor, "slop": 3}}},
             {"match": {
                 "text": {"query": query, "boost": 4.0 * boost_factor,
                          "operator": "OR", "minimum_should_match": "60%"}
+            }},
+            # 기존 캡션 필드들 활용
+            {"match": {
+                "caption": {"query": query, "boost": 5.5 * boost_factor,
+                          "operator": "OR", "minimum_should_match": "50%"}
+            }},
+            {"match": {
+                "table_caption": {"query": query, "boost": 4.8 * boost_factor,
+                                "operator": "OR", "minimum_should_match": "50%"}
             }},
             # 벡터 유사도 (script_score)
             {"script_score": {

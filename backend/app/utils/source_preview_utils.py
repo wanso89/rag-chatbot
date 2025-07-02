@@ -101,7 +101,7 @@ def apply_highlighting(content: str, keywords: List[str], original_query: str = 
     if not original_query:
         # 답변 텍스트가 없으면 기존 키워드 하이라이트 방식 사용
         highlighted_content = _apply_keyword_highlighting(content, keywords)
-        has_highlights = '<span class="highlight-keyword">' in highlighted_content
+        has_highlights = '<span class="highlight-strong">' in highlighted_content
         return highlighted_content, has_highlights
     
     # 2. 답변에서 핵심 정보 추출 (NER 스타일)
@@ -120,7 +120,7 @@ def apply_highlighting(content: str, keywords: List[str], original_query: str = 
         
         # 점수가 높은 문장은 하이라이트
         if importance_score > 0.6:  # 임계값
-            highlighted_sentence = f'<mark class="line-highlight">{sentence.strip()}</mark>'
+            highlighted_sentence = f'<span class="highlight-strong">{sentence.strip()}</span>'
             highlighted_sentences.append(highlighted_sentence)
             has_highlights = True
             print(f"🔍 하이라이트: '{sentence.strip()[:50]}...' (점수: {importance_score:.2f})")
@@ -186,7 +186,7 @@ def _apply_keyword_highlighting(content: str, keywords: List[str]) -> str:
         
     for keyword in keywords:
         pattern = re.compile(re.escape(keyword), re.IGNORECASE)
-        content = pattern.sub(f'<span class="highlight-keyword">{keyword}</span>', content)
+        content = pattern.sub(f'<span class="highlight-strong">{keyword}</span>', content)
     
     return content
 
