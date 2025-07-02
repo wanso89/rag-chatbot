@@ -875,6 +875,13 @@ body {
     max-width: 100%;
   }
   
+  /* 코드 블록 내 줄바꿈 강제 적용 */
+  .markdown-content pre code {
+    white-space: pre-wrap !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+  }
+  
   /* 마크다운 표 반응형 처리 */
   .markdown-table-wrapper {
     @apply overflow-x-auto max-w-full my-4;

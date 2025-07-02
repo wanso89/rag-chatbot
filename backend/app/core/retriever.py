@@ -102,7 +102,7 @@ class ElasticsearchRetriever:
         
         # 점수 기준 정렬
         unique_docs.sort(key=lambda x: x.metadata.get('relevance_score', 0), reverse=True)
-        result = unique_docs[:self.k]
+        result = unique_docs[:10]  # 상위 10개 문서로 제한하여 컨텍스트 길이 줄이기
         
         print(f"✅ 2단계 검색 완료: 총 {len(result)}개 문서 (1단계: {len(primary_docs)}, 2단계: {len(secondary_docs)})")
         return result
@@ -152,131 +152,57 @@ class ElasticsearchRetriever:
         return secondary_docs
     
     def _extract_and_expand_keywords(self, query: str) -> List[str]:
-        """쿼리에서 키워드 추출 및 확장 (Qwen 동의어 사전 + 기본 확장)"""
+        """쿼리에서 키워드 추출 및 확장 (search_enhancer의 개선된 로직 사용, 저장된 동의어 사전 활용)"""
         
-        # 1. 기본 키워드 추출
-        base_keywords = []
-        words = re.findall(r'[가-힣a-zA-Z0-9]{2,}', query)
-        
-        # 불용어 제거
-        stopwords = {
-            '이것', '그것', '저것', '무엇', '어떤', '어떻게', '왜', '어디서', '언제', 
-            '누구', '어느', '얼마', '없는', '있는', '되는', '하는', '같은', '다른',
-            '때문', '위해', '통해', '따라', '의해', '관련', '부분', '내용', '정보',
-            '방법', '경우', '때는', '있습니다', '없습니다', '됩니다', '합니다', '대한'
-        }
-        
-        for word in words:
-            if word.lower() not in stopwords and len(word) >= 2:
-                base_keywords.append(word)
-        
-        # 2. Qwen 동의어 사전으로 키워드 확장
         try:
-            from app.utils.synonym_builder import get_qwen_synonym_builder
-            synonym_builder = get_qwen_synonym_builder()
+            # search_enhancer의 QueryExpander 사용
+            from app.utils.search_enhancer import QueryExpander
+            query_expander = QueryExpander()
             
-            # Qwen 동의어 사전 활용
-            qwen_expanded = synonym_builder.get_expanded_keywords(base_keywords)
-            print(f"🔍 Qwen 동의어 확장: {len(base_keywords)} → {len(qwen_expanded)}개")
-            expanded = set(qwen_expanded)
+            # 개선된 키워드 추출
+            keywords = query_expander.extract_keywords(query)
+            print(f"🔍 개선된 키워드 추출: {len(keywords)}개 - {keywords}")
             
-        except Exception as e:
-            print(f"⚠️ Qwen 동의어 확장 실패, 기본 확장 사용: {e}")
-            expanded = set(base_keywords)
-        
-        # 3. 기본 확장 사전 추가 (Qwen 동의어가 없는 경우 백업)
-        company_synonyms={
-            '쓰리에스': ['3s', '3S', '삼에스', '3s소프트', '3S소프트', 'threess'],
-            '3s': ['쓰리에스', '삼에스', '3S', '3s소프트', '3S소프트', 'threess'],
-            '전자': ['electronics', 'elec'],
-            '한국전력': ['한전', 'kepco', 'KEPCO', '한국전력공사'],
-            '국세청': ['nts', 'NTS', '세무청'],
-            '사회보장': ['사보', '사회보장정보원'],
-            '신용보증': ['신보', '신용보증기금'],
-            '국가철도': ['코레일', 'korail', 'KORAIL', '철도공단'],
-            '대구': ['daegu', 'DAEGU', '대구광역시'],
-            '지사': ['branch', '지점', '사업소'],
-        }
-        
-        # 기술 용어 확장 사전
-        tech_synonyms = {
-            '설치': ['install', '인스톨', '설정', 'setup'],
-            '오류': ['error', '에러', '문제', '장애', 'bug', '실패'],
-            '서버': ['server', 'host', '호스트', '시스템', 'sys'],
-            '데이터베이스': ['database', 'db', 'DB', '디비', 'mysql', 'oracle'],
-            '네트워크': ['network', '망', '통신', 'net'],
-            '보안': ['security', '암호화', '인증', 'auth'],
-            '백업': ['backup', '복구', 'restore', '복원'],
-            '모니터링': ['monitoring', '감시', '추적', 'monitor'],
-            '로그': ['log', 'logs', '기록', 'logging'],
-            '성능': ['performance', '속도', 'speed', 'perf'],
-            '용량': ['capacity', '크기', 'size', '저장공간', 'storage'],
-            '버전': ['version', 'ver', 'v', '버젼'],
-            '업데이트': ['update', '갱신', 'upgrade', '업그레이드'],
-            '구성': ['config', 'configuration', '설정', 'setup'],
-            '연결': ['connection', 'connect', '접속', 'conn'],
-            '조직': ['organization', 'org', '조직도', '구성', '체계'],
-            '직원': ['employee', 'staff', '사원', '인력', '담당자'],
-            '점검': ['check', 'inspect', '검사', '테스트', 'test'],
-            '장애': ['trouble', 'issue', '문제', '오류', 'error'],
-            '보고': ['report', '리포트', '보고서'],
-            '매뉴얼': ['manual', '메뉴얼', '설명서', 'guide'],
-            '운영': ['operation', 'ops', 'operate', '관리'],
-            '시스템': ['system', 'sys', '체계', '구성'],
-        }
-        
-        # 모든 확장 사전 결합
-        all_synonyms = {**company_synonyms, **tech_synonyms}
-        
-        # 동의어 확장
-        for keyword in base_keywords:
-            keyword_lower = keyword.lower()
-            for main_term, synonyms in all_synonyms.items():
-                if keyword_lower == main_term or keyword_lower in [s.lower() for s in synonyms]:
-                    expanded.update([main_term] + synonyms)
-                    break
-        
-        # 3. 특수 패턴 확장
-        for keyword in base_keywords:
-            # 한글 회사명 패턴 (예: "쓰리에스소프트" -> "쓰리에스", "소프트")
-            if len(keyword) > 4 and re.match(r'^[가-힣]+$', keyword):
-                # 회사명 분리 시도
-                if '소프트' in keyword:
-                    company_part = keyword.replace('소프트', '')
-                    if len(company_part) >= 2:
-                        expanded.add(company_part)
-                        expanded.add('소프트')
+            # 저장된 동의어 사전 로드
+            try:
+                from app.utils.synonym_builder import get_qwen_synonym_builder
+                synonym_builder = get_qwen_synonym_builder()
                 
-                # 숫자-한글 변환 (예: "삼에스" <-> "3에스")
-                num_map = {'일': '1', '이': '2', '삼': '3', '사': '4', '오': '5'}
-                for kor_num, eng_num in num_map.items():
-                    if keyword.startswith(kor_num):
-                        expanded.add(eng_num + keyword[1:])
-                    elif keyword.startswith(eng_num):
-                        expanded.add(kor_num + keyword[1:])
-        
-        # 4. 부분 매칭용 키워드 (중요한 키워드만)
-        partial_keywords = []
-        important_keywords = [kw for kw in base_keywords if len(kw) >= 4]
-        for keyword in important_keywords:
-            if len(keyword) >= 5:
-                # 앞 3글자, 뒤 3글자
-                partial_keywords.append(keyword[:3])
-                partial_keywords.append(keyword[-3:])
-        
-        # 5. 최종 키워드 목록 정리
-        final_keywords = list(expanded) + partial_keywords
-        
-        # 길이가 너무 짧거나 숫자만인 것 제외
-        final_keywords = [
-            kw for kw in final_keywords 
-            if len(kw) >= 2 and not (kw.isdigit() and len(kw) == 1)
-        ]
-        
-        # 중복 제거 후 길이 순 정렬 (긴 것부터)
-        final_keywords = sorted(set(final_keywords), key=len, reverse=True)
-        
-        return final_keywords[:20]  # 최대 20개로 확장
+                # 각 키워드에 대해 동의어 확장
+                expanded_keywords = set(keywords)
+                for keyword in keywords:
+                    synonyms = synonym_builder.get_synonyms(keyword)
+                    expanded_keywords.update(synonyms)  # 모든 동의어 포함
+                
+                final_keywords = list(expanded_keywords)
+                print(f"🔍 동의어 사전 확장: {len(keywords)} → {len(final_keywords)}개")
+                
+                return final_keywords[:30]  # 최대 30개로 제한 확장
+                
+            except Exception as e:
+                print(f"⚠️ 동의어 사전 확장 실패, 기본 키워드만 사용: {e}")
+                return keywords[:15]  # 기본 키워드만 사용
+                
+        except Exception as e:
+            print(f"⚠️ 개선된 키워드 추출 실패, 기본 방식 사용: {e}")
+            
+            # 백업: 기본 키워드 추출
+            words = re.findall(r'[가-힣a-zA-Z0-9]{2,}', query)
+            
+            # 불용어 제거
+            stopwords = {
+                '이것', '그것', '저것', '무엇', '어떤', '어떻게', '왜', '어디서', '언제', 
+                '누구', '어느', '얼마', '없는', '있는', '되는', '하는', '같은', '다른',
+                '때문', '위해', '통해', '따라', '의해', '관련', '부분', '내용', '정보',
+                '방법', '경우', '때는', '있습니다', '없습니다', '됩니다', '합니다', '대한'
+            }
+            
+            keywords = []
+            for word in words:
+                if word.lower() not in stopwords and len(word) >= 2:
+                    keywords.append(word)
+            
+            return keywords[:10]  # 기본 키워드만 반환
     
     async def _search_same_document_chunks(
         self, source: str, page: int, keywords: List[str], original_query: str

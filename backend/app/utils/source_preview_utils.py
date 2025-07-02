@@ -85,9 +85,16 @@ def extract_keywords_from_content(content: str) -> List[str]:
 
 
 
-def apply_highlighting(content: str, keywords: List[str], original_query: str = None) -> tuple:
+def apply_highlighting(content: str, keywords: List[str], original_query: str = None, metadata: Dict[str, Any] = None, embedding_function: Any = None) -> tuple:
     """
     Semantic similarity 기반으로 답변과 관련된 문장을 하이라이트합니다.
+    
+    Args:
+        content (str): 하이라이트할 문서 내용
+        keywords (List[str]): 하이라이트에 사용할 키워드 목록
+        original_query (str, optional): 답변 텍스트
+        metadata (Dict[str, Any], optional): 문서 메타데이터 (리랭킹 점수 포함)
+        embedding_function (Any, optional): 임베딩 함수
     
     Returns:
         tuple: (하이라이트된_내용, 하이라이트_여부)
@@ -116,10 +123,10 @@ def apply_highlighting(content: str, keywords: List[str], original_query: str = 
         if not sentence.strip():
             continue
             
-        importance_score = _calculate_sentence_importance(sentence, answer_entities, keywords)
+        importance_score = _calculate_sentence_importance(sentence, answer_entities, keywords, metadata, original_query, embedding_function)
         
-        # 점수가 높은 문장은 하이라이트
-        if importance_score > 0.6:  # 임계값
+        # 점수가 높은 문장은 하이라이트 (임계값 강화)
+        if importance_score > 0.75:  # 임계값을 0.6에서 0.75로 높임
             highlighted_sentence = f'<span class="highlight-strong">{sentence.strip()}</span>'
             highlighted_sentences.append(highlighted_sentence)
             has_highlights = True
@@ -150,7 +157,16 @@ def _split_into_sentences(content: str) -> List[str]:
     return [s.strip() for s in sentences if s.strip()]
 
 
-def _calculate_sentence_importance(sentence: str, answer_entities: Dict, keywords: List[str]) -> float:
+def _sigmoid(x: float, k: float = 10.0, x0: float = 0.7) -> float:
+    """시그모이드 함수를 사용하여 점수를 비선형적으로 변환합니다."""
+    try:
+        import math
+        return 1 / (1 + math.exp(-k * (x - x0)))
+    except Exception as e:
+        print(f"시그모이드 계산 중 오류: {e}")
+        return 0.0
+
+def _calculate_sentence_importance(sentence: str, answer_entities: Dict, keywords: List[str], metadata: Dict[str, Any] = None, original_query: str = None, embedding_function: Any = None) -> float:
     """문장의 중요도 점수를 계산합니다."""
     score = 0.0
     
@@ -159,19 +175,51 @@ def _calculate_sentence_importance(sentence: str, answer_entities: Dict, keyword
         for entity in entities:
             if entity.strip() and entity.strip() in sentence:
                 if entity_type == 'numbers':
-                    score += 0.4  # 숫자는 매우 중요
+                    # 숫자가 쿼리와 관련이 있는지 확인
+                    if original_query and entity.strip() in original_query:
+                        score += 0.3  # 쿼리와 관련된 숫자는 높은 점수
+                    else:
+                        # 쿼리와 관련 없고 주변 키워드도 없으면 점수 부여하지 않음
+                        entity_pos = sentence.find(entity.strip())
+                        context_range = 20  # 숫자 주변 20자 내에서 키워드 확인
+                        context = sentence[max(0, entity_pos - context_range):entity_pos + context_range + len(entity.strip())]
+                        context_keywords = sum(1 for k in keywords if k.lower() in context.lower())
+                        if context_keywords > 0:
+                            score += 0.1  # 주변에 키워드가 있으면 추가 점수
+                        else:
+                            score += 0.0  # 관련 없는 숫자는 점수 부여하지 않음
                 elif entity_type == 'periods':
                     score += 0.3  # 기간도 중요
                 else:
                     score += 0.2
     
-    # 2. 키워드 밀도
+    # 2. 키워드 밀도 (점수 비중 높임)
     matching_keywords = sum(1 for k in keywords if k.lower() in sentence.lower())
-    if keywords:
+    if keywords and matching_keywords >= 1:  # 최소 1개 이상 키워드 일치해야 점수 부여
         keyword_density = matching_keywords / len(keywords)
-        score += keyword_density * 0.3
+        score += keyword_density * 0.25  # 키워드 비중 높임
     
-    # 3. 문장 길이 보정 (너무 짧거나 긴 문장은 덜 중요)
+    # 3. 문서 메타데이터에서 리랭킹 점수 반영
+    if metadata and 'relevance_score' in metadata:
+        relevance_score = metadata.get('relevance_score', 0.0)
+        adjusted_relevance = _sigmoid(relevance_score)
+        score += adjusted_relevance * 0.35  # 리랭킹 점수 비중 낮춤
+    
+    # 4. 문장과 쿼리 간의 임베딩 유사성 반영
+    if original_query and embedding_function:
+        try:
+            query_embedding = embedding_function(original_query)
+            sentence_embedding = embedding_function(sentence)
+            if query_embedding is not None and sentence_embedding is not None:
+                from numpy import dot
+                from numpy.linalg import norm
+                similarity = dot(query_embedding, sentence_embedding) / (norm(query_embedding) * norm(sentence_embedding))
+                adjusted_similarity = _sigmoid(similarity)
+                score += adjusted_similarity * 0.3  # 유사성 점수 비중 낮춤
+        except Exception as e:
+            print(f"임베딩 유사성 계산 중 오류: {e}")
+    
+    # 5. 문장 길이 보정 (너무 짧거나 긴 문장은 덜 중요)
     sentence_length = len(sentence.split())
     if 5 <= sentence_length <= 30:  # 적절한 길이
         score += 0.1

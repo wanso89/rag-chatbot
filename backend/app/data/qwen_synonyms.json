@@ -4522,11 +4522,34 @@
       "Dynamic security measures",
       "Flexible security architecture",
       "Adaptive security plan"
+    ],
+    "회갑": [
+      "잔치",
+      "회갑",
+      "경조사",
+      "생신",
+      "행사",
+      "환갑",
+      "축하"
+    ],
+    "지원": [
+      "비용",
+      "지출",
+      "수당",
+      "지원",
+      "경비",
+      "원",
+      "금액",
+      "보상",
+      "보조금",
+      "천원",
+      "만원",
+      "정액지급"
     ]
   },
-  "last_updated": "2025-07-02T13:18:31.353879",
+  "last_updated": "2025-07-02T14:51:18.472770",
   "stats": {
-    "total_terms": 265,
-    "total_synonyms": 3993
+    "total_terms": 267,
+    "total_synonyms": 4012
   }
 }

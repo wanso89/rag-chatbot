@@ -33,95 +33,126 @@ class QueryExpander:
         return cleaned
         
     def extract_keywords(self, query: str) -> List[str]:
-        """쿼리에서 핵심 키워드 추출"""
-        # 불용어 제거 및 길이 1 이하 단어 제거
-        tokens = query.split()
-        keywords = [t for t in tokens if t not in self.stopwords and len(t) > 1]
-        return keywords
+        """쿼리에서 핵심 키워드 추출 (도메인 특화 개선, 동의어 사전 활용 활성화)"""
+        # 복합어 및 도메인 특화 키워드 사전
+        compound_keywords = {
+            r'\d+년\s*이상': lambda m: m.group().replace(' ', ''),  # "1년 이상" -> "1년이상"
+            r'\d+개월\s*이상': lambda m: m.group().replace(' ', ''),  # "6개월 이상" -> "6개월이상"
+            r'회갑|환갑|칠순|팔순|고희|생신|잔치|축하|행사': '경조사',  # 생일 관련 -> 경조사
+            r'결혼식|결혼|혼례|웨딩': '경조사',  # 결혼 관련 -> 경조사
+            r'장례식|장례|초상|상|부고|사망': '경조사',  # 장례 관련 -> 경조사
+            r'출산|출산휴가|육아휴직|아기|신생아': '출산육아',  # 출산 관련
+            r'지원금|지원은|얼마|금액|보조|보조금|수당|혜택|복지|경조사비|만원|정액지급': '지원',  # 지원 관련
+            r'직원|근로자|사원|임직원|종업원|근무자': '직원',  # 직원 관련 통일
+            r'급여|임금|월급|연봉|보수|수입': '급여',  # 급여 관련 통일
+            r'휴가|휴직|휴일|연차|병가|특별휴가|청원휴가|특별청원휴가': '휴가',  # 휴가 관련 통일
+            r'자녀|유\s*자녀|자식|아들|딸': '자녀',  # 자녀 관련 통일
+            r'조부모|조\s*부\s*모|할아버지|할머니|외조부|외조모': '조부모',  # 조부모 관련 통일
+            r'장인|장모|장인장모|장인\s*장모|시아버지|시어머니': '장인장모',  # 장인장모 관련 통일
+            r'아버지|어머니|아빠|엄마|부모|부모님': '부모',  # 부모 관련 통일
+            r'백숙|백\s*숙|백숙부모|백\s*숙\s*부\s*모|삼촌|이모|고모|숙모': '백숙부모',  # 백숙부모 관련 통일
+            r'배우자|배\s*우\s*자|남편|아내': '배우자',  # 배우자 관련 통일
+            r'형제자매|형제\s*자매|형|오빠|누나|동생|남매': '형제자매',  # 형제자매 관련 통일
+            r'승중|승\s*중|승중상|승\s*중\s*상': '승중상',  # 승중상 관련 통일
+        }
+        
+        # 1. 복합어 및 도메인 특화 키워드 추출
+        domain_keywords = []
+        processed_query = query
+        
+        for pattern, replacement in compound_keywords.items():
+            matches = re.finditer(pattern, processed_query, re.IGNORECASE)
+            for match in matches:
+                if callable(replacement):
+                    keyword = replacement(match)
+                else:
+                    keyword = replacement
+                
+                if keyword not in domain_keywords:
+                    domain_keywords.append(keyword)
+                
+                # 매치된 부분을 마커로 대체하여 중복 추출 방지
+                processed_query = processed_query.replace(match.group(), f' _PROCESSED_{len(domain_keywords)}_ ')
+        
+        # 2. 기본 토큰화 (남은 부분에 대해)
+        tokens = processed_query.split()
+        basic_keywords = []
+        
+        for token in tokens:
+            # 처리된 마커는 무시
+            if token.startswith('_PROCESSED_'):
+                continue
+                
+            # 불용어 제거 및 길이 조건
+            if token not in self.stopwords and len(token) > 1:
+                # 숫자+단위 조합 보존
+                if re.match(r'\d+[년개월일주시간]', token):
+                    basic_keywords.append(token)
+                # 일반 키워드
+                elif not token.isdigit():  # 단순 숫자는 제외
+                    basic_keywords.append(token)
+        
+        # 3. 최종 키워드 조합 (도메인 키워드 우선)
+        final_keywords = domain_keywords + basic_keywords
+        
+        # 중복 제거하면서 순서 보존
+        unique_keywords = []
+        seen = set()
+        for kw in final_keywords:
+            if kw not in seen:
+                unique_keywords.append(kw)
+                seen.add(kw)
+        
+        # 4. 동의어 사전 활용 활성화
+        print("🔍 동의어 사전 활용 활성화됨")
+        synonym_builder = get_qwen_synonym_builder()
+        expanded_keywords = []
+        for kw in unique_keywords:
+            synonyms = synonym_builder.get_synonyms(kw)
+            if synonyms:
+                expanded_keywords.extend(synonyms)
+            else:
+                expanded_keywords.append(kw)
+        
+        # 중복 제거하면서 순서 보존
+        final_expanded_keywords = []
+        seen = set()
+        for kw in expanded_keywords:
+            if kw not in seen:
+                final_expanded_keywords.append(kw)
+                seen.add(kw)
+        
+        print(f"🔍 개선된 키워드 추출: {len(unique_keywords)}개 - {unique_keywords}")
+        print(f"🔍 동의어 사전 확장: {len(unique_keywords)} → {len(final_expanded_keywords)}개")
+        print(f"📝 확장된 키워드: {final_expanded_keywords}")
+        return final_expanded_keywords
         
     def expand_query(self, query: str) -> Dict[str, Any]:
         """
-        쿼리 확장 및 변형 생성 (동의어 사전 활용)
+        쿼리 확장 및 변형 생성 (동의어 사전 활용 활성화)
         """
         cleaned_query = self.clean_query(query)
         keywords = self.extract_keywords(cleaned_query)
         
-        # 동의어 빌더 가져오기
-        try:
-            synonym_builder = get_qwen_synonym_builder()
-        except Exception as e:
-            print(f"동의어 빌더 로드 실패: {e}")
-            synonym_builder = None
-        
         # 확장된 쿼리 생성
-        expanded_variants = []
+        must_variants = []
+        should_variants = []
         
-        # 1. 원본 쿼리 (항상 포함)
-        expanded_variants.append(query.strip())
+        # 1. 원본 쿼리 (항상 포함, 'must' 방식으로 높은 가중치 부여)
+        must_variants.append(query.strip())
         
-        # 2. 동의어 기반 쿼리 변형 (가장 중요)
-        if synonym_builder and keywords:
-            # 각 키워드의 동의어 찾기
-            keyword_synonyms = {}
-            for keyword in keywords:
-                synonyms = synonym_builder.get_synonyms(keyword)
-                if len(synonyms) > 1:  # 동의어가 실제로 있는 경우
-                    keyword_synonyms[keyword] = [s for s in synonyms if s != keyword][:3]  # 최대 3개
-            
-            # 동의어로 치환한 쿼리 생성
-            if keyword_synonyms:
-                # 각 키워드를 동의어로 치환한 버전들 생성
-                for original_keyword, synonyms in keyword_synonyms.items():
-                    for synonym in synonyms:
-                        # 원본 쿼리에서 키워드를 동의어로 치환
-                        synonym_query = re.sub(
-                            rf'\b{re.escape(original_keyword)}\b', 
-                            synonym, 
-                            query, 
-                            flags=re.IGNORECASE
-                        )
-                        if synonym_query != query and synonym_query.strip():
-                            expanded_variants.append(synonym_query.strip())
-                
-                # 여러 키워드를 동시에 치환한 조합 생성
-                if len(keyword_synonyms) >= 2:
-                    # 가장 중요한 2개 키워드의 첫 번째 동의어로 치환
-                    combination_query = query
-                    replacement_count = 0
-                    for original_keyword, synonyms in list(keyword_synonyms.items())[:2]:
-                        if synonyms:
-                            combination_query = re.sub(
-                                rf'\b{re.escape(original_keyword)}\b', 
-                                synonyms[0], 
-                                combination_query, 
-                                flags=re.IGNORECASE
-                            )
-                            replacement_count += 1
-                    
-                    if replacement_count >= 2 and combination_query != query:
-                        expanded_variants.append(combination_query.strip())
-        
-        # 3. 핵심 키워드만 포함한 쿼리 (동의어 확장된 키워드 포함)
+        # 2. 핵심 키워드만 포함한 쿼리 ('must' 방식)
         if keywords:
-            # 원본 키워드 + 동의어 조합
-            expanded_keywords = []
-            if synonym_builder:
-                for keyword in keywords:
-                    synonyms = synonym_builder.get_synonyms(keyword)
-                    expanded_keywords.extend(synonyms[:2])  # 각 키워드당 최대 2개 동의어
-            else:
-                expanded_keywords = keywords
-            
             # 중복 제거하고 키워드 쿼리 생성
-            unique_keywords = list(dict.fromkeys(expanded_keywords))
+            unique_keywords = list(dict.fromkeys(keywords))
             if len(unique_keywords) >= 2:
                 keyword_query = " ".join(unique_keywords[:4])  # 최대 4개 키워드
                 if keyword_query != query.strip():
-                    expanded_variants.append(keyword_query)
+                    must_variants.append(keyword_query)
         
-        # 4. 질문 형태 변환 (의문문 -> 평서문)
+        # 3. 질문 형태 변환 (의문문 -> 평서문, 'must' 방식)
         transformed_queries = []
-        for variant in expanded_variants:
+        for variant in must_variants:
             if "?" in variant:
                 # 다양한 질문 패턴 처리
                 statement_query = variant
@@ -134,11 +165,11 @@ class QueryExpander:
                 if statement_query and statement_query != variant:
                     transformed_queries.append(statement_query)
         
-        expanded_variants.extend(transformed_queries)
+        must_variants.extend(transformed_queries)
         
-        # 5. 어미 변형 (추가 변형)
+        # 4. 어미 변형 (추가 변형, 'should' 방식)
         morphology_variants = []
-        for variant in expanded_variants[:3]:  # 처음 3개 변형에 대해서만
+        for variant in must_variants[:3]:  # 처음 3개 변형에 대해서만
             # 높임말 -> 평어 변환
             morphed = variant
             morphed = re.sub(r'해주세요$', '', morphed)
@@ -150,22 +181,40 @@ class QueryExpander:
             if morphed and morphed != variant and len(morphed) > 2:
                 morphology_variants.append(morphed)
         
-        expanded_variants.extend(morphology_variants)
+        should_variants.extend(morphology_variants)
+        
+        # 5. 동의어 기반 변형 ('should' 방식)
+        synonym_builder = get_qwen_synonym_builder()
+        for kw in unique_keywords:
+            synonyms = synonym_builder.get_synonyms(kw)
+            if synonyms and len(synonyms) > 1:
+                for syn in synonyms[1:]:  # 첫 번째는 원본이므로 제외
+                    syn_query = query.replace(kw, syn)
+                    if syn_query != query:
+                        should_variants.append(syn_query)
         
         # 중복 제거 및 빈 문자열 제거
-        unique_variants = []
-        seen = set()
-        for variant in expanded_variants:
+        must_unique_variants = []
+        should_unique_variants = []
+        seen_must = set()
+        seen_should = set()
+        for variant in must_variants:
             variant = variant.strip()
-            if variant and variant not in seen and len(variant) > 1:
-                unique_variants.append(variant)
-                seen.add(variant)
+            if variant and variant not in seen_must and len(variant) > 1:
+                must_unique_variants.append(variant)
+                seen_must.add(variant)
+        for variant in should_variants:
+            variant = variant.strip()
+            if variant and variant not in seen_should and len(variant) > 1:
+                should_unique_variants.append(variant)
+                seen_should.add(variant)
         
         return {
             "original": query,
             "cleaned": cleaned_query,
             "keywords": keywords,
-            "variants": unique_variants[:5]  # 최대 5개 변형만 사용
+            "must_variants": must_unique_variants[:3],  # 최대 3개 'must' 변형 사용
+            "should_variants": should_unique_variants[:5]  # 최대 5개 'should' 변형 사용
         }
 
 
@@ -175,10 +224,10 @@ class SearchScoreEnhancer:
     """
     
     def __init__(self, 
-                 keyword_match_boost: float = 0.15,
-                 exact_match_boost: float = 0.2,
+                 keyword_match_boost: float = 0.05,
+                 exact_match_boost: float = 0.1,
                  title_match_boost: float = 0.25,
-                 recency_weight: float = 0.05):
+                 recency_weight: float = 0.02):
         self.keyword_match_boost = keyword_match_boost  # 키워드 매치 가중치
         self.exact_match_boost = exact_match_boost  # 정확한 문구 매치 가중치
         self.title_match_boost = title_match_boost  # 제목 매치 가중치
@@ -195,10 +244,14 @@ class SearchScoreEnhancer:
             
         original_query = query_info["original"]
         keywords = query_info["keywords"]
+        must_variants = query_info.get("must_variants", [])
+        should_variants = query_info.get("should_variants", [])
         
         # 검색어와 키워드 기반 정규식 생성
         keyword_patterns = [re.compile(rf'\b{re.escape(kw)}\b', re.IGNORECASE) for kw in keywords]
         exact_pattern = re.compile(re.escape(original_query), re.IGNORECASE)
+        must_patterns = [re.compile(rf'\b{re.escape(variant)}\b', re.IGNORECASE) for variant in must_variants]
+        should_patterns = [re.compile(rf'\b{re.escape(variant)}\b', re.IGNORECASE) for variant in should_variants]
         
         # 결과 점수 보정
         for doc in documents:
@@ -216,7 +269,11 @@ class SearchScoreEnhancer:
             exact_matches = len(exact_pattern.findall(content))
             exact_boost = min(self.exact_match_boost, exact_matches * 0.05)
             
-            # 3. 문서 메타데이터 고려 (제목 매치 등)
+            # 3. must_variants와 should_variants에 대한 점수 계산
+            must_boost = sum(1 for pattern in must_patterns if pattern.search(content)) * 0.3  # must는 더 높은 가중치
+            should_boost = sum(1 for pattern in should_patterns if pattern.search(content)) * 0.02  # should는 더 낮은 가중치
+            
+            # 4. 문서 메타데이터 고려 (제목 매치 등)
             title_boost = 0
             if "title" in doc.metadata and doc.metadata["title"]:
                 title = doc.metadata["title"]
@@ -224,7 +281,7 @@ class SearchScoreEnhancer:
                 if title_keyword_matches > 0:
                     title_boost = min(self.title_match_boost, (title_keyword_matches / len(keywords)) * self.title_match_boost)
             
-            # 4. 최신성 점수 (indexed_at 필드 있을 경우)
+            # 5. 최신성 점수 (indexed_at 필드 있을 경우)
             recency_boost = 0
             if "indexed_at" in doc.metadata and doc.metadata["indexed_at"]:
                 try:
@@ -236,7 +293,7 @@ class SearchScoreEnhancer:
                     pass
                     
             # 최종 보정 점수 계산 및 적용
-            boost_factor = 1 + keyword_boost + exact_boost + title_boost + recency_boost
+            boost_factor = 1 + keyword_boost + exact_boost + must_boost + should_boost + title_boost + recency_boost
             enhanced_score = base_score * boost_factor
             
             # 메타데이터에 점수 업데이트
@@ -245,6 +302,8 @@ class SearchScoreEnhancer:
             doc.metadata["boost_factor"] = boost_factor
             doc.metadata["keyword_boost"] = keyword_boost
             doc.metadata["exact_boost"] = exact_boost
+            doc.metadata["must_boost"] = must_boost
+            doc.metadata["should_boost"] = should_boost
             doc.metadata["title_boost"] = title_boost
             doc.metadata["recency_boost"] = recency_boost
             

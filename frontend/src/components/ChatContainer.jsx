@@ -624,9 +624,9 @@ const IndexedFilesModal = ({ isOpen, onClose }) => {
                     >
                       {getFileIcon(filename)}
                       <div className="ml-3 flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-800 dark:text-white truncate">
-                          {cleanFilename(filename)}
-                        </p>
+<p className="text-sm font-medium text-gray-800 dark:text-white overflow-x-auto">
+  {cleanFilename(filename)}
+</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">

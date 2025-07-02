@@ -19,7 +19,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 class QwenSynonymBuilder:
-    def __init__(self, synonym_file_path: str = "backend/app/data/qwen_synonyms.json"):
+    def __init__(self, synonym_file_path: str = "app/data/qwen_synonyms.json"):
         self.synonym_file_path = Path(synonym_file_path)
         self.synonym_file_path.parent.mkdir(parents=True, exist_ok=True)
         
@@ -86,7 +86,7 @@ class QwenSynonymBuilder:
         else:
             text_sample = document_text
         
-        prompt = f"""다음 문서에서 중요한 용어들을 추출해주세요. 회사명, 제품명, 기술용어, 시스템명 등을 포함해주세요.
+        prompt = f"""다음 문서에서 중요한 용어들을 추출해주세요. 회사명, 제품명, 기술용어, 시스템명 등을 포함해주세요. 단, 중국어는 사용하면 안됩니다.
 
 문서 내용:
 {text_sample}
@@ -165,7 +165,7 @@ class QwenSynonymBuilder:
 4. 문맥상 같은 의미로 사용될 수 있는 용어들
 5. 각 동의어는 한 줄씩 나열
 6. 최대 20개까지 생성 (제한 완화)
-
+7. 중국어는 사용하지 말 것
 '{term}'의 동의어 목록:"""
 
         try:

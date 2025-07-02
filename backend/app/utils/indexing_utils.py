@@ -511,6 +511,256 @@ async def extract_images_from_docling_layout(
         print(f"⚠️ Docling 레이아웃 이미지 처리 실패: {e}")
         return image_texts, image_paths
 
+async def extract_tables_from_docling_layout(
+    pdf_path: str, 
+    layout_info, 
+    doc_id: str = None,
+    llm_model=None,
+    tokenizer=None
+) -> Tuple[Dict[int, List[str]], Dict[int, List[str]]]:
+    """Docling 레이아웃 정보를 기반으로 테이블 영역 추출 및 OCR + AI 캡셔닝"""
+    
+    table_texts = {}
+    table_paths = {}
+    
+    if not layout_info:
+        print("⚠️ Docling 레이아웃 정보 없음")
+        return table_texts, table_paths
+    
+    # Clean doc_id 처리
+    if not doc_id:
+        file_name = Path(pdf_path).name
+        doc_id = strip_uuid_prefix(file_name)
+        if '.' in doc_id:
+            doc_id = doc_id.rsplit('.', 1)[0]
+    
+    tbl_dir = Path("app/static/document_tables") / doc_id
+    tbl_dir.mkdir(parents=True, exist_ok=True)
+    
+    print(f"📄 Docling 레이아웃 기반 테이블 처리 시작: {doc_id}")
+    
+    try:
+        # Docling layout_info에서 tables(테이블) 추출
+        tables = getattr(layout_info, 'tables', [])
+        
+        print(f"📊 Docling에서 감지된 테이블: {len(tables)}개")
+        
+        # 테이블 영역 처리
+        for idx, table in enumerate(tables):
+            try:
+                page_num = getattr(table, 'page', 1) 
+                bbox = getattr(table, 'bbox', None)
+                
+                if not bbox:
+                    continue
+                
+                # PDF 영역 크롭
+                tbl_data = crop_pdf_region(pdf_path, page_num, bbox)
+                
+                # 테이블 저장
+                tbl_name = f"page_{page_num}_docling_tbl_{idx+1}.png"
+                tbl_path = tbl_dir / tbl_name
+                
+                with open(tbl_path, "wb") as f:
+                    f.write(tbl_data)
+                
+                print(f"📊 Docling 테이블 영역 저장: {tbl_name}")
+                
+                # OCR 텍스트 추출
+                ocr_text = ""
+                try:
+                    from .ocr_utils import get_paddle_ocr
+                    ocr = get_paddle_ocr()
+                    ocr_result = ocr.ocr(str(tbl_path), cls=True)
+                    
+                    if ocr_result and ocr_result[0]:
+                        ocr_texts = []
+                        for line in ocr_result[0]:
+                            if line and len(line) >= 2:
+                                text = line[1][0] if isinstance(line[1], (list, tuple)) else str(line[1])
+                                confidence = line[1][1] if isinstance(line[1], (list, tuple)) and len(line[1]) > 1 else 0.0
+                                
+                                if confidence > 0.6 and text.strip():
+                                    ocr_texts.append(text.strip())
+                        
+                        ocr_text = " ".join(ocr_texts)
+                        print(f"📝 Docling 테이블 OCR: {ocr_text[:50]}...")
+                
+                except Exception as ocr_e:
+                    print(f"⚠️ Docling 테이블 OCR 실패: {ocr_e}")
+                
+                # AI 캡션 생성
+                ai_caption = ""
+                if llm_model and tokenizer:
+                    try:
+                        # 페이지 텍스트를 컨텍스트로 사용 (추후 개선 가능)
+                        page_context = f"PDF 문서 페이지 {page_num}의 테이블 영역"
+                        
+                        ai_caption = await generate_table_caption_with_qwen(
+                            table_text=ocr_text,
+                            page_text=page_context,
+                            llm_model=llm_model,
+                            tokenizer=tokenizer
+                        )
+                        print(f"🤖 Docling 테이블 AI 캡션: {ai_caption}")
+                        
+                    except Exception as ai_e:
+                        print(f"⚠️ Docling 테이블 AI 캡션 실패: {ai_e}")
+                        ai_caption = f"문서 테이블 {idx + 1}"
+                
+                # 결과 저장
+                relative_path = f"document_tables/{doc_id}/{tbl_name}"
+                table_paths.setdefault(page_num, []).append(relative_path)
+                
+                # OCR + AI 캡션 통합
+                combined_text = []
+                if ocr_text.strip():
+                    combined_text.append(f"텍스트: {ocr_text}")
+                if ai_caption.strip():
+                    combined_text.append(f"설명: {ai_caption}")
+                
+                if combined_text:
+                    table_texts.setdefault(page_num, []).append(" | ".join(combined_text))
+                
+            except Exception as tbl_e:
+                print(f"⚠️ Docling 테이블 {idx} 처리 실패: {tbl_e}")
+                continue
+        
+        print(f"✅ Docling 테이블 처리 완료: {len(table_texts)} 페이지")
+        return table_texts, table_paths
+        
+    except Exception as e:
+        print(f"⚠️ Docling 레이아웃 테이블 처리 실패: {e}")
+        return table_texts, table_paths
+
+async def extract_images_from_pdf_with_layout(file_path: str, doc_id: str = None) -> Tuple[Dict[int, List[str]], Dict[int, List[str]]]:
+    """PP-Structure를 사용하여 PDF에서 이미지 영역을 추출하고 OCR 수행"""
+    from .ocr_utils import get_pp_structure
+    
+    image_texts = {}
+    image_paths = {}
+    
+    if not doc_id:
+        file_name = Path(file_path).name
+        doc_id = strip_uuid_prefix(file_name)
+        if '.' in doc_id:
+            doc_id = doc_id.rsplit('.', 1)[0]
+    
+    img_dir = IMAGE_DIR / doc_id
+    img_dir.mkdir(parents=True, exist_ok=True)
+    
+    try:
+        pp_structure = get_pp_structure()
+        layout_res = pp_structure.structure_analyzer(file_path)
+        
+        for page_idx, layout in enumerate(layout_res):
+            page_num = page_idx + 1
+            
+            for region_idx, region in enumerate(layout):
+                if region['type'] != 'figure':
+                    continue
+                
+                bbox = region['bbox']
+                img_data = crop_pdf_region(file_path, page_num, fitz.Rect(bbox[0], bbox[1], bbox[2], bbox[3]))
+                
+                img_name = f"page_{page_num}_img_{region_idx+1}.png"
+                img_path = img_dir / img_name
+                
+                with open(img_path, "wb") as f:
+                    f.write(img_data)
+                
+                ocr_text = ""
+                try:
+                    ocr_result = pp_structure.ocr(str(img_path))
+                    if ocr_result:
+                        ocr_texts = []
+                        for line in ocr_result:
+                            if line and len(line) >= 2:
+                                text = line[1][0] if isinstance(line[1], (list, tuple)) else str(line[1])
+                                confidence = line[1][1] if isinstance(line[1], (list, tuple)) and len(line[1]) > 1 else 0.0
+                                
+                                if confidence > 0.6 and text.strip():
+                                    ocr_texts.append(text.strip())
+                        
+                        ocr_text = " ".join(ocr_texts)
+                except Exception as ocr_e:
+                    print(f"⚠️ 이미지 OCR 실패: {ocr_e}")
+                
+                relative_path = f"document_images/{doc_id}/{img_name}"
+                image_paths.setdefault(page_num, []).append(relative_path)
+                
+                if ocr_text.strip():
+                    image_texts.setdefault(page_num, []).append(f"텍스트: {ocr_text}")
+    
+    except Exception as e:
+        print(f"⚠️ PP-Structure 이미지 추출 실패: {e}")
+    
+    return image_texts, image_paths
+
+async def extract_tables_from_pdf_with_layout(file_path: str, doc_id: str = None) -> Tuple[Dict[int, List[str]], Dict[int, List[str]]]:
+    """PP-Structure를 사용하여 PDF에서 테이블 영역을 추출하고 OCR 수행"""
+    from .ocr_utils import get_pp_structure
+    
+    table_texts = {}
+    table_paths = {}
+    
+    if not doc_id:
+        file_name = Path(file_path).name
+        doc_id = strip_uuid_prefix(file_name)
+        if '.' in doc_id:
+            doc_id = doc_id.rsplit('.', 1)[0]
+    
+    tbl_dir = Path("app/static/document_tables") / doc_id
+    tbl_dir.mkdir(parents=True, exist_ok=True)
+    
+    try:
+        pp_structure = get_pp_structure()
+        layout_res = pp_structure.structure_analyzer(file_path)
+        
+        for page_idx, layout in enumerate(layout_res):
+            page_num = page_idx + 1
+            
+            for region_idx, region in enumerate(layout):
+                if region['type'] != 'table':
+                    continue
+                
+                bbox = region['bbox']
+                tbl_data = crop_pdf_region(file_path, page_num, fitz.Rect(bbox[0], bbox[1], bbox[2], bbox[3]))
+                
+                tbl_name = f"page_{page_num}_tbl_{region_idx+1}.png"
+                tbl_path = tbl_dir / tbl_name
+                
+                with open(tbl_path, "wb") as f:
+                    f.write(tbl_data)
+                
+                ocr_text = ""
+                try:
+                    ocr_result = pp_structure.ocr(str(tbl_path))
+                    if ocr_result:
+                        ocr_texts = []
+                        for line in ocr_result:
+                            if line and len(line) >= 2:
+                                text = line[1][0] if isinstance(line[1], (list, tuple)) else str(line[1])
+                                confidence = line[1][1] if isinstance(line[1], (list, tuple)) and len(line[1]) > 1 else 0.0
+                                
+                                if confidence > 0.6 and text.strip():
+                                    ocr_texts.append(text.strip())
+                        
+                        ocr_text = " ".join(ocr_texts)
+                except Exception as ocr_e:
+                    print(f"⚠️ 테이블 OCR 실패: {ocr_e}")
+                
+                relative_path = f"document_tables/{doc_id}/{tbl_name}"
+                table_paths.setdefault(page_num, []).append(relative_path)
+                
+                if ocr_text.strip():
+                    table_texts.setdefault(page_num, []).append(f"텍스트: {ocr_text}")
+    
+    except Exception as e:
+        print(f"⚠️ PP-Structure 테이블 추출 실패: {e}")
+    
+    return table_texts, table_paths
+
 
 def get_docling_converter():
     """Docling 컨버터 싱글톤 (CPU 모드, GPU 오류 방지)"""
@@ -1092,17 +1342,21 @@ async def create_hybrid_documents(
                 docling_tables.extend(row_docs)
                 docling_table_pages.add(page_num)
 
-    # === 2단계: 이미지 처리 - Docling vs PP-Structure 선택 ===
+    # === 2단계: 이미지 및 테이블 이미지 처리 - Docling vs PP-Structure 선택 ===
     if layout_info is not None:
-        # Docling 레이아웃 정보가 있으면 Docling 기반 이미지 처리
-        print("🔍 Docling 레이아웃 정보 활용하여 이미지 처리")
+        # Docling 레이아웃 정보가 있으면 Docling 기반 이미지 및 테이블 처리
+        print("🔍 Docling 레이아웃 정보 활용하여 이미지 및 테이블 이미지 처리")
         image_ocr_texts, image_paths = await extract_images_from_docling_layout(
+            file_path, layout_info, doc_id, llm_model, tokenizer
+        )
+        table_ocr_texts, table_paths = await extract_tables_from_docling_layout(
             file_path, layout_info, doc_id, llm_model, tokenizer
         )
     else:
         # Docling 정보가 없으면 기존 PP-Structure 방식 사용
-        print("🔍 PP-Structure 방식으로 이미지 처리 (Docling 정보 없음)")
+        print("🔍 PP-Structure 방식으로 이미지 및 테이블 이미지 처리 (Docling 정보 없음)")
         image_ocr_texts, image_paths = await extract_images_from_pdf_with_layout(file_path, doc_id)
+        table_ocr_texts, table_paths = await extract_tables_from_pdf_with_layout(file_path, doc_id)
 
     # === 3단계: 각 페이지별 표 추출 전략 결정 ===
     ocr_tables = []

@@ -142,6 +142,8 @@ def get_reranker_model():
         return reranker
     except Exception as e:
         print(f"Reranker 모델 로딩 중 오류 발생: {e}")
+        print(f"Reranker 모델 경로: {RERANKER_MODEL_NAME}")
+        print(f"CUDA 사용 가능 여부: {torch.cuda.is_available()}")
         traceback.print_exc()
         return None
 
@@ -224,7 +226,7 @@ class EnhancedLocalReranker:
             sorted_docs.extend(remaining_docs)
 
             # 임계값 필터링 - 점수가 낮은 문서 제외 (임계값 하향으로 더 많은 문서 포함)
-            threshold = 0.52  # 임계값 하향 (0.6 → 0.52)
+            threshold = 0.5  # 임계값 하향 (0.52 → 0.4)
             filtered_docs = [
                 doc
                 for doc in sorted_docs
@@ -232,7 +234,7 @@ class EnhancedLocalReranker:
             ]
 
             # 필터링 결과가 최소 개수 미만이면 상위 문서 추가
-            min_docs = 3  # 최소 3개 문서 보장
+            min_docs = 3  # 최소 5개 문서 보장
             if len(filtered_docs) < min_docs and sorted_docs:
                 additional_docs = [
                     doc for doc in sorted_docs 
@@ -300,6 +302,7 @@ async def search_and_combine(
 
 
     start_time = time.time()
+    print(f"검색 및 결합 시작: {query[:30]}...")
     
     # Redis 캐싱 적용: 동일한 쿼리의 중복 처리 방지 - 성능 대폭 개선
     from utils.cache_utils import RedisCache, CacheKeys, CACHE_TTL_SEARCH
@@ -363,18 +366,19 @@ async def search_and_combine(
         retrieval_start = time.time()
         # ElasticsearchRetriever - 2단계 검색 방식으로 개선 (Qwen 대안쿼리 제거)
         retriever = ElasticsearchRetriever(
-        es_client=es_client,
-        index_name=ES_INDEX_NAME,
-        embedding_function=embedding_function,
-        category=category,
-        k=15,
-        llm_model=None,      # Qwen 대안쿼리 비활성화
-        tokenizer=None       # Qwen 대안쿼리 비활성화
+            es_client=es_client,
+            index_name=ES_INDEX_NAME,
+            embedding_function=embedding_function,
+            category=category,
+            k=15,
+            llm_model=None,      # Qwen 대안쿼리 비활성화
+            tokenizer=None       # Qwen 대안쿼리 비활성화
         )
 
         docs = await retriever.async_get_relevant_documents(query)
         retrieval_time = time.time() - retrieval_start
         print(f"Retrieval time: {retrieval_time:.2f}s, Found {len(docs)} docs from ES.")
+        print(f"ES 검색 성능 분석: 검색 시간 {retrieval_time:.2f}초, 문서 수 {len(docs)}개")
 
         # 검색 결과가 없을 경우 조기 반환
         if not docs:
@@ -395,7 +399,10 @@ async def search_and_combine(
 
             if enhanced_docs:
                 docs = enhanced_docs
-                print(f"Enhanced search with query variants: {', '.join(query_info['variants'])}")
+                if 'variants' in query_info:
+                    print(f"Enhanced search with query variants: {', '.join(query_info['variants'])}")
+                else:
+                    print("Enhanced search with query variants: No variants available")
             else:
                 print("Enhanced search returned no results, using original docs")
         except Exception as enhance_error:
@@ -405,6 +412,7 @@ async def search_and_combine(
 
         enhance_time = time.time() - enhance_start
         print(f"Search enhancement time: {enhance_time:.2f}s")
+        print(f"검색 개선 성능 분석: 개선 시간 {enhance_time:.2f}초")
 
         # 2. Reranking (최적화 - 비동기 처리)
         rerank_start = time.time()
@@ -415,15 +423,18 @@ async def search_and_combine(
             reranked_docs = reranker.rerank(query, docs)
             rerank_time = time.time() - rerank_start
             print(f"Reranking time: {rerank_time:.2f}s, Reranked to {len(reranked_docs)} docs.")
+            print(f"리랭킹 성능 분석: 리랭킹 시간 {rerank_time:.2f}초, 문서 수 {len(reranked_docs)}개")
         except Exception as rerank_error:
             print(f"Reranking 중 오류 발생, 원본 문서 사용: {rerank_error}")
             traceback.print_exc()
             # 리랭킹 실패 시 원본 문서 사용
             reranked_docs = docs[:15]  # 상위 15개만 사용
+            rerank_time = time.time() - rerank_start
+            print(f"Reranking time (error case): {rerank_time:.2f}s")
 
         # 최종 토큰 수 제한
-        # 컨텍스트 크기를 최대 3,500 토큰으로 제한
-        max_tokens = 3500
+        # 컨텍스트 크기를 최대 5,000 토큰으로 제한
+        max_tokens = 5000
         token_count = 0
         final_docs = []
 
@@ -570,29 +581,59 @@ async def search_and_combine(
             print("정제된 응답이 비어있어 원본 응답을 사용합니다.")
             cleaned_answer = "안녕하세요! 어떻게 도와드릴까요?"
         
-        # 유효한 응답이 있는 경우 LLM 인용 우선 출처 선별
+        # 출처 선별을 LLM 응답 생성 전에 수행 (기본적으로 점수 기준으로 상위 문서 선택)
+        print(f"기본 출처 선별 시작: 총 {len(source_metadata)}개 문서")
+        cited_sources = []
+        qualified_sources = []
+        
+        # 점수 기준으로 상위 3개 문서 선택
+        for i, meta in enumerate(source_metadata):
+            score = meta.get("score", 0)
+            display_name = meta.get('display_name', 'unknown')
+            qualified_sources.append({
+                'meta': meta,
+                'score': score,
+                'index': i,
+                'directly_cited': False,
+                'reason': 'high_score'
+            })
+            print(f"  ✅ 기본 출처: {display_name} (스코어: {score:.3f})")
+            if len(qualified_sources) >= 3:
+                break
+        
+        # 메타데이터에 is_cited 설정
+        cited_indices = {source['index'] for source in qualified_sources}
+        for i, meta in enumerate(source_metadata):
+            if i in cited_indices:
+                meta["is_cited"] = True
+                cited_sources.append(meta)
+            else:
+                meta["is_cited"] = False
+        
+        print(f"기본 선별된 출처: {len(cited_sources)}개 (점수 기준 상위 문서)")
+        
+        # 유효한 응답이 있는 경우 추가적으로 인용 기반 출처 선별
         if cleaned_answer and isinstance(cleaned_answer, str) and cleaned_answer.strip():
-            print(f"LLM 인용 우선 출처 선별 시작: 총 {len(source_metadata)}개 문서")
+            print(f"LLM 인용 기반 출처 재선별 시작: 총 {len(source_metadata)}개 문서")
+            directly_cited_files = set()
             
             # 1. LLM 응답에서 직접 인용된 파일명 추출 (예: [파일명 p.페이지])
             import re
             citation_pattern = r'\[([^[\]]+?)(?:\s+p\.(\d+))?\]'
             cited_files = re.findall(citation_pattern, cleaned_answer)
-            directly_cited_files = set()
             
             for file_part, page_part in cited_files:
-                # 파일명만 추출 
+                # 파일명만 추출
                 clean_file = file_part.strip()
                 if clean_file:
                     directly_cited_files.add(clean_file.lower())
                     print(f"🎯 응답에서 직접 인용된 파일: '{clean_file}'")
             
-            # 2. 먼저 직접 인용된 문서들을 우선 선택
-            qualified_sources = []
+            # 2. 직접 인용된 문서들을 우선 선택
+            new_qualified_sources = []
             for i, meta in enumerate(source_metadata):
                 display_name = meta.get('display_name', 'unknown')
                 score = meta.get("score", 0)
-                element_type = meta.get("element_type", "text")
                 
                 # 직접 인용 여부 확인 (더 유연한 매칭)
                 is_directly_cited = False
@@ -606,7 +647,7 @@ async def search_and_combine(
                         break
                 
                 if is_directly_cited:
-                    qualified_sources.append({
+                    new_qualified_sources.append({
                         'meta': meta,
                         'score': max(score, 0.95),  # 직접 인용된 경우 최고 점수 부여
                         'index': i,
@@ -616,11 +657,11 @@ async def search_and_combine(
                     print(f"  ✅ 직접 인용 문서: {display_name} (스코어: {score:.3f} → 0.95)")
             
             # 3. 직접 인용된 문서가 부족한 경우에만 추가 선별
-            if len(qualified_sources) < 3:
-                print(f"  📋 직접 인용 문서 {len(qualified_sources)}개 부족, 추가 선별 시작...")
+            if len(new_qualified_sources) < 3:
+                print(f"  📋 직접 인용 문서 {len(new_qualified_sources)}개 부족, 추가 선별 시작...")
                 
                 for i, meta in enumerate(source_metadata):
-                    if any(source['index'] == i for source in qualified_sources):
+                    if any(source['index'] == i for source in new_qualified_sources):
                         continue  # 이미 선택된 문서는 스킵
                     
                     source_text = context_chunks[i] if i < len(context_chunks) else ""
@@ -631,7 +672,7 @@ async def search_and_combine(
                     # 표/이미지는 스코어 기준만 적용
                     if element_type in ["table_row", "table"] or meta.get("has_images"):
                         if score >= 0.6:  # 높은 임계값
-                            qualified_sources.append({
+                            new_qualified_sources.append({
                                 'meta': meta,
                                 'score': score,
                                 'index': i,
@@ -653,26 +694,26 @@ async def search_and_combine(
                         source_lower = source_text.lower()
                         direct_matches = [kw for kw in answer_keywords if kw.lower() in source_lower]
                         
-                        # 매우 엄격한 기준: 최소 3개 키워드 매칭 + 높은 스코어
-                        if len(direct_matches) >= 3 and score >= 0.7:
-                            qualified_sources.append({
+                        # 완화된 기준: 최소 2개 키워드 매칭 + 낮은 스코어
+                        if len(direct_matches) >= 2 and score >= 0.5:
+                            new_qualified_sources.append({
                                 'meta': meta,
                                 'score': score,
                                 'index': i,
                                 'directly_cited': False,
-                                'reason': f'strict_match({len(direct_matches)}개)'
+                                'reason': f'match({len(direct_matches)}개)'
                             })
-                            print(f"  ✅ 엄격 매칭: {display_name} (키워드: {len(direct_matches)}개, 스코어: {score:.3f})")
+                            print(f"  ✅ 매칭: {display_name} (키워드: {len(direct_matches)}개, 스코어: {score:.3f})")
                             print(f"    매칭된 키워드: {direct_matches[:3]}")
                         else:
-                            reason = f"키워드 부족({len(direct_matches)}개)" if len(direct_matches) < 3 else f"스코어 낮음({score:.3f})"
+                            reason = f"키워드 부족({len(direct_matches)}개)" if len(direct_matches) < 2 else f"스코어 낮음({score:.3f})"
                             print(f"  ❌ 제외: {display_name} ({reason})")
                             
                     except Exception as e:
                         print(f"  ⚠️ 관련성 검사 오류: {e}")
                         # 오류 시에는 매우 높은 스코어만 허용
                         if score >= 0.8:
-                            qualified_sources.append({
+                            new_qualified_sources.append({
                                 'meta': meta,
                                 'score': score,
                                 'index': i,
@@ -681,15 +722,15 @@ async def search_and_combine(
                             })
                     
                     # 최대 3개까지만
-                    if len(qualified_sources) >= 3:
+                    if len(new_qualified_sources) >= 3:
                         break
             
             # 정렬: 직접 인용 > 스코어 순
-            qualified_sources.sort(key=lambda x: (x.get('directly_cited', False), x['score']), reverse=True)
+            new_qualified_sources.sort(key=lambda x: (x.get('directly_cited', False), x['score']), reverse=True)
             final_sources = []
             
             # 상위 3개까지 선택 (직접 인용된 것 우선)
-            for source in qualified_sources:
+            for source in new_qualified_sources:
                 if len(final_sources) < 3:
                     final_sources.append(source)
                     reason = source.get('reason', 'unknown')
@@ -699,7 +740,8 @@ async def search_and_combine(
                 else:
                     break
             
-            # 메타데이터에 is_cited 설정
+            # 메타데이터에 is_cited 설정 업데이트
+            cited_sources = []
             cited_indices = {source['index'] for source in final_sources}
             for i, meta in enumerate(source_metadata):
                 if i in cited_indices:
@@ -725,6 +767,7 @@ async def search_and_combine(
         llm_time = time.time() - llm_start
         print(f"LLM generation time: {llm_time:.2f}s")
         print(f"응답에 포함된 출처 수: {len(cited_sources)}")
+        print(f"LLM 생성 성능 분석: 생성 시간 {llm_time:.2f}초")
 
         # 최종 응답 생성
         final_result = {
@@ -807,6 +850,8 @@ async def startup_event():
     embedding_function = get_embedding_function()
     llm_model, tokenizer = get_llm_model_and_tokenizer()
     reranker_model = get_reranker_model()
+    if reranker_model is None:
+        print("⚠️ 리랭커 모델 로드 실패, 검색 속도가 느려질 수 있습니다.")
     sqlcoder_model, sqlcoder_tokenizer = get_sqlcoder_model()
     
     # indexing_utils에 모델 전달 (캡션 생성용)
