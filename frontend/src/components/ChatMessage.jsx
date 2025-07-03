@@ -880,12 +880,12 @@ const ImageModal = ({ isOpen, onClose, src, alt, caption }) => {
   );
 };
 
-// 이미지 표시 컴포넌트
-const ImageDisplay = ({ images, captions }) => {
-  const [selectedImage, setSelectedImage] = useState(null);
-  
-  console.log("ImageDisplay received images:", images);
-  console.log("ImageDisplay received captions:", captions);
+  // 이미지 표시 컴포넌트
+  const ImageDisplay = ({ images, captions }) => {
+    const [selectedImage, setSelectedImage] = useState(null);
+    
+    console.log("ImageDisplay received images:", JSON.stringify(images, null, 2));
+    console.log("ImageDisplay received captions:", JSON.stringify(captions, null, 2));
 
   if (!images || !Array.isArray(images) || images.length === 0) return null;
   
@@ -1109,8 +1109,44 @@ function ChatMessage({ message, searchTerm = "", isSearchMode, prevMessage, next
   // 메시지 내용 준비 - 모든 관련 함수보다 먼저 실행
   // 봇 메시지인 경우 bot_response 사용, 사용자 메시지는 content 사용
   const messageContent = useMemo(() => {
-    const content = message.role === 'user' ? message.content : (message.bot_response || message.content || "");
-    return content || "";
+    const rawContent = message.role === 'user' ? message.content : (message.bot_response || message.content || "");
+    if (!rawContent) return "";
+    
+    // 마크다운 노드를 문자열로 변환하는 함수
+    const mdNodeToString = (node) => {
+      if (node == null) return '';
+      if (typeof node === 'string') return node;
+      if (Array.isArray(node)) return node.map(mdNodeToString).join('\n');
+      
+      if (typeof node === 'object' && node !== null) {
+        switch (node.type) {
+          case 'heading':
+            return `${'#'.repeat(node.depth || 1)} ${mdNodeToString(node.children || node.value || '')}`;
+          case 'listItem':
+            return `- ${mdNodeToString(node.children || node.value || '')}`;
+          case 'code':
+            return `\`\`\`${node.lang || ''}\n${node.value || ''}\n\`\`\``;
+          case 'paragraph':
+            return mdNodeToString(node.children || node.value || '');
+          case 'text':
+            return node.value || '';
+          default:
+            return mdNodeToString(node.children || node.value || '');
+        }
+      }
+      return String(node);
+    };
+    
+    // 데이터 평탄화: 배열이나 객체를 문자열로 변환
+    const content = mdNodeToString(rawContent);
+    
+    // 디버그 로그 추가
+    console.log("messageContent type:", typeof content);
+    console.log("messageContent isArray:", Array.isArray(content));
+    console.log("messageContent includes [object Object]:", content.includes('[object Object]'));
+    console.log("messageContent:", content);
+    
+    return content;
   }, [message.role, message.content, message.bot_response]);
 
   // 추천 질문 관련 상태
@@ -1958,12 +1994,18 @@ function ChatMessage({ message, searchTerm = "", isSearchMode, prevMessage, next
     // 콘텐츠 전처리 - 외부에서 정의된 messageContent 사용
     let processedContent = messageContent || "";
     
+    // 객체가 문자열로 변환되지 않은 경우 처리
+    if (typeof processedContent === 'object') {
+      processedContent = JSON.stringify(processedContent);
+    }
+    
     // 비정상 패턴이 있는 경우에만 escapeHtmlTags 함수 적용 (성능 최적화)
     if (hasAbnormalPatterns(processedContent)) {
-       // 비정상 패턴 감지 로그 제거
       processedContent = escapeHtmlTags(processedContent);
     }
     
+    // Ensure content is a string before passing to ReactMarkdown
+    const contentAsString = String(processedContent || '');
     return (
       <div className="prose prose-sm dark:prose-invert max-w-none overflow-hidden">
         <ReactMarkdown
@@ -1974,7 +2016,7 @@ function ChatMessage({ message, searchTerm = "", isSearchMode, prevMessage, next
             // ... (커스텀 컴포넌트들은 기존과 동일) ...
           }}
         >
-          {processedContent}
+          {contentAsString}
         </ReactMarkdown>
       </div>
     );
@@ -2008,7 +2050,7 @@ function ChatMessage({ message, searchTerm = "", isSearchMode, prevMessage, next
   // 출처 정보 디버깅 로그 추가
   useEffect(() => {
     if (message.role === 'assistant') {
-      console.log('출처 정보 상태:', {
+      console.log('출처 정보 상태:', JSON.stringify({
         hasSources: Boolean(message.sources),
         sourcesLength: message.sources?.length || 0,
         hasCitedSources: Boolean(message.cited_sources),
@@ -2016,7 +2058,7 @@ function ChatMessage({ message, searchTerm = "", isSearchMode, prevMessage, next
         filteredSourcesLength: message.sources?.filter(s => s.is_cited)?.length || 0,
         sourcesVisible,
         isLastInGroup
-      });
+      }, null, 2));
     }
   }, [message, sourcesVisible, isLastInGroup]);
   
@@ -2153,17 +2195,17 @@ function ChatMessage({ message, searchTerm = "", isSearchMode, prevMessage, next
       if (source.element_type === 'table_row' && source.table_id && source.is_cited === true) {
         if (!tables.has(source.table_id)) {
           tables.set(source.table_id, {
-            caption: source.table_caption || '',
+            caption: typeof source.table_caption === 'string' ? source.table_caption : '',
             rows: [],
             source_info: {
-              display_name: source.display_name,
-              page: source.page
+              display_name: typeof source.display_name === 'string' ? source.display_name : '문서',
+              page: source.page || ''
             }
           });
         }
         
         tables.get(source.table_id).rows.push({
-          text: source.text || '',
+          text: typeof source.text === 'string' ? source.text : '',
           row_index: source.row_index || 0
         });
       }
@@ -2172,15 +2214,15 @@ function ChatMessage({ message, searchTerm = "", isSearchMode, prevMessage, next
       if (source.is_cited === true && source.has_images && source.images && Array.isArray(source.images)) {
         source.images.forEach((imagePath, idx) => {
           const caption = source.image_captions && source.image_captions[idx] 
-            ? source.image_captions[idx].caption 
-            : null;
+            ? (typeof source.image_captions[idx].caption === 'string' ? source.image_captions[idx].caption : '')
+            : '';
           
           images.push({
             path: imagePath,
             caption: caption,
             source_info: {
-              display_name: source.display_name,
-              page: source.page
+              display_name: typeof source.display_name === 'string' ? source.display_name : '문서',
+              page: source.page || ''
             }
           });
         });
@@ -2219,6 +2261,8 @@ function ChatMessage({ message, searchTerm = "", isSearchMode, prevMessage, next
     // 표와 이미지 데이터 추출 (어시스턴트 메시지인 경우에만)
     const { tables, images } = !isUser ? extractTableAndImageData() : { tables: [], images: [] };
 
+    // Ensure content is a string before passing to ReactMarkdown
+    const contentAsString = String(content || '');
     return (
       <div className="message-content-wrapper">
         {/* 기본 마크다운 콘텐츠 */}
@@ -2244,9 +2288,9 @@ function ChatMessage({ message, searchTerm = "", isSearchMode, prevMessage, next
               
               // 코드 블록
               return (
-                <div className="relative my-4 rounded-lg overflow-hidden">
+                <div className="relative my-0 rounded-lg overflow-hidden">
                   {language && (
-                    <div className="absolute top-0 right-0 px-2 py-1 text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-bl">
+                    <div className="absolute top-0 right-0 px-0.5 py-0 text-[18px] font-large text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-bl h-4 flex items-center">
                       {language}
                     </div>
                   )}
@@ -2254,7 +2298,8 @@ function ChatMessage({ message, searchTerm = "", isSearchMode, prevMessage, next
                     style={oneDark}
                     language={language}
                     PreTag="div"
-                    className="!bg-gray-100 dark:!bg-gray-800 !rounded-lg !p-4 !text-sm"
+                    className="!bg-gray-100 dark:!bg-gray-800 !rounded-xs !text-xs"
+                    customStyle={{ lineHeight: '1.2', padding: '2px' }}
                   >
                     {String(children).replace(/\n$/, "")}
                   </SyntaxHighlighter>
@@ -2263,7 +2308,7 @@ function ChatMessage({ message, searchTerm = "", isSearchMode, prevMessage, next
             },
             p({ node, children, ...props }) {
               return (
-                <p className="mb-4 last:mb-0" {...props}>
+                <p className="mb-0 last:mb-0 text-base" style={{ lineHeight: '1.2', verticalAlign: 'baseline' }} {...props}>
                   {children}
                 </p>
               );
@@ -2303,7 +2348,7 @@ function ChatMessage({ message, searchTerm = "", isSearchMode, prevMessage, next
             }
           }}
         >
-          {content}
+          {contentAsString}
         </ReactMarkdown>
 
         {/* 표 데이터 렌더링 */}
@@ -2337,7 +2382,7 @@ function ChatMessage({ message, searchTerm = "", isSearchMode, prevMessage, next
             </div>
             <ImageDisplay 
               images={images.map(img => img.path)} 
-              captions={images.map(img => ({ caption: img.caption || `${img.source_info.display_name} (페이지 ${img.source_info.page})` }))}
+              captions={images.map(img => ({ caption: img.caption || `${img.source_info.display_name} (페이지 ${img.source_info.page})`, source_info: img.source_info }))}
             />
           </div>
         )}

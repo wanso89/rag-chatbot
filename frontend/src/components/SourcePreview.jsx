@@ -22,7 +22,7 @@ const SourcePreview = ({ isOpen, onClose, source, content, image, isLoading, key
   
   const [copySuccess, setCopySuccess] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  console.log('🪵 raw content >>>', content); 
+
   // 오류 메시지인지 확인하는 함수
   const isErrorMessage = (text) => {
     if (!text) return false;
@@ -140,8 +140,6 @@ const SourcePreview = ({ isOpen, onClose, source, content, image, isLoading, key
         </div>
       );
     }
-    console.log('🔍 hasHtmlTags?', hasHtmlTags(content));
-    console.log('🔍 first 200 chars', content.slice(0, 200));  
     
     // 일반 마크다운 콘텐츠 - 키워드 하이라이트 강화
     const enhancedContent = keywords && keywords.length > 0
