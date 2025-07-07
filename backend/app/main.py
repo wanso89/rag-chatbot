@@ -790,7 +790,10 @@ async def search_and_combine(
 
             # 메타데이터에 is_cited 설정 업데이트
             cited_sources = []
-            cited_indices = {source['index'] for source in final_sources}
+            document_sources = [source for source in final_sources if source['meta'].get('element_type', 'text') != 'image'][:2]
+            image_sources = [source for source in final_sources if source['meta'].get('element_type', 'text') == 'image'][:2]
+            final_limited_sources = document_sources + image_sources
+            cited_indices = {source['index'] for source in final_limited_sources}
             for i, meta in enumerate(source_metadata):
                 if i in cited_indices:
                     meta["is_cited"] = True
@@ -798,7 +801,7 @@ async def search_and_combine(
                 else:
                     meta["is_cited"] = False
 
-            print(f"최종 선별된 출처: {len(cited_sources)}개 (LLM 직접 인용)")
+            print(f"최종 선별된 출처: {len(cited_sources)}개 (LLM 직접 인용, 출처 2개 및 이미지 2개로 제한)")
             for source in final_sources:
                 meta = source['meta']
                 element_type = meta.get("element_type", "text")
