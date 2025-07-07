@@ -139,7 +139,6 @@ def detect_table_in_text(text: str) -> bool:
     # === 최종 판단 ===
     # 점수가 2점 이상이면 표로 판단 (기존 3점에서 완화)
     # 더 많은 테이블을 감지하도록 임계값 조정
-    print(f"DEBUG TABLE SCORE ▸ 표 감지 점수: {table_indicators}점")
     return table_indicators >= 2
 
 

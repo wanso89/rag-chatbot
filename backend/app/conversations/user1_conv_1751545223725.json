@@ -1,0 +1,113 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1751545223725",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "아버지 회갑이야. 회사에서 얼마 지급해주니?",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "[사내규정모음집20100129_개정.pdf p.24]에 따르면, 회사에서는 직원의 아버지 회갑일에 대해 1년 이상 경조휴가를 부여하며, 지급될 금액은 30만원입니다. 따라서 아버지 회갑일에 대한 경조금은 30만원이 지급됩니다.",
+      "sources": [
+        {
+          "path": "회사정보-20250616.docx",
+          "display_name": "회사정보-20250616.docx",
+          "page": 1,
+          "chunk_id": "batch1_1",
+          "score": 9.580574499999999,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "사내규정모음집20100129_개정.pdf",
+          "display_name": "사내규정모음집20100129_개정.pdf",
+          "page": 24,
+          "chunk_id": "batch1_23",
+          "score": 1,
+          "element_type": "text",
+          "is_cited": true
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 38,
+          "chunk_id": "batch1_36",
+          "score": 0,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "LlamaFirewall - 가로스크롤테스트문서몇자까지인지 확인이 어려움 가나다라마마사마자어오ㅓ린아리나어리나어롤ㅇ니ㅏㅓ리낭린아ㅓㄹㄴ이ㅏ렁ㄹㄴ.pdf",
+          "display_name": "LlamaFirewall - 가로스크롤테스트문서몇자까지인지 확인이 어려움 가나다라마마사마자어오ㅓ린아리나어리나어롤ㅇ니ㅏㅓ리낭린아ㅓㄹㄴ이ㅏ렁ㄹㄴ.pdf",
+          "page": 3,
+          "chunk_id": "batch1_2",
+          "score": 0,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "[NDT4]Ceph 설치 가이드(CentOS 8 Stream).pdf",
+          "display_name": "[NDT4]Ceph 설치 가이드(CentOS 8 Stream).pdf",
+          "page": 8,
+          "chunk_id": "batch1_7",
+          "score": 0,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "NDT User Guide(Win).pdf",
+          "display_name": "NDT User Guide(Win).pdf",
+          "page": 30,
+          "chunk_id": "batch1_29",
+          "score": 0,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 27,
+          "chunk_id": "batch1_25",
+          "score": 0,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "LlamaFirewall - 가로스크롤테스트문서몇자까지인지 확인이 어려움 가나다라마마사마자어오ㅓ린아리나어리나어롤ㅇ니ㅏㅓ리낭린아ㅓㄹㄴ이ㅏ렁ㄹㄴ.pdf",
+          "display_name": "LlamaFirewall - 가로스크롤테스트문서몇자까지인지 확인이 어려움 가나다라마마사마자어오ㅓ린아리나어리나어롤ㅇ니ㅏㅓ리낭린아ㅓㄹㄴ이ㅏ렁ㄹㄴ.pdf",
+          "page": 6,
+          "chunk_id": "batch1_5",
+          "score": 0,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "NDT User Guide(Win).pdf",
+          "display_name": "NDT User Guide(Win).pdf",
+          "page": 32,
+          "chunk_id": "batch1_31",
+          "score": 0,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "LlamaFirewall - 가로스크롤테스트문서몇자까지인지 확인이 어려움 가나다라마마사마자어오ㅓ린아리나어리나어롤ㅇ니ㅏㅓ리낭린아ㅓㄹㄴ이ㅏ렁ㄹㄴ.pdf",
+          "display_name": "LlamaFirewall - 가로스크롤테스트문서몇자까지인지 확인이 어려움 가나다라마마사마자어오ㅓ린아리나어리나어롤ㅇ니ㅏㅓ리낭린아ㅓㄹㄴ이ㅏ렁ㄹㄴ.pdf",
+          "page": 2,
+          "chunk_id": "batch1_1",
+          "score": 0,
+          "element_type": "text",
+          "is_cited": false
+        }
+      ]
+    }
+  ],
+  "timestamp": "2025-07-03T21:20:35.611194"
+}

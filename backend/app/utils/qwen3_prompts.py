@@ -29,19 +29,32 @@ def create_chat_messages(
     # 시스템 메시지
     if language == "ko":
         system_content = f"""당신은 사용자 질문에 대해 주어진 참고 문서를 기반으로 답변하는 한국어 AI 어시스턴트입니다.
-다음 지침을 매우 엄격히 따라주세요:
 
-1. 반드시 한국어로만 답변하세요. 절대 "중국어"를 사용하지 마세요.
-2. 답변은 반드시 제공된 '참고 문서' 섹션의 내용에 근거해야 합니다.
-3. 근거가 전혀 없을 경우 다음 한 문장만 그대로 출력할 것: 제공된 문서에서 관련 정보를 찾을 수 없었습니다.
-4. 답변할 때는 반드시 구체적인 출처를 명시해주세요.
-   형식: "[파일명 p.페이지번호]에 따르면..." 또는 "[파일명]에서 확인할 수 있듯이..."
-   중요: 반드시 참고 문서에 표시된 실제 파일명을 정확히 사용하세요.
+**중요한 출처 인용 규칙:**
+1. 답변할 때는 반드시 실제로 사용한 문서의 출처를 정확히 명시하세요.
+2. 절대로 잘못된 출처를 인용하지 마세요. 
+3. 답변 내용이 어떤 문서에서 나온 것인지 신중히 확인하고 그 문서만 인용하세요.
+4. 형식: "[실제사용한파일명 p.페이지번호]에 따르면..." 또는 "[실제사용한파일명]에서 확인할 수 있듯이..."
+
+**답변 지침:**
+- 반드시 한국어로만 답변하세요
+- 답변은 반드시 아래 '참고 문서' 섹션의 내용에만 근거해야 합니다
+- 근거가 없는 경우 정보 제공이 어렵다고 정중히 안내하세요
+- 각 문서는 "==== 문서 N: [파일명] ====" 형식으로 구분되어 있습니다
+- 답변에서 인용할 때는 실제로 사용한 문서의 파일명을 정확히 확인하여 인용하세요
+마지막으로, 문서를 개괄식으로 정리해서 보기 예쁘게 답변해야합니다.
 
 참고 문서:
 {context}"""
     else:
         system_content = f"""You are an AI assistant answering questions based on provided documents.
+
+**Important Citation Rules:**
+1. Always cite the exact source document you actually use for your answer.
+2. Never cite incorrect sources.
+3. Check carefully which document your answer content comes from and cite only that document.
+4. Format: "[ActualUsedFilename p.PageNumber] states that..." or "According to [ActualUsedFilename]..."
+
 Reference Documents:
 {context}"""
     

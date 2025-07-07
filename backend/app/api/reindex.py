@@ -35,7 +35,7 @@ async def test_api():
 
 
 @router.post("/reindex-all-files")
-async def reindex_all_files():
+def reindex_all_files():
     """
     uploads/ 안에 존재하는 모든 파일을 다시 읽어
     Elasticsearch 인덱스를 새로 만든다.
@@ -75,30 +75,33 @@ async def reindex_all_files():
 
     # 4. 파일별 인덱싱 (batch 병렬)
     success, failed = 0, 0
+    failed_files = []
 
-    async def worker(batch: List[Path], batch_no: int):
+    def worker(batch: List[Path], batch_no: int):
         nonlocal success, failed
         for fp in batch:
             logger.info(f"[batch {batch_no}] 인덱싱: {fp.name}")
             try:
-                ok = await process_and_index_file(
+                ok = process_and_index_file(
                     es_client=es,
                     embedding_function=embed_fn,
                     uploaded_file_path=str(fp),
                     category="메뉴얼",
                     reindex=True,          # ← 복사 금지
                 )
-                success += 1 if ok else 0
-                failed  += 0 if ok else 1
+                if ok:
+                    success += 1
+                else:
+                    failed += 1
+                    failed_files.append(fp.name)
             except Exception as e:
                 failed += 1
+                failed_files.append(fp.name)
                 logger.error(f"{fp.name} 처리 오류: {e}")
 
     # batch split
-    tasks = []
     for i in range(0, len(file_list), BATCH_SIZE):
-        tasks.append(worker(file_list[i : i + BATCH_SIZE], (i // BATCH_SIZE) + 1))
-    await asyncio.gather(*tasks)
+        worker(file_list[i : i + BATCH_SIZE], (i // BATCH_SIZE) + 1)
 
     elapsed = round(time.time() - t0, 2)
     return {
@@ -107,6 +110,7 @@ async def reindex_all_files():
         "total_files": len(file_list),
         "success": success,
         "failed": failed,
+        "failed_files": failed_files,
         "seconds": elapsed,
         "index": ES_INDEX_NAME,
     }
@@ -127,7 +131,107 @@ async def get_reindex_status():
         "index_name": ES_INDEX_NAME,
     }
 
-async def get_unique_files_from_uploads(uploads_dir: str) -> List[str]:
+@router.post("/reindex-specific-files")
+def reindex_specific_files(files: List[str]):
+    """
+    특정 파일 이름 또는 여러 파일 이름을 배열로 입력받아 인덱싱한다.
+    """
+    t0 = time.time()
+    logger.info("=== 특정 파일 재인덱싱 요청 수신 ===")
+
+    # 1. 사전 체크
+    if not UPLOADS_DIR.exists():
+        raise HTTPException(500, detail=f"업로드 경로가 없습니다: {UPLOADS_DIR}")
+
+    es = get_elasticsearch_client()
+    if not es:
+        raise HTTPException(500, detail="Elasticsearch 연결 실패")
+    
+    embed_fn = get_embedding_function()
+
+    # 2. 입력받은 파일 목록 확인
+    if not files:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "status": "error",
+                "message": "파일 목록이 제공되지 않았습니다.",
+                "found_files": 0,
+            },
+        )
+
+    file_list: List[Path] = []
+    for file_name in files:
+        file_path = UPLOADS_DIR / file_name
+        if file_path.is_file():
+            file_list.append(file_path)
+        else:
+            logger.warning(f"파일을 찾을 수 없음: {file_name}")
+
+    if not file_list:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "status": "error",
+                "message": "제공된 파일 중 존재하는 파일이 없습니다.",
+                "requested_files": len(files),
+            },
+        )
+
+    logger.info(f"요청된 파일 중 {len(file_list)}개 파일 발견")
+
+    # 3. 기존 인덱스에서 해당 파일 관련 문서 삭제
+    try:
+        for file_path in file_list:
+            file_name = file_path.name
+            es.delete_by_query(index=ES_INDEX_NAME, body={"query": {"term": {"source": file_name}}})
+        logger.info("기존 인덱스에서 해당 파일 관련 문서 삭제 완료")
+    except Exception as e:
+        logger.warning(f"인덱스 삭제 경고: {e}")
+
+    # 4. 파일별 인덱싱 (batch 병렬)
+    success, failed = 0, 0
+    failed_files = []
+
+    def worker(batch: List[Path], batch_no: int):
+        nonlocal success, failed
+        for fp in batch:
+            logger.info(f"[batch {batch_no}] 인덱싱: {fp.name}")
+            try:
+                ok = process_and_index_file(
+                    es_client=es,
+                    embedding_function=embed_fn,
+                    uploaded_file_path=str(fp),
+                    category="메뉴얼",
+                    reindex=True,          # ← 복사 금지
+                )
+                if ok:
+                    success += 1
+                else:
+                    failed += 1
+                    failed_files.append(fp.name)
+            except Exception as e:
+                failed += 1
+                failed_files.append(fp.name)
+                logger.error(f"{fp.name} 처리 오류: {e}")
+
+    # batch split
+    for i in range(0, len(file_list), BATCH_SIZE):
+        worker(file_list[i : i + BATCH_SIZE], (i // BATCH_SIZE) + 1)
+
+    elapsed = round(time.time() - t0, 2)
+    return {
+        "status": "success" if failed == 0 else "partial_success",
+        "message": f"총 {len(file_list)}개 중 {success}개 성공, {failed}개 실패",
+        "total_files": len(file_list),
+        "success": success,
+        "failed": failed,
+        "failed_files": failed_files,
+        "seconds": elapsed,
+        "index": ES_INDEX_NAME,
+    }
+
+def get_unique_files_from_uploads(uploads_dir: str) -> List[str]:
     """uploads 폴더에서 직접 파일명들을 가져옵니다."""
     files = []
     if os.path.exists(uploads_dir):
@@ -137,7 +241,7 @@ async def get_unique_files_from_uploads(uploads_dir: str) -> List[str]:
     logger.info(f"uploads 폴더에서 {len(files)}개 파일 발견")
     return files
 
-async def get_unique_files_from_es(es_client) -> List[str]:
+def get_unique_files_from_es(es_client) -> List[str]:
     """ES에서 고유 파일명들을 추출합니다."""
     try:
         # aggregation 쿼리로 고유 파일명들 추출
@@ -181,7 +285,7 @@ def check_existing_files(unique_files: List[str], uploads_dir: str) -> List[str]
     
     return existing_files
 
-async def delete_all_documents(es_client) -> Dict[str, Any]:
+def delete_all_documents(es_client) -> Dict[str, Any]:
     """ES에서 모든 문서를 삭제합니다."""
     try:
         delete_query = {"query": {"match_all": {}}}
@@ -195,7 +299,7 @@ async def delete_all_documents(es_client) -> Dict[str, Any]:
         logger.error(f"문서 삭제 중 오류: {e}")
         return {"deleted": 0, "status": "error"}
 
-async def reindex_files(file_paths: List[str], es_client, embedding_function) -> Dict[str, int]:
+def reindex_files(file_paths: List[str], es_client, embedding_function) -> Dict[str, int]:
     """파일들을 순차적으로 재인덱싱합니다."""
     success_count = 0
     failed_count = 0
@@ -208,7 +312,7 @@ async def reindex_files(file_paths: List[str], es_client, embedding_function) ->
         
         try:
             # 파일 재인덱싱
-            result = await process_and_index_file(
+            result = process_and_index_file(
                 es_client=es_client,
                 embedding_function=embedding_function,
                 uploaded_file_path=file_path,

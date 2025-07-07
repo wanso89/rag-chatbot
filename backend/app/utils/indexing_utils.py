@@ -31,12 +31,11 @@ from .table_parser import (detect_table_in_text,
                               is_same_table,
                               )
 from .ocr_utils import (
-        extract_text_from_file,
-        extract_text_from_image,
-        extract_text_from_pdf_with_ocr,
+        extract_text_from_file_sync,
+        extract_text_from_image_sync,
+        extract_text_from_pdf_with_ocr_sync,
         extract_images_from_pdf_with_layout,
 )
-from .synonym_builder import update_synonyms_from_indexing
 try:
     from docling.document_converter import DocumentConverter
     from docling.datamodel.base_models import InputFormat
@@ -76,14 +75,34 @@ BATCH_SIZE  = 4
 IMAGE_DIR = Path("app/static/document_images")  # 사용 안되면 제거 가능
 os.makedirs(IMAGE_DIR, exist_ok=True)  # 사용 안되면 제거 가능
 
-# LOADER_MAPPING: 이미지 파일 확장자 추가
+# LOADER_MAPPING: 이미지 파일 확장자 추가 -> .파싱 실패 할경우를 대비해 양쪽 다 지원
 LOADER_MAPPING = {
+    "pdf": (PyPDFLoader, {}),
+    
+    # 변환 후 PDF로 처리할 파일들
+    "xlsx": (UnstructuredExcelLoader, {}),
+    "xls":  (UnstructuredExcelLoader, {}),
+    "ppt":  ("CONVERT_TO_PDF", {}),
+    "pptx": ("CONVERT_TO_PDF", {}),
+    "docx": ("CONVERT_TO_PDF", {}),
+    
+    "txt": (TextLoader, {"encoding": "utf-8"}),
+    
+    # 이미지 파일
+    "jpg": ("OCR_LOADER", {}),
+    "jpeg": ("OCR_LOADER", {}),
+    "png": ("OCR_LOADER", {}),
+    "bmp": ("OCR_LOADER", {}),
+    "tiff": ("OCR_LOADER", {}),
+    "tif": ("OCR_LOADER", {}),
+    "webp": ("OCR_LOADER", {}),
+
     ".pdf": (PyPDFLoader, {}),
     
     # 변환 후 PDF로 처리할 파일들
-    ".xlsx": ("CONVERT_TO_PDF", {}),
-    ".xls": ("CONVERT_TO_PDF", {}),
-    ".ppt": ("CONVERT_TO_PDF", {}),
+    ".xlsx": (UnstructuredExcelLoader, {}),
+    ".xls":  (UnstructuredExcelLoader, {}),
+    ".ppt":  ("CONVERT_TO_PDF", {}),
     ".pptx": ("CONVERT_TO_PDF", {}),
     ".docx": ("CONVERT_TO_PDF", {}),
     
@@ -166,179 +185,137 @@ def convert_docx_to_pdf_sync(docx_path: str, output_dir: str) -> Optional[str]:
         return None
 
 
-async def convert_docx_to_pdf(docx_path: str, output_dir: str) -> Optional[str]:
-    loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(
-        None, convert_docx_to_pdf_sync, docx_path, output_dir
-    )
+def convert_docx_to_pdf(docx_path: str, output_dir: str) -> Optional[str]:
+    return convert_docx_to_pdf_sync(docx_path, output_dir)
 
 
 # --- 파일 내용을 읽어 Langchain Document 객체 리스트로 만드는 함수 (OCR 기능 추가) ---
-async def load_document(file_path_to_load: str, loader_selector_ext: str, llm_model=None, tokenizer=None) -> List[Document]:
-    print(
-        f"load_document 호출: file_path_to_load='{file_path_to_load}', loader_selector_ext='{loader_selector_ext}'"
-    )
+def load_document_sync(file_path_to_load: str, loader_selector_ext: str, llm_model=None, tokenizer=None, **kwargs) -> List[Document]:
 
-    loader_info = LOADER_MAPPING.get(loader_selector_ext)
+    if kwargs.get("forced_ocr"):
 
-    # OCR 로더 처리
-    if loader_info and loader_info[0] == "OCR_LOADER":
-        logger.info(f"OCR 로더를 사용하여 파일 처리: {file_path_to_load}")
-        return await load_document_with_ocr(file_path_to_load)
-    if loader_info and loader_info[0] == "CONVERT_TO_PDF":
-        logger.info(f"PDF 변환 후 처리: {file_path_to_load}")
+        # Check if the file is a converted PDF from PPTX, DOCX, etc.
         temp_dir = "temp_conversions"
-        
-        # Office 파일을 PDF로 변환
-        pdf_path = await convert_office_to_pdf(file_path_to_load, temp_dir)
-        
-        if pdf_path:
-            logger.info(f"PDF 변환 성공, Docling으로 처리: {pdf_path}")
-            # 변환된 PDF를 Docling 파이프라인으로 처리
-            return await load_document_with_ocr(pdf_path)
-        else:
-            logger.warning(f"PDF 변환 실패, 기존 방식으로 fallback: {file_path_to_load}")
+        file_name = Path(file_path_to_load).stem
+        converted_pdf_path = os.path.join(temp_dir, f"{file_name}.pdf")
+        if os.path.exists(converted_pdf_path):
+            print(f"[INFO] 변환된 PDF 파일 발견: {converted_pdf_path}")
+            # Directly process the converted PDF with OCR to avoid recursion
+            return load_document_with_ocr_sync(converted_pdf_path)
+        return load_document_with_ocr_sync(file_path_to_load)
+    
+    # (선택) 확장자 정규화
+    raw_ext    = loader_selector_ext.lower()         # ex) ".pdf" 또는 ".xlsx"
+    no_dot_ext = raw_ext.lstrip('.')                # ex) "pdf" 또는 "xlsx"
+    loader_info = LOADER_MAPPING.get(raw_ext) or LOADER_MAPPING.get(no_dot_ext)
+    print(f"[CHECK] loader_info lookup: raw_ext={raw_ext!r}, no_dot_ext={no_dot_ext!r} → {loader_info!r}")
 
-    # PDF 파일 처리 강화 (OCR 보조)
-    if loader_selector_ext == '.pdf':
-        # 먼저 기존 PyPDFLoader로 처리 시도
-        pdf_loader_class, pdf_loader_kwargs = loader_info
-        pdf_loader = pdf_loader_class(file_path_to_load)
-        
-        try:
-            docs = pdf_loader.load()
-            
-            # 추출된 텍스트가 충분한지 확인
-            total_text = "".join([doc.page_content for doc in docs])
-            clean_text = clean_ocr_text(total_text)
-            
-            
-            if len(clean_text) < 100:  # 텍스트가 충분하지 않으면 PaddleOCR 시도
-                logger.info(f"PDF에서 추출된 텍스트가 부족함 ({len(clean_text)} 글자). PaddleOCR 시도: {file_path_to_load}")
-                ocr_docs = await load_document_with_ocr(file_path_to_load)
-                
-                if ocr_docs and len(ocr_docs) > 0:
-                    logger.info(f"PaddleOCR을 통해 PDF에서 텍스트 추출 성공: {len(ocr_docs)} 페이지")
-                    return ocr_docs
-            
-            # 기존 로더로 충분한 텍스트 추출에 성공한 경우
-                
-            processed_docs = []
-            for doc_idx, doc in enumerate(docs):
-                cleaned_content = doc.page_content
-                cleaned_content = re.sub(r'\s+', ' ', cleaned_content).strip()
-                
-                if cleaned_content:
-                    doc.page_content = cleaned_content
-                    doc.metadata["loaded_at"] = datetime.now().isoformat()
-                    
-                    # 페이지 번호 설정
-                    page_number_to_set = None
-                    if "page" in doc.metadata and isinstance(doc.metadata["page"], int):
-                        page_number_to_set = doc.metadata["page"] + 1
-                    else:
-                        print(f"Warning: PyPDFLoader가 Doc {doc_idx}의 'page' 메타데이터를 제공하지 않음. 순번 사용.")
-                        page_number_to_set = doc_idx + 1
-                        
-                    doc.metadata["page"] = int(page_number_to_set)
-                    processed_docs.append(doc)
-            processed_docs = merge_table_chunks(processed_docs)        
-            return processed_docs
-            
-        except Exception as e:
-            logger.error(f"기본 PDF 로더 실패, PaddleOCR 시도: {file_path_to_load}, 오류: {e}")
-            return await load_document_with_ocr(file_path_to_load)
 
-    if (
-        not loader_info
-    ):  # LOADER_MAPPING에 없는 확장자 (예: DOCX 변환 실패 후 원본 .docx)
-        print(
-            f"LOADER_MAPPING에서 '{loader_selector_ext}' 로더를 찾지 못함. UnstructuredFileLoader로 시도: {file_path_to_load}"
-        )
-        if not os.path.isfile(file_path_to_load):
-            print(
-                f"ERROR (load_document): file_path_to_load '{file_path_to_load}'는 실제 파일이 아닙니다."
-            )
-            return []
-        # UnstructuredFileLoader는 페이지 정보를 제대로 주지 않을 가능성이 높음
-        loader = UnstructuredFileLoader(
-            file_path_to_load
-        )  # mode="paged"는 PDF 외에는 의미 없을 수 있음
-    else:
-        loader_class, loader_kwargs = loader_info
-        if loader_class == PyPDFLoader:  # PyPDFLoader 특별 처리
-            loader = loader_class(file_path_to_load)
-        else:  # 다른 로더들 (Excel, Text 등)
-            loader = loader_class(file_path_to_load, **loader_kwargs)
+    # 파일 존재/크기 확인
+    exists = os.path.exists(file_path_to_load)
+    size = os.path.getsize(file_path_to_load) if exists else None
+    print(f"[CHECK] file exists={exists}, size={size if size is not None else 'N/A'} bytes")
 
     try:
-        docs = loader.load()  # 파일 로드! PyPDFLoader는 페이지별로 Document 객체 생성
+        if loader_info and loader_info[0] == "OCR_LOADER":
+            return load_document_with_ocr_sync(file_path_to_load)
+        elif loader_info and loader_info[0] == "CONVERT_TO_PDF":
+            temp_dir = "temp_conversions"
+            pdf_path = convert_office_to_pdf_sync(file_path_to_load, temp_dir)
 
-        processed_docs = []
-        for doc_idx, doc in enumerate(
-            docs
-        ):  # doc_idx는 로드된 Document 객체의 순서 (0부터 시작)
-            # 원본 코드의 전처리 로직 적용 (줄바꿈 보존)
-            cleaned_content = doc.page_content
-            # cleaned_content = re.sub(r"Cloudera 운영자메뉴얼|Version \d+\.\d+|Page \d+/\d+|네오오토|취업규칙", "", cleaned_content)
-            # 줄바꿈 보존하면서 과도한 공백만 정리
-            cleaned_content = re.sub(r'[ \t]+', ' ', cleaned_content)  # 탭과 공백만 정리
-            cleaned_content = re.sub(r'\n\s*\n\s*\n', '\n\n', cleaned_content)  # 3개 이상 연속 줄바꿈을 2개로
-            cleaned_content = cleaned_content.strip()
-            # cleaned_content = re.sub(r"(습니다|합니다|입니다)\s*", " ", cleaned_content) # 문맥 왜곡 가능성
+            if not pdf_path:
+                print("[WARN] PDF 변환 실패 → OCR 대체 처리 시도")
+                print(f"[ERROR] PDF 변환 실패: {Path(file_path_to_load).name}")
+                print(f"추가 디버깅 정보: 파일 경로: {file_path_to_load}, 파일 크기: {os.path.getsize(file_path_to_load) if os.path.exists(file_path_to_load) else 'N/A'} 바이트")
+                print(f"[ACTION] PDF 변환 실패로 인해 OCR 처리로 전환")
+                return load_document_with_ocr_sync(file_path_to_load)
+            else:
+                print(f"[INFO] PDF 변환 성공: {pdf_path}")
+                return load_document_sync(pdf_path, '.pdf', llm_model, tokenizer, **kwargs)
 
-            if cleaned_content:
-                doc.page_content = cleaned_content
-                doc.metadata["loaded_at"] = datetime.now().isoformat()  # 로드 시간 기록
 
-                # --- 페이지 번호 설정 (핵심!) ---
-                page_number_to_set = None
-                if loader_selector_ext == ".pdf":  # PyPDFLoader를 사용한 경우
-                    # PyPDFLoader는 metadata에 'page' 키로 0부터 시작하는 페이지 번호를 줌
-                    if "page" in doc.metadata and isinstance(doc.metadata["page"], int):
-                        page_number_to_set = (
-                            doc.metadata["page"] + 1
-                        )  # 1부터 시작하도록 +1
-                    else:  # PyPDFLoader가 페이지 정보를 못 준 경우 (거의 없음)
-                        print(
-                            f"Warning (load_document): PyPDFLoader가 Doc {doc_idx}의 'page' 메타데이터를 제공하지 않음. 순번 사용."
-                        )
-                        page_number_to_set = doc_idx + 1
-                elif (
-                    "page_number" in doc.metadata
-                ):  # 다른 Unstructured 로더가 'page_number'를 줄 경우
-                    page_number_to_set = doc.metadata["page_number"]
-                else:  # 페이지 정보를 어떤 로더에서도 얻지 못한 경우
-                    print(
-                        f"Warning (load_document): Doc {doc_idx}에서 페이지 정보를 찾을 수 없음. loader: {loader_selector_ext}. 페이지 1로 설정."
-                    )
-                    page_number_to_set = 1  # 기본값 1로 설정 (단일 페이지 문서로 간주)
-
-                doc.metadata["page"] = int(
-                    page_number_to_set
-                )  # 최종적으로 'page' 키에 정수형으로 저장
-                # --- 페이지 번호 설정 끝 ---
-
-                processed_docs.append(doc)
-        processed_docs = merge_table_chunks(processed_docs)         
-        return processed_docs
-    except Exception as e:
-        print(
-            f"파일 로딩 중 오류 발생 ({file_path_to_load}, loader_ext: {loader_selector_ext}): {e}"
-        )
-        traceback.print_exc()
-        
-        # 로딩 실패 시 PaddleOCR 시도 (새로운 코드)
-        if loader_selector_ext != "OCR_LOADER":  # OCR 로더가 아닌 경우에만 시도
-            logger.info(f"일반 로더 실패, PaddleOCR 시도: {file_path_to_load}")
+        elif loader_selector_ext == '.pdf':
+            print(f"[BRANCH] PDF 기본 로더 분기 진입 (PyPDFLoader + OCR 보조)")
+            # 먼저 기존 PyPDFLoader로 처리 시도
+            pdf_loader_class, pdf_loader_kwargs = loader_info
+            pdf_loader = pdf_loader_class(file_path_to_load)
+            
             try:
-                ocr_docs = await load_document_with_ocr(file_path_to_load)
-                if ocr_docs and len(ocr_docs) > 0:
-                    logger.info(f"PaddleOCR을 통해 텍스트 추출 성공: {len(ocr_docs)} 페이지")
-                    return ocr_docs
-            except Exception as ocr_e:
-                logger.error(f"PaddleOCR 대체 시도 실패: {file_path_to_load}, 오류: {ocr_e}")
+                docs = pdf_loader.load()
+                print(f"PyPDFLoader 결과: 문서 수 {len(docs)}")
                 
+                for doc in docs:
+                    doc.metadata["source"] = file_path_to_load
+                    doc.metadata["filename"] = Path(file_path_to_load).name
+                
+                # 추출된 텍스트가 충분한지 확인
+                total_text = "".join([doc.page_content for doc in docs])
+                clean_text = clean_ocr_text(total_text)
+                
+                if len(docs) == 0:
+                    print(f"[WARN] PyPDFLoader 결과가 비어 있음, OCR 폴백 처리: {file_path_to_load}")
+                    return load_document_with_ocr_sync(file_path_to_load)
+                
+                if len(clean_text) < 100:  # 텍스트가 충분하지 않으면 PaddleOCR 시도
+                    logger.info(f"PDF에서 추출된 텍스트가 부족함 ({len(clean_text)} 글자). PaddleOCR 시도: {file_path_to_load}")
+                    ocr_docs = load_document_with_ocr_sync(file_path_to_load)
+                    
+                    if ocr_docs and len(ocr_docs) > 0:
+                        logger.info(f"PaddleOCR을 통해 PDF에서 텍스트 추출 성공: {len(ocr_docs)} 페이지")
+                        return ocr_docs
+                    else:
+                        logger.info(f"[WARN] PaddleOCR로도 텍스트 추출 실패: {file_path_to_load}")
+                        print(f"[WARN] PaddleOCR 결과가 비어 있음, 텍스트 추출 실패: {file_path_to_load}")
+                        print(f"추가 정보: 파일 경로: {file_path_to_load}")
+                        # OCR 결과가 비어 있어도 이미지 폴백 처리 시도
+                        logger.info("OCR 결과가 비어 있음 → 이미지 폴백 처리 시도")
+                        file_name = Path(file_path_to_load).name
+                        doc_id = strip_uuid_prefix(file_name)
+                        if '.' in doc_id:
+                            doc_id = doc_id.rsplit('.', 1)[0]
+                        
+                        img_dir = Path("app/static/document_images") / doc_id
+                        img_dir.mkdir(parents=True, exist_ok=True)
+                        
+                        # PDF에서 이미지 추출 및 저장
+                        image_paths = {}
+                        try:
+                            from .ocr_utils import run_paddle_ocr
+                            images = extract_images_from_pdf_with_layout(file_path_to_load, doc_id)
+                            texts = run_paddle_ocr(images)
+                            if not any(t.strip() for t in texts):
+                                logger.info("OCR이 한 글자도 추출하지 못함 → 이미지 폴백")
+                                for page_num, img_data_list in images.items():
+                                    for idx, img_data in enumerate(img_data_list):
+                                        img_name = f"page_{page_num}_img_{idx+1}.png"
+                                        img_path = img_dir / img_name
+                                        with open(img_path, "wb") as f:
+                                            f.write(img_data)
+                                        relative_path = f"document_images/{doc_id}/{img_name}"
+                                        image_paths.setdefault(page_num, []).append(relative_path)
+                                
+                                # 이미지 경로를 메타데이터에 포함하여 빈 문서 생성
+                                ocr_docs = []
+                                for page_num in image_paths:
+                                    metadata = {
+                                        "source": file_name,
+                                        "page": page_num,
+                                        "loaded_at": datetime.now().isoformat(),
+                                        "images": image_paths[page_num],
+                                        "has_images": True,
+                                        "caption": "이미지 폴백: OCR 텍스트 추출 실패"
+                                    }
+                                    ocr_docs.append(Document(page_content="이미지 폴백: OCR 텍스트 추출 실패", metadata=metadata))
+                                logger.info(f"이미지 폴백 완료: {len(ocr_docs)} 페이지에 이미지 추가")
+                                return ocr_docs
+                        except Exception as img_e:
+                            logger.error(f"이미지 폴백 처리 중 오류 발생: {img_e}")
+                            return []
+            except Exception as e:
+                logger.error(f"PyPDFLoader 로드 중 오류 발생: {e}")
+                return []
+    except Exception as e:
+        logger.error(f"문서 로드 중 오류 발생: {e}")
         return []
 
 def crop_pdf_region(pdf_path: str, page_num: int, bbox) -> bytes:
@@ -354,7 +331,7 @@ def crop_pdf_region(pdf_path: str, page_num: int, bbox) -> bytes:
     
     return img_data
 
-async def extract_image_ocr_texts(pdf_path: str, layout_info, doc_id: str = None):
+def extract_image_ocr_texts(pdf_path: str, layout_info, doc_id: str = None):
     image_texts = {}
     image_paths = {}
     
@@ -388,14 +365,14 @@ async def extract_image_ocr_texts(pdf_path: str, layout_info, doc_id: str = None
     return image_texts, image_paths
 
 
-async def extract_images_from_docling_layout(
+def extract_images_from_docling_layout(
     pdf_path: str, 
     layout_info, 
     doc_id: str = None,
     llm_model=None,
     tokenizer=None
 ) -> Tuple[Dict[int, List[str]], Dict[int, List[str]]]:
-    """Docling 레이아웃 정보를 기반으로 이미지 영역 추출 및 OCR + AI 캡셔닝"""
+    """Docling 레이아웃 정보를 기반으로 모든 이미지 영역 추출 및 OCR + AI 캡셔닝"""
     
     image_texts = {}
     image_paths = {}
@@ -417,12 +394,17 @@ async def extract_images_from_docling_layout(
     print(f"📄 Docling 레이아웃 기반 이미지 처리 시작: {doc_id}")
     
     try:
-        # Docling layout_info에서 figures(이미지) 추출
-        figures = getattr(layout_info, 'figures', [])
+        # Docling layout_info에서 모든 가능한 이미지 요소 추출
+        figures = []
+        for element in getattr(layout_info, 'elements', []):
+            if hasattr(element, 'type') and element.type in ['figure', 'image']:
+                figures.append(element)
+            elif hasattr(element, 'bbox') and not hasattr(element, 'text'):
+                figures.append(element)
         
-        print(f"🖼️ Docling에서 감지된 이미지: {len(figures)}개")
+        print(f"🖼️ Docling에서 감지된 모든 이미지 요소: {len(figures)}개")
         
-        # 이미지 영역 처리
+        # 모든 이미지 영역 처리
         for idx, figure in enumerate(figures):
             try:
                 page_num = getattr(figure, 'page', 1) 
@@ -473,7 +455,7 @@ async def extract_images_from_docling_layout(
                         # 페이지 텍스트를 컨텍스트로 사용 (추후 개선 가능)
                         page_context = f"PDF 문서 페이지 {page_num}의 이미지 영역"
                         
-                        ai_caption = await generate_image_caption_with_qwen(
+                        ai_caption = generate_image_caption_with_qwen_sync(
                             page_text=page_context,
                             image_index=idx,
                             total_images=len(figures),
@@ -511,7 +493,7 @@ async def extract_images_from_docling_layout(
         print(f"⚠️ Docling 레이아웃 이미지 처리 실패: {e}")
         return image_texts, image_paths
 
-async def extract_tables_from_docling_layout(
+def extract_tables_from_docling_layout(
     pdf_path: str, 
     layout_info, 
     doc_id: str = None,
@@ -596,7 +578,7 @@ async def extract_tables_from_docling_layout(
                         # 페이지 텍스트를 컨텍스트로 사용 (추후 개선 가능)
                         page_context = f"PDF 문서 페이지 {page_num}의 테이블 영역"
                         
-                        ai_caption = await generate_table_caption_with_qwen(
+                        ai_caption = generate_table_caption_with_qwen_sync(
                             table_text=ocr_text,
                             page_text=page_context,
                             llm_model=llm_model,
@@ -633,9 +615,9 @@ async def extract_tables_from_docling_layout(
         print(f"⚠️ Docling 레이아웃 테이블 처리 실패: {e}")
         return table_texts, table_paths
 
-async def extract_images_from_pdf_with_layout(file_path: str, doc_id: str = None) -> Tuple[Dict[int, List[str]], Dict[int, List[str]]]:
-    """PP-Structure를 사용하여 PDF에서 이미지 영역을 추출하고 OCR 수행"""
-    from .ocr_utils import get_pp_structure
+def extract_images_from_pdf_with_layout(file_path: str, doc_id: str = None) -> Tuple[Dict[int, List[str]], Dict[int, List[str]]]:
+    """PDF에서 페이지별 이미지 추출 및 저장 (OCR 텍스트와 이미지 경로 반환)"""
+    import fitz  # PyMuPDF
     
     image_texts = {}
     image_paths = {}
@@ -646,20 +628,19 @@ async def extract_images_from_pdf_with_layout(file_path: str, doc_id: str = None
         if '.' in doc_id:
             doc_id = doc_id.rsplit('.', 1)[0]
     
+    # 이미지 저장 디렉토리 생성
     img_dir = IMAGE_DIR / doc_id
     img_dir.mkdir(parents=True, exist_ok=True)
     
     try:
-        pp_structure = get_pp_structure()
+        pp_structure = get_paddle_structure()
         layout_res = pp_structure.structure_analyzer(file_path)
         
         for page_idx, layout in enumerate(layout_res):
             page_num = page_idx + 1
             
             for region_idx, region in enumerate(layout):
-                if region['type'] != 'figure':
-                    continue
-                
+                # 모든 영역을 이미지로 간주하여 저장 (조건 제거)
                 bbox = region['bbox']
                 img_data = crop_pdf_region(file_path, page_num, fitz.Rect(bbox[0], bbox[1], bbox[2], bbox[3]))
                 
@@ -697,9 +678,9 @@ async def extract_images_from_pdf_with_layout(file_path: str, doc_id: str = None
     
     return image_texts, image_paths
 
-async def extract_tables_from_pdf_with_layout(file_path: str, doc_id: str = None) -> Tuple[Dict[int, List[str]], Dict[int, List[str]]]:
+def extract_tables_from_pdf_with_layout(file_path: str, doc_id: str = None) -> Tuple[Dict[int, List[str]], Dict[int, List[str]]]:
     """PP-Structure를 사용하여 PDF에서 테이블 영역을 추출하고 OCR 수행"""
-    from .ocr_utils import get_pp_structure
+    from .ocr_utils import get_paddle_structure
     
     table_texts = {}
     table_paths = {}
@@ -714,7 +695,7 @@ async def extract_tables_from_pdf_with_layout(file_path: str, doc_id: str = None
     tbl_dir.mkdir(parents=True, exist_ok=True)
     
     try:
-        pp_structure = get_pp_structure()
+        pp_structure = get_paddle_structure()
         layout_res = pp_structure.structure_analyzer(file_path)
         
         for page_idx, layout in enumerate(layout_res):
@@ -770,9 +751,11 @@ def get_docling_converter():
     
     if _docling_layout_converter is None:
         try:
-            # GPU 사용 강제 비활성화
+            # GPU 사용 강제 비활성화 및 PyTorch 설정
             import os
             os.environ["CUDA_VISIBLE_DEVICES"] = ""  # GPU 숨기기
+            import torch
+            torch.device('cpu')  # CPU 디바이스 설정
             
             # 레이아웃 분석만 (OCR 없이, CPU 모드)
             pdf_options = PdfPipelineOptions()
@@ -789,6 +772,7 @@ def get_docling_converter():
             print(f"✅ Docling 레이아웃 분석기 초기화 완료 (CPU 모드)")
         except Exception as e:
             print(f"⚠️ Docling 초기화 실패 (CPU 모드에서도): {e}")
+            traceback.print_exc()
             _docling_layout_converter = None
     
     return _docling_layout_converter
@@ -814,7 +798,7 @@ def extract_pdf_text_fast(file_path: str) -> Dict[int, str]:
     
     return pdf_texts
 
-async def generate_image_caption_with_qwen(
+def generate_image_caption_with_qwen_sync(
     page_text: str,
     image_index: int,
     total_images: int,
@@ -907,9 +891,7 @@ async def generate_image_caption_with_qwen(
                 
     except Exception as e:
         print(f"Qwen 이미지 캡션 생성 실패: {e}")
-    
-    # 실패 시 간단한 대체 캡션
-    return create_simple_fallback_caption(page_text, image_index)
+        return create_simple_fallback_caption(page_text, image_index)
 
 def create_simple_fallback_caption(page_text: str, image_index: int) -> str:
     """간단한 대체 캡션 생성"""
@@ -935,7 +917,7 @@ def create_simple_fallback_caption(page_text: str, image_index: int) -> str:
     else:
         return "문서 주요 내용"
 
-async def generate_table_caption_with_qwen(
+def generate_table_caption_with_qwen_sync(
     table_text: str,
     page_text: str = "",
     llm_model=None,
@@ -1018,9 +1000,7 @@ async def generate_table_caption_with_qwen(
                 
     except Exception as e:
         print(f"Qwen 표 캡션 생성 실패: {e}")
-    
-    # 실패 시 스마트 대체 캡션
-    return create_smart_table_caption(table_text, page_text)
+        return create_smart_table_caption(table_text, page_text)
 
 def analyze_table_content(table_text: str) -> Dict[str, Any]:
     """표 내용을 분석하여 구조와 데이터 유형 파악"""
@@ -1246,41 +1226,194 @@ def merge_table_chunks(docs: list[Document]) -> list[Document]:
     return merged_tables
 
 
-async def load_document_with_ocr(file_path: str) -> List["Document"]:
+def load_document_with_ocr_sync(file_path: str) -> List["Document"]:
     try:
+        from pathlib import Path
         logger.info(f"하이브리드 방식으로 파일 처리 중: {file_path}")
         file_extension = Path(file_path).suffix.lower()
 
         # ── PDF 외 포맷은 기존 함수로 위임 ───────────────────────────
         if file_extension != ".pdf":
-            return await load_document_with_ocr_original(file_path)
+            return load_document_with_ocr_original(file_path)
 
+        # 1. OCR 결과 파일 확인
+        import hashlib
+        import json
+        from datetime import datetime
+        
+        file_hash = hashlib.sha1(Path(file_path).read_bytes()).hexdigest()
+        ocr_file = Path("/home/test_code/test01/rag-chatbot/backend/app/static/temp_ocr") / f"{file_hash[:12]}.json"
+        
+        if ocr_file.exists():
+            print(f"🎯 OCR 결과 파일 발견: {ocr_file}")
+            with open(ocr_file, 'r', encoding='utf-8') as f:
+                ocr_result = json.load(f)
+            
+            print(f"📖 OCR 결과 로드: {ocr_result['total_chars']}자, {len(ocr_result['pages'])}페이지")
+            
+            # Document 객체들 생성
+            docs = []
+            for page_num, text in ocr_result['pages'].items():
+                if text.strip():  # 빈 텍스트 제외
+                    docs.append(Document(
+                        page_content=text,
+                        metadata={
+                            "source": Path(file_path).name,
+                            "page": int(page_num),
+                            "loaded_at": datetime.now().isoformat(),
+                            "from_ocr_cache": True
+                        }
+                    ))
+            
+            if docs:
+                print(f"✅ OCR 캐시에서 {len(docs)} 문서 생성 완료")
+                return docs
+        
+        # 2. OCR 결과 없으면 기존 로직
+        print(f"❌ OCR 결과 없음, 기존 로직 실행")
         start = time.time()
-        # 1) Docling 레이아웃 분석 - CPU 모드로 이미지/표 영역 감지
+        # 3) Docling 레이아웃 분석 - CPU 모드로 이미지/표 영역 감지
         layout_info = None
         if DOCLING_AVAILABLE:
             try:
                 converter = get_docling_converter()
                 if converter is not None:
-                    layout_result = await asyncio.to_thread(converter.convert, file_path)
+                    layout_result = converter.convert(file_path)
                     layout_info = layout_result.document
                     logger.info("✅ Docling 레이아웃 분석 완료 (CPU 모드)")
             except Exception as e:
                 logger.warning(f"Docling 레이아웃 분석 실패 → 텍스트만 처리: {e}")
-        # 2) 텍스트 레이어 추출
+        # 4) 텍스트 레이어 추출
         pdf_texts = extract_pdf_text_fast(file_path)
-        # 3) 텍스트 없으면 기존 OCR Fallback
+        # 5) 텍스트 없으면 기존 OCR Fallback
         if not any(t.strip() for t in pdf_texts.values()):
             logger.info("PDF 텍스트 없어서 기존 OCR 사용")
-            return await load_document_with_ocr_original(file_path)
-        # # 4) Hybrid 문서 생성
-        docs = await create_hybrid_documents(pdf_texts, layout_info, file_path, llm_model=shared_llm_model, tokenizer=shared_tokenizer)  # layout_info → None
+            return load_document_with_ocr_original(file_path)
+        # 6) 모든 페이지 이미지를 저장
+        file_name = Path(file_path).name
+        doc_id = strip_uuid_prefix(file_name)
+        if '.' in doc_id:
+            doc_id = doc_id.rsplit('.', 1)[0]
+        img_paths = save_pages_as_images(file_path, doc_id)
+        # 7) Hybrid 문서 생성
+        docs = create_hybrid_documents(pdf_texts, layout_info, file_path, llm_model=shared_llm_model, tokenizer=shared_tokenizer, image_paths=img_paths)
         logger.info(f"하이브리드 완료: {len(docs)} 청크, {time.time()-start:.2f}s")
+
+        # OCR 결과가 비어 있을 경우 이미지 폴백 로직 추가
+        if not any(doc.page_content.strip() for doc in docs):
+            logger.info("OCR 결과가 비어 있음 → 이미지 폴백 처리")
+            file_name = Path(file_path).name
+            doc_id = strip_uuid_prefix(file_name)
+            if '.' in doc_id:
+                doc_id = doc_id.rsplit('.', 1)[0]
+            
+            img_dir = Path("app/static/document_images") / doc_id
+            img_dir.mkdir(parents=True, exist_ok=True)
+            
+            # PDF에서 이미지 추출 및 저장
+            image_paths = {}
+            try:
+                from .ocr_utils import get_paddle_ocr
+                images = extract_images_from_pdf_with_layout(file_path, doc_id)
+                ocr = get_paddle_ocr()
+                texts = []
+                for page_num, img_data_list in images.items():
+                    for img_data in img_data_list:
+                        ocr_result = ocr.ocr(img_data, cls=True)
+                        if ocr_result and ocr_result[0]:
+                            page_texts = []
+                            for line in ocr_result[0]:
+                                if line and len(line) >= 2:
+                                    text = line[1][0] if isinstance(line[1], (list, tuple)) else str(line[1])
+                                    confidence = line[1][1] if isinstance(line[1], (list, tuple)) and len(line[1]) > 1 else 0.0
+                                    if confidence > 0.6 and text.strip():
+                                        page_texts.append(text.strip())
+                            texts.append(" ".join(page_texts))
+                if not any(t.strip() for t in texts):
+                    logger.info("OCR이 한 글자도 추출하지 못함 → 이미지 폴백")
+                    for page_num, img_data_list in images.items():
+                        for idx, img_data in enumerate(img_data_list):
+                            img_name = f"page_{page_num}_img_{idx+1}.png"
+                            img_path = img_dir / img_name
+                            with open(img_path, "wb") as f:
+                                f.write(img_data)
+                            relative_path = f"document_images/{doc_id}/{img_name}"
+                            image_paths.setdefault(page_num, []).append(relative_path)
+                    
+                    # 이미지 경로를 메타데이터에 포함하여 빈 문서 생성
+                    for page_num in image_paths:
+                        metadata = {
+                            "source": file_name,
+                            "page": page_num,
+                            "loaded_at": datetime.now().isoformat(),
+                            "images": image_paths[page_num],
+                            "has_images": True,
+                            "caption": "이미지 폴백: OCR 텍스트 추출 실패",
+                            "forced_ocr": True
+                        }
+                        docs.append(Document(page_content="이미지 폴백: OCR 텍스트 추출 실패", metadata=metadata))
+                    logger.info(f"이미지 폴백 완료: {len(docs)} 페이지에 이미지 추가")
+                    return docs
+            except Exception as img_e:
+                logger.error(f"이미지 폴백 처리 중 오류 발생: {img_e}")
+                return load_document_with_ocr_original(file_path)
+
+        # 유효 글자 0 → 이미지 폴백 로직 추가
+        joined_text = "".join(doc.page_content for doc in docs)
+        effective = re.sub(r"[^가-힣a-zA-Z0-9]", "", joined_text)
+        if not effective:
+            logger.info("유효 글자가 0개임 → 이미지 폴백 처리")
+            img_paths = save_pages_as_images(file_path, doc_id)
+            docs = []
+            for page_idx, img_path in enumerate(img_paths, start=1):
+                docs.append(
+                    Document(
+                        page_content="",
+                        metadata={
+                            "source": file_path,
+                            "filename": Path(file_path).name,
+                            "page": page_idx,
+                            "image_path": img_path,
+                            "has_text": False,
+                            "forced_ocr": True
+                        },
+                    )
+                )
+            logger.info(f"유효 글자 0 → 이미지 폴백 완료: {len(docs)} 페이지에 이미지 추가")
+            return docs
+
+        # forced_ocr 플래그 추가
+        for doc in docs:
+            doc.metadata["forced_ocr"] = True
+
         return docs
     
     except Exception as e:
         logger.error(f"하이브리드 실패 → 기존 방식 Fallback: {e}")
-        return await load_document_with_ocr_original(file_path)
+        print(f"[ERROR] 하이브리드 방식 실패: {file_path}, 오류: {str(e)}")
+        print(f"추가 디버깅 정보: 파일 크기: {os.path.getsize(file_path) if os.path.exists(file_path) else 'N/A'} 바이트")
+        traceback.print_exc()
+        return load_document_with_ocr_original(file_path)
+
+def save_pages_as_images(file_path: str, doc_id: str) -> List[str]:
+    """PDF 페이지를 이미지로 저장하고 이미지 경로를 반환"""
+    from pdf2image import convert_from_path
+    from pathlib import Path
+    
+    img_dir = Path("app/static/document_images") / doc_id
+    img_dir.mkdir(parents=True, exist_ok=True)
+    
+    images = convert_from_path(file_path, dpi=200)
+    img_paths = []
+    for page_num, image in enumerate(images, 1):
+        img_name = f"page_{page_num}.png"
+        img_path = img_dir / img_name
+        image.save(img_path, 'PNG')
+        relative_path = f"document_images/{doc_id}/{img_name}"
+        img_paths.append(relative_path)
+    
+    logger.info(f"PDF 페이지 이미지 저장 완료: {len(img_paths)} 페이지")
+    return img_paths
 
 def clean_ocr_text(text: str) -> str:
     """OCR 결과에서 불필요한 숫자 패턴 제거"""
@@ -1300,13 +1433,14 @@ def clean_ocr_text(text: str) -> str:
     
     return text.strip()
 
-async def create_hybrid_documents(
+def create_hybrid_documents(
     pdf_texts: Dict[int, str],
     layout_info,
     file_path: str,
     *,
     llm_model: str | None,
     tokenizer=None,
+    image_paths: List[str] = None
 ) -> List["Document"]:
     """
     Docling과 OCR 결과를 조합하는 하이브리드 문서 생성
@@ -1333,30 +1467,41 @@ async def create_hybrid_documents(
                 continue
             
             page_num = getattr(tbl, "page", 1)
-            row_docs = await markdown_to_row_chunks(
-                md, page=page_num, file_path=file_path,
-                llm_model=llm_model, tokenizer=tokenizer,
-            )
-            
-            if row_docs:  # 실제로 파싱된 경우만 기록
-                docling_tables.extend(row_docs)
-                docling_table_pages.add(page_num)
+            try:
+                row_docs = markdown_to_row_chunks_sync(
+                    md, page=page_num, file_path=file_path,
+                    llm_model=llm_model, tokenizer=tokenizer,
+                )
+                
+                if row_docs:  # 실제로 파싱된 경우만 기록
+                    docling_tables.extend(row_docs)
+                    docling_table_pages.add(page_num)
+            except Exception as e:
+                logger.warning(f"Docling 테이블 파싱 실패 (페이지 {page_num}): {e}")
+                continue
 
     # === 2단계: 이미지 및 테이블 이미지 처리 - Docling vs PP-Structure 선택 ===
     if layout_info is not None:
         # Docling 레이아웃 정보가 있으면 Docling 기반 이미지 및 테이블 처리
         print("🔍 Docling 레이아웃 정보 활용하여 이미지 및 테이블 이미지 처리")
-        image_ocr_texts, image_paths = await extract_images_from_docling_layout(
+        image_ocr_texts, extracted_image_paths = extract_images_from_docling_layout(
             file_path, layout_info, doc_id, llm_model, tokenizer
         )
-        table_ocr_texts, table_paths = await extract_tables_from_docling_layout(
+        table_ocr_texts, table_paths = extract_tables_from_docling_layout(
             file_path, layout_info, doc_id, llm_model, tokenizer
         )
     else:
         # Docling 정보가 없으면 기존 PP-Structure 방식 사용
         print("🔍 PP-Structure 방식으로 이미지 및 테이블 이미지 처리 (Docling 정보 없음)")
-        image_ocr_texts, image_paths = await extract_images_from_pdf_with_layout(file_path, doc_id)
-        table_ocr_texts, table_paths = await extract_tables_from_pdf_with_layout(file_path, doc_id)
+        image_ocr_texts, extracted_image_paths = extract_images_from_pdf_with_layout(file_path, doc_id)
+        table_ocr_texts, table_paths = extract_tables_from_pdf_with_layout(file_path, doc_id)
+
+    # 모든 페이지 이미지 경로를 포함
+    if image_paths is None:
+        image_paths = []
+        for page_num in pdf_texts.keys():
+            page_image_path = f"document_images/{doc_id}/page_{page_num}.png"
+            image_paths.append(page_image_path)
 
     # === 3단계: 각 페이지별 표 추출 전략 결정 ===
     ocr_tables = []
@@ -1364,14 +1509,9 @@ async def create_hybrid_documents(
     for page_num, page_text in pdf_texts.items():
         if not page_text.strip():
             continue           
+        page_table_docs = []
         if detect_table_in_text(page_text):
-            print(f"DEBUG TABLE ▸ 페이지 {page_num} 표 감지됨!")
             page_table_docs = parse_ocr_table(page_text)
-            print(f"DEBUG TABLE ▸ 페이지 {page_num} 파싱된 표 행 수: {len(page_table_docs)}")
-            for i, doc in enumerate(page_table_docs):
-                print(f"DEBUG TABLE ▸ 행 {i} element_type: {doc.metadata.get('element_type')}")
-        else:
-            print(f"DEBUG TABLE ▸ 페이지 {page_num} 표 감지 실패 - 감지 조건 미충족")
             
             # Docling 결과와 비교하여 더 나은 결과 선택
             if page_num in docling_table_pages:
@@ -1409,13 +1549,10 @@ async def create_hybrid_documents(
     all_table_docs.sort(key=lambda x: (x.metadata.get("page", 0), x.metadata.get("row_index", 0)))
     merged_table_docs = merge_table_chunks(all_table_docs)
     documents.extend(merged_table_docs)
-    
-    # 표 페이지의 인접 페이지도 제외 (기존 로직 유지하되 실제 표 페이지 기준)
-    extended_table_pages = actual_table_pages | {p + 1 for p in actual_table_pages}
 
     # === 5단계: 본문 + 이미지 처리 (OCR + AI 캡션 모두 활용) ===
     for page_num, page_text in pdf_texts.items():
-        if page_num in extended_table_pages or not page_text.strip():
+        if not page_text.strip():
             continue
             
         combined = page_text.strip()
@@ -1427,8 +1564,11 @@ async def create_hybrid_documents(
             combined += "\n\n[이미지 텍스트]\n" + "\n".join(page_ocr_texts)
         
         # 이미지 경로 수집
-        if page_num in image_paths:
-            page_images = image_paths[page_num]
+        if page_num in extracted_image_paths:
+            page_images.extend(extracted_image_paths[page_num])
+        
+        # 모든 페이지 이미지 경로 추가
+        page_images.append(f"document_images/{doc_id}/page_{page_num}.png")
 
         # 단락 분할
         for para_idx, para in enumerate(re.split(r"\n\s*\n", combined)):
@@ -1462,7 +1602,7 @@ async def create_hybrid_documents(
                 
                 for img_idx, img_path in enumerate(page_images):
                     try:
-                        ai_caption = await generate_image_caption_with_qwen(
+                        ai_caption = generate_image_caption_with_qwen_sync(
                             page_text=page_text,  # 원본 페이지 텍스트 사용
                             image_index=img_idx,
                             total_images=len(page_images),
@@ -1520,7 +1660,7 @@ async def create_hybrid_documents(
     return documents
 
 # 기존 함수 백업 (기존 로직 보존)
-async def load_document_with_ocr_original(file_path: str) -> List[Document]:
+def load_document_with_ocr_original(file_path: str) -> List[Document]:
     """
     PaddleOCR 엔진을 사용하여 이미지 또는 PDF 파일에서 텍스트를 추출하고 Document 객체로 변환합니다.
     
@@ -1539,16 +1679,14 @@ async def load_document_with_ocr_original(file_path: str) -> List[Document]:
         
         # 파일 종류에 따라 적절한 OCR 함수 호출
         if file_extension == '.pdf':
-            extracted_text = await extract_text_from_pdf_with_ocr(file_path, min_confidence)
+            extracted_text = extract_text_from_pdf_with_ocr_sync(file_path, min_confidence)
         elif file_extension in ['.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.tif', '.webp']:
-            extracted_text = await extract_text_from_image(file_path, min_confidence)
+            extracted_text = extract_text_from_image_sync(file_path, min_confidence)
         else:
-            extracted_text = await extract_text_from_file(file_path, min_confidence)
-            
+            extracted_text = extract_text_from_file_sync(file_path, min_confidence)
         if not extracted_text:
             logger.warning(f"PaddleOCR 텍스트 추출 실패: {file_path}")
             return []
-            
         # 텍스트 정리
         cleaned_text = re.sub(r'\s+', ' ', extracted_text).strip()
         
@@ -1572,7 +1710,8 @@ async def load_document_with_ocr_original(file_path: str) -> List[Document]:
                                 "page": page_num,
                                 "loaded_at": datetime.now().isoformat(),
                                 "ocr_processed": True,
-                                "ocr_engine": "PaddleOCR"
+                                "ocr_engine": "PaddleOCR",
+                                "forced_ocr": True
                             }
                         ))
         else:  # 페이지 구분자가 없는 경우 (단일 페이지 처리)
@@ -1584,20 +1723,34 @@ async def load_document_with_ocr_original(file_path: str) -> List[Document]:
                         "page": 1,
                         "loaded_at": datetime.now().isoformat(),
                         "ocr_processed": True,
-                        "ocr_engine": "PaddleOCR"
+                        "ocr_engine": "PaddleOCR",
+                        "forced_ocr": True
                     }
                 ))
-        documents = merge_table_chunks(documents)
-        logger.info(f"PaddleOCR 텍스트 추출 완료: {len(documents)} 페이지/섹션 생성")
-        return documents
+            documents = merge_table_chunks(documents)
+            logger.info(f"PaddleOCR 텍스트 추출 완료: {len(documents)} 페이지/섹션 생성")
+            # 반환 직전 모든 문서에 대해 메타데이터 설정
+            for doc in documents:
+                doc.metadata["source"] = file_path
+                doc.metadata["filename"] = Path(file_path).name
+                if "page" not in doc.metadata:
+                    doc.metadata["page"] = 1
+                doc.metadata["forced_ocr"] = True
+            
+            # 디버깅 로그 추가
+            for i, doc in enumerate(documents):
+                content_snippet = doc.page_content[:50].replace("\n", "\\n")
+            return documents
         
     except Exception as e:
         logger.error(f"PaddleOCR 문서 로드 중 오류 발생: {file_path}, 오류: {e}")
+        print(f"[ERROR] PaddleOCR 문서 로드 실패: {file_path}, 오류: {str(e)}")
+        print(f"추가 디버깅 정보: 파일 크기: {os.path.getsize(file_path) if os.path.exists(file_path) else 'N/A'} 바이트")
         traceback.print_exc()
         return []
 
 # --- index_chunks_to_elasticsearch 함수 (페이지 번호 사용 명확화) ---
-async def index_chunks_to_elasticsearch(
+def index_chunks_to_elasticsearch(
     es_client: Any, embedding_function: Any, chunks: List[Document], category: str
 ):
     # (이전 답변에서 제공된 index_chunks_to_elasticsearch 함수 코드와 거의 동일하게 유지)
@@ -1609,7 +1762,7 @@ async def index_chunks_to_elasticsearch(
     success_count = 0
     failure_count = 0
 
-    async def process_batch(batch_chunks_input, batch_num_for_log):
+    def process_batch(batch_chunks_input, batch_num_for_log):
         nonlocal success_count, failure_count
 
         valid_chunks_in_batch = [
@@ -1620,7 +1773,7 @@ async def index_chunks_to_elasticsearch(
 
         chunk_texts_for_embedding = [chk.page_content for chk in valid_chunks_in_batch]
         try:
-            embeddings = await asyncio.to_thread(embedding_function, chunk_texts_for_embedding)
+            embeddings = embedding_function(chunk_texts_for_embedding)
             actions_for_bulk = []
 
             # ── 핵심 패치: **element_type 기준으로 인덱스 라우팅** ──
@@ -1665,8 +1818,7 @@ async def index_chunks_to_elasticsearch(
             # ────────────────────────────────────────────────────
 
             if actions_for_bulk:
-                success_num, failed_items = await asyncio.to_thread(
-                    bulk,
+                success_num, failed_items = bulk(
                     es_client,
                     actions_for_bulk,
                     chunk_size=len(actions_for_bulk),
@@ -1684,17 +1836,14 @@ async def index_chunks_to_elasticsearch(
             failure_count += len(valid_chunks_in_batch)
             traceback.print_exc()
 
-    tasks = [
+    for i in range(0, len(chunks), batch_size):
         process_batch(chunks[i : i + batch_size], (i // batch_size) + 1)
-        for i in range(0, len(chunks), batch_size)
-    ]
-    await asyncio.gather(*tasks)
     print(f"인덱싱 완료: 총 {len(chunks)} 청크 중 {success_count}개 성공, {failure_count}개 실패")
     return success_count > 0
 
 
 # 파일 중복 체크를 위한 함수 개선
-async def check_file_exists(es_client: Any, file_path: str) -> Tuple[bool, str]:
+def check_file_exists_sync(es_client: Any, file_path: str) -> Tuple[bool, str]:
     """
     파일의 해시값을 계산하고 ES에서 중복 여부를 확인합니다.
     
@@ -1762,7 +1911,7 @@ def format_file_size(size_in_bytes):
         size_in_bytes /= 1024.0
     return f"{size_in_bytes:.2f} TB"
 
-async def process_and_index_file(
+def process_and_index_file(
     es_client: Elasticsearch,
     embedding_function,
     uploaded_file_path: str,
@@ -1805,7 +1954,7 @@ async def process_and_index_file(
         file_hash = hashlib.sha1(content_bytes).hexdigest()
         
         # 🔍 중복 검사 실행
-        file_exists, existing_hash = await check_file_exists(es_client, str(src_path))
+        file_exists, existing_hash = check_file_exists_sync(es_client, str(src_path))
         
         if file_exists:
             print(f"🔄 중복 파일 발견: {src_path.name} (해시: {file_hash[:8]}...)")
@@ -1823,11 +1972,14 @@ async def process_and_index_file(
             saved_path.write_bytes(content_bytes)
             print(f"💾 새 파일 저장: {saved_name}")
 
-    # ── 2) 문서 로드 · 청킹 ────────────────────────────────────
+    # ── 2) OCR 결과 대기 및 처리 코드 제거됨 - race condition 방지 ────────────────────────────────────
     ext = saved_path.suffix.lower()
-    documents: List = await load_document(str(saved_path), ext, shared_llm_model, shared_tokenizer)
+    
+    # ── 3) 문서 로드 · 청킹 ────────────────────────────────────
+    print(f"[DEBUG] load_document_sync 호출 전: path={saved_path}, ext={ext}")
+    documents: List = load_document_sync(str(saved_path), ext, shared_llm_model, shared_tokenizer, forced_ocr=True)
     if not documents:
-        print(f"[!] 문서 로드 실패: {saved_path.name}")
+        print(f"---[!] 문서 로드 실패---: {saved_path.name}")
         return False
 
     for doc in documents:
@@ -1836,8 +1988,8 @@ async def process_and_index_file(
         doc.metadata["file_hash"] = file_hash
         doc.metadata["source_path"] = str(saved_path)  # 원본 경로 (필요시)
 
-    # ── 3) ES 인덱싱 ─────────────────────────────────────────
-    success = await index_chunks_to_elasticsearch(
+    # ── 4) ES 인덱싱 ─────────────────────────────────────────
+    success = index_chunks_to_elasticsearch(
         es_client, embedding_function, documents, category
     )
 
@@ -1849,7 +2001,7 @@ import uuid, re, markdown, pandas as pd
 from io import StringIO
 from langchain.schema import Document   # 쓰고 계신 Document 모델에 맞게 import
 
-async def markdown_to_row_chunks(
+def markdown_to_row_chunks_sync(
     md: str,
     page: int,
     file_path: str,
@@ -1882,7 +2034,7 @@ async def markdown_to_row_chunks(
             table_text = re.sub(r'-+', '', table_text)  # 구분선 제거
             table_text = re.sub(r'\s+', ' ', table_text).strip()  # 공백 정리
             
-            qwen_caption = await generate_table_caption_with_qwen(
+            qwen_caption = generate_table_caption_with_qwen_sync(
                 table_text=table_text,
                 page_text="",  # 페이지 컨텍스트는 여기서는 생략
                 llm_model=llm_model,
@@ -1916,7 +2068,7 @@ async def markdown_to_row_chunks(
         one_liner = None
         if llm_model and tokenizer:
             try:
-                one_liner = await summarize_row_one_liner(
+                one_liner = summarize_row_one_liner_sync(
                     raw_row_text, llm_model, tokenizer
                 )
             except Exception:
@@ -1947,7 +2099,7 @@ async def markdown_to_row_chunks(
     return docs
 
 
-async def summarize_row_one_liner(text, llm_model, tokenizer):
+def summarize_row_one_liner_sync(text, llm_model, tokenizer):
     """Qwen 사용: 반드시 '이 행은' 으로 시작, 40자 이내."""
     prompt = (
         "다음 텍스트는 표의 한 행입니다. "
@@ -1999,9 +2151,10 @@ def convert_office_to_pdf_sync(office_path: str, output_dir: str) -> Optional[st
     try:
         file_ext = Path(office_path).suffix.lower()
         file_stem = Path(office_path).stem
+        file_size = os.path.getsize(office_path)
         
-        print(f"Office 파일을 PDF로 변환 시도 (libreoffice): '{office_path}' -> '{output_dir}' 디렉토리로")
-        print(f"파일 형식: {file_ext}")
+        logger.info(f"Office 파일을 PDF로 변환 시도 (libreoffice): '{office_path}' -> '{output_dir}' 디렉토리로, 크기: {format_file_size(file_size)}")
+        logger.info(f"파일 형식: {file_ext}")
         
         # 출력 디렉토리 생성
         os.makedirs(output_dir, exist_ok=True)
@@ -2022,6 +2175,8 @@ def convert_office_to_pdf_sync(office_path: str, output_dir: str) -> Optional[st
         # 파일 형식에 따라 타임아웃 조정
         timeout = 180 if file_ext in ['.pptx', '.ppt'] else 120  # PPT는 시간이 더 걸릴 수 있음
         
+        logger.info(f"변환 명령 실행: {' '.join(command)}")
+        logger.info(f"실행 환경: HOME=/tmp, 타임아웃: {timeout}초")
         process = subprocess.run(
             command, 
             capture_output=True, 
@@ -2035,37 +2190,49 @@ def convert_office_to_pdf_sync(office_path: str, output_dir: str) -> Optional[st
         converted_pdf_path = os.path.join(output_dir, expected_pdf_filename)
         
         if process.returncode == 0 and os.path.exists(converted_pdf_path):
-            print(f"PDF 변환 성공 (libreoffice): '{converted_pdf_path}'")
+            logger.info(f"PDF 변환 성공 (libreoffice): '{converted_pdf_path}'")
             return converted_pdf_path
         else:
-            print(f"PDF 변환 실패 (libreoffice). Return code: {process.returncode}")
-            print(f"Stdout: {process.stdout.strip()}")
-            print(f"Stderr: {process.stderr.strip()}")
+            logger.error(f"PDF 변환 실패 (libreoffice): '{office_path}', Return code: {process.returncode}")
+            logger.error(f"Stdout: {process.stdout.strip() if process.stdout else '없음'}")
+            logger.error(f"Stderr: {process.stderr.strip() if process.stderr else '없음'}")
+            logger.error(f"CONVERSION_FAILURE: 파일 변환 실패, 파일 크기: {format_file_size(file_size)}, 형식: {file_ext}")
+            logger.error(f"추가 디버깅 정보: 명령어 실행 경로: {os.getcwd()}, 파일 경로 확인: {os.path.exists(office_path)}")
             
             # 실패한 PDF 파일이 있다면 삭제
             if os.path.exists(converted_pdf_path):
                 try:
                     os.remove(converted_pdf_path)
-                    print(f"실패한 PDF 파일 삭제: {converted_pdf_path}")
+                    logger.info(f"실패한 PDF 파일 삭제: {converted_pdf_path}")
                 except Exception as e_rem:
-                    print(f"실패한 PDF 파일 삭제 중 오류: {e_rem}")
+                    logger.error(f"실패한 PDF 파일 삭제 중 오류: {e_rem}")
             return None
             
     except FileNotFoundError:
-        print("PDF 변환 실패: 'libreoffice' 명령어를 찾을 수 없습니다. 서버에 libreoffice가 설치되어 있는지 확인하세요.")
+        logger.error("PDF 변환 실패: 'libreoffice' 명령어를 찾을 수 없습니다. 서버에 libreoffice가 설치되어 있는지 확인하세요.")
+        logger.error(f"추가 디버깅 정보: PATH 환경 변수: {os.environ.get('PATH', '없음')}")
+        print(f"[ERROR] PDF 변환 실패: 'libreoffice' 명령어를 찾을 수 없습니다.")
+        print(f"추가 디버깅 정보: PATH 환경 변수: {os.environ.get('PATH', '없음')}")
         return None
     except subprocess.TimeoutExpired:
-        print(f"PDF 변환 시간 초과 (libreoffice): {office_path} (timeout: {timeout}초)")
+        logger.error(f"PDF 변환 시간 초과 (libreoffice): {office_path} (timeout: {timeout}초)")
+        logger.error(f"추가 디버깅 정보: 파일 크기: {format_file_size(file_size)}, 형식: {file_ext}")
+        print(f"[ERROR] PDF 변환 시간 초과: {office_path} (timeout: {timeout}초)")
+        print(f"추가 디버깅 정보: 파일 크기: {format_file_size(file_size)}, 형식: {file_ext}")
         return None
     except Exception as e:
-        print(f"Office -> PDF 변환 중 예외 발생 (libreoffice, {office_path}): {e}")
+        logger.error(f"Office -> PDF 변환 중 예외 발생 (libreoffice, {office_path}): {e}")
+        logger.error(f"Stdout: {process.stdout.strip() if process.stdout else '없음'}")
+        logger.error(f"Stderr: {process.stderr.strip() if process.stderr else '없음'}")
+        logger.error(f"추가 디버깅 정보: 파일 크기: {format_file_size(file_size)}, 형식: {file_ext}")
+        print(f"[ERROR] Office -> PDF 변환 중 예외 발생: {office_path}, 오류: {str(e)}")
+        print(f"Stdout: {process.stdout.strip() if process.stdout else '없음'}")
+        print(f"Stderr: {process.stderr.strip() if process.stderr else '없음'}")
+        print(f"추가 디버깅 정보: 파일 크기: {format_file_size(file_size)}, 형식: {file_ext}")
         traceback.print_exc()
         return None
 
 
-async def convert_office_to_pdf(office_path: str, output_dir: str) -> Optional[str]:
-    """Office 파일을 PDF로 비동기 변환"""
-    loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(
-        None, convert_office_to_pdf_sync, office_path, output_dir
-    )
+def convert_office_to_pdf(office_path: str, output_dir: str) -> Optional[str]:
+    """Office 파일을 PDF로 변환"""
+    return convert_office_to_pdf_sync(office_path, output_dir)

@@ -1,0 +1,113 @@
+{
+  "userId": "user1",
+  "conversationId": "1751520527668",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "사용자 비밀번호 초기화 방법 알려줘 / 마크다운 형태로 이쁘게",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "사용자 비밀번호 초기화 방법은 다음과 같습니다.\n\n```markdown\n### 사용자 비밀번호 초기화 방법\n\n**Q&A:**\n- **Q1:** 사용자 비밀번호 초기화 방법을 알려주세요.\n- **A1:** 홈 > 사용자 > “부서” 뉴에서 해당 사용자 검색 및 선택 후 오른쪽 상단 [비밀번호 변경]과 [비밀번호 초기화]로 사용자 암호를 변경할 수 있습니다. [비밀번호 변경]의 경우 관리자가 임의로 설정이 가능하며, [비밀번호 초기화]의 경우 운영설정에서 초기비밀번호로 변경됩니다.\n```\n\n위 답변은 [중앙보훈병원 FAQ_관리_20260324.pdf]에 기반하여 작성되었습니다.",
+      "sources": [
+        {
+          "path": "중앙보훈병원_FAQ_관리_20260324.pdf",
+          "display_name": "중앙보훈병원_FAQ_관리_20260324.pdf",
+          "page": 4,
+          "chunk_id": "batch1_3",
+          "score": 0.1048673540353775,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "중앙보훈병원_FAQ_관리_20260324.pdf",
+          "display_name": "중앙보훈병원_FAQ_관리_20260324.pdf",
+          "page": 1,
+          "chunk_id": "batch1_0",
+          "score": 0.09697344899177551,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "[NDT4]Windows11 Template VM 생성 가이드.pdf",
+          "display_name": "[NDT4]Windows11 Template VM 생성 가이드.pdf",
+          "page": 8,
+          "chunk_id": "batch1_7",
+          "score": 0.027642736211419106,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "[NDT4]Ceph 설치 가이드(CentOS 8 Stream).pdf",
+          "display_name": "[NDT4]Ceph 설치 가이드(CentOS 8 Stream).pdf",
+          "page": 5,
+          "chunk_id": "batch1_4",
+          "score": 0.027263173833489418,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "[NDT4]Windows11 Template VM 생성 가이드.pdf",
+          "display_name": "[NDT4]Windows11 Template VM 생성 가이드.pdf",
+          "page": 4,
+          "chunk_id": "batch1_3",
+          "score": 0.027257153764367104,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "[NDT4]Windows11 Template VM 생성 가이드.pdf",
+          "display_name": "[NDT4]Windows11 Template VM 생성 가이드.pdf",
+          "page": 5,
+          "chunk_id": "batch1_4",
+          "score": 0.02723252959549427,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "NDT User Guide(Win).pdf",
+          "display_name": "NDT User Guide(Win).pdf",
+          "page": 2,
+          "chunk_id": "batch1_1",
+          "score": 0.027087263762950897,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "LlamaFirewall - 가로스크롤테스트문서몇자까지인지 확인이 어려움 가나다라마마사마자어오ㅓ린아리나어리나어롤ㅇ니ㅏㅓ리낭린아ㅓㄹㄴ이ㅏ렁ㄹㄴ.pdf",
+          "display_name": "LlamaFirewall - 가로스크롤테스트문서몇자까지인지 확인이 어려움 가나다라마마사마자어오ㅓ린아리나어리나어롤ㅇ니ㅏㅓ리낭린아ㅓㄹㄴ이ㅏ렁ㄹㄴ.pdf",
+          "page": 5,
+          "chunk_id": "batch1_4",
+          "score": 0.02667168155312538,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "NDT 이미지만 있는 문서.pdf",
+          "display_name": "NDT 이미지만 있는 문서.pdf",
+          "page": 12,
+          "chunk_id": "batch1_11",
+          "score": 0.026503602042794228,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "3S소프트 회사소개-250514.pdf",
+          "display_name": "3S소프트 회사소개-250514.pdf",
+          "page": 3,
+          "chunk_id": "batch1_2",
+          "score": 0.0263210516422987,
+          "element_type": "text",
+          "is_cited": false
+        }
+      ]
+    }
+  ],
+  "timestamp": "2025-07-03T14:29:52.069712"
+}

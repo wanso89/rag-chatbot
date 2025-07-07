@@ -127,7 +127,6 @@ async def get_synonym_stats():
 async def build_synonyms_from_elasticsearch():
     """ES에 인덱싱된 모든 문서를 분석해서 동의어 사전을 구축합니다."""
     try:
-        logger.info("🔍 ES 기반 동의어 구축 시작")
         
         # 1. ES 클라이언트 가져오기
         es_client = get_elasticsearch_client()

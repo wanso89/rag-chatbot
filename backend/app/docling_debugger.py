@@ -350,7 +350,7 @@ async def test_actual_hybrid_workflow():
             lines = tb.split('\n')
             for line in lines:
                 if 'create_hybrid_documents' in line and '.py' in line:
-                    print(f"🔍 정확한 발생 위치: {line.strip()}")
+
 
 async def test_pp_structure_output():
     """

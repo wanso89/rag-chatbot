@@ -115,7 +115,7 @@ def get_paddle_ocr_version():
         logger.error(f"PaddleOCR 버전 확인 중 오류: {e}")
         return None
 
-async def extract_text_from_image(image_path: str, min_confidence: float = 0.5) -> str:
+def extract_text_from_image_sync(image_path: str, min_confidence: float = 0.5) -> str:
     """
     이미지 파일에서 텍스트를 추출합니다.
     
@@ -127,56 +127,50 @@ async def extract_text_from_image(image_path: str, min_confidence: float = 0.5) 
         추출된 텍스트
     """
     try:
-        loop = asyncio.get_event_loop()
+        start_time = time.time()
         
-        # 이미지 로드 및 OCR 처리를 비동기로 실행
-        def process_image():
-            start_time = time.time()
-            
-            # PaddleOCR 인스턴스 가져오기
-            ocr = get_paddle_ocr()
-            
-            # 이미지 로드 및 전처리
-            image = preprocess_image_for_ocr(image_path)
-            
-            # OCR 처리
-            result = ocr.ocr(image, cls=True)
-            
-            # 결과 텍스트 추출 및 정렬
-            extracted_texts = []
-            if result:
-                for idx, line_result in enumerate(result):
-                    if not line_result:
-                        continue
-                        
-                    # 신뢰도 기준으로 필터링
-                    line_texts = []
-                    for box, (text, confidence) in line_result:
-                        if confidence >= min_confidence:
-                            line_texts.append(text)
+        # PaddleOCR 인스턴스 가져오기
+        ocr = get_paddle_ocr()
+        
+        # 이미지 로드 및 전처리
+        image = preprocess_image_for_ocr(image_path)
+        
+        # OCR 처리
+        result = ocr.ocr(image, cls=True)
+        
+        # 결과 텍스트 추출 및 정렬
+        extracted_texts = []
+        if result:
+            for idx, line_result in enumerate(result):
+                if not line_result:
+                    continue
                     
-                    if line_texts:
-                        extracted_texts.append(" ".join(line_texts))
-            
-            # 결과 텍스트 구성
-            text = "\n".join(extracted_texts)
-            
-            # 후처리: 불필요한 줄바꿈, 공백 정리
-            text = re.sub(r'\s*\n\s*', '\n', text)
-            text = re.sub(r' +', ' ', text)
-            
-            elapsed = time.time() - start_time
-            logger.info(f"이미지 OCR 처리 완료: {elapsed:.2f}초")
-            
-            return text
-            
-        return await loop.run_in_executor(None, process_image)
+                # 신뢰도 기준으로 필터링
+                line_texts = []
+                for box, (text, confidence) in line_result:
+                    if confidence >= min_confidence:
+                        line_texts.append(text)
+                
+                if line_texts:
+                    extracted_texts.append(" ".join(line_texts))
+        
+        # 결과 텍스트 구성
+        text = "\n".join(extracted_texts)
+        
+        # 후처리: 불필요한 줄바꿈, 공백 정리
+        text = re.sub(r'\s*\n\s*', '\n', text)
+        text = re.sub(r' +', ' ', text)
+        
+        elapsed = time.time() - start_time
+        logger.info(f"이미지 OCR 처리 완료: {elapsed:.2f}초")
+        
+        return text
     except Exception as e:
         logger.error(f"이미지에서 텍스트 추출 중 오류 발생: {e}")
         traceback.print_exc()
         return ""
 
-async def extract_text_from_pdf_with_ocr(pdf_path: str, min_confidence: float = 0.5) -> str:
+def extract_text_from_pdf_with_ocr_sync(pdf_path: str, min_confidence: float = 0.5) -> str:
     """
     PDF 파일에서 텍스트를 추출합니다. 
     먼저 PyPDF를 통한 직접 추출을 시도하고, 충분한 텍스트가 없는 경우 OCR을 적용합니다.
@@ -192,11 +186,10 @@ async def extract_text_from_pdf_with_ocr(pdf_path: str, min_confidence: float = 
         # 1. 먼저 일반적인 텍스트 추출 시도 (PDFMiner)
         ocr_processing_logger.info(f"[PDF OCR START] 파일 처리 시작: {pdf_path}")
         logger.info(f"PDF에서 텍스트 직접 추출 시도: {pdf_path}")
-        loop = asyncio.get_event_loop()
-        extracted_text_raw = await loop.run_in_executor(None, lambda: pdfminer_extract_text(pdf_path))
+        extracted_text_raw = pdfminer_extract_text(pdf_path)
         
         # 추출된 텍스트에서 실제 유효 문자 수 확인
-        meaningful_text_threshold = 10  # 실제 의미있는 문자의 최소 개수
+        meaningful_text_threshold = 50  # 실제 의미있는 문자의 최소 개수
         valid_text_for_skip_ocr = False
         if extracted_text_raw:
             # 공백, 줄바꿈, form feed 등 제외하고 실제 문자만 카운트
@@ -209,7 +202,7 @@ async def extract_text_from_pdf_with_ocr(pdf_path: str, min_confidence: float = 
             logger.info(f"PDFMiner 추출: 총 문자(공백제거): {total_chars_no_whitespace}, 유효 문자(a-zA-Z0-9가-힣): {num_meaningful_chars}")
             ocr_processing_logger.info(f"[PDF OCR INFO] PDFMiner 추출 결과 - 총 문자(공백제거): {total_chars_no_whitespace}, 유효 문자: {num_meaningful_chars} (임계값: {meaningful_text_threshold})")
 
-            if total_chars_no_whitespace >= 30 and num_meaningful_chars >= meaningful_text_threshold:
+            if total_chars_no_whitespace >= 100 and num_meaningful_chars >= meaningful_text_threshold:
                 valid_text_for_skip_ocr = True
         
         if valid_text_for_skip_ocr:
@@ -222,25 +215,21 @@ async def extract_text_from_pdf_with_ocr(pdf_path: str, min_confidence: float = 
         ocr_processing_logger.info(f"[PDF OCR INFO] 직접 추출 불충분/유효문자 부족, 이미지 변환 및 PaddleOCR 진행: {pdf_path}")
         
         # PDF를 이미지로 변환
-        def convert_pdf_to_images():
-            ocr_processing_logger.info(f"[PDF OCR INFO] PDF -> 이미지 변환 시작: {pdf_path}")
-            images = convert_from_path(
-                pdf_path,
-                dpi=300,  # 해상도 (높을수록 더 정확하지만 처리 시간 증가)
-                thread_count=4,  # 멀티스레딩
-                use_pdftocairo=True,  # pdftocairo 사용 (더 빠르고 정확함)
-                grayscale=False,  # 컬러 유지 (표와 도표 인식 향상)
-                transparent=False  # 투명도 제거
-            )
-            ocr_processing_logger.info(f"[PDF OCR INFO] PDF -> 이미지 변환 완료: {pdf_path}, 페이지 수: {len(images)}")
-            return images
-        
-        # 비동기로 PDF를 이미지로 변환
-        images = await loop.run_in_executor(None, convert_pdf_to_images)
+        ocr_processing_logger.info(f"[PDF OCR INFO] PDF -> 이미지 변환 시작: {pdf_path}")
+        images = convert_from_path(
+            pdf_path,
+            dpi=500,  # 해상도 (높을수록 더 정확하지만 처리 시간 증가)
+            thread_count=4,  # 멀티스레딩
+            use_pdftocairo=True,  # pdftocairo 사용 (더 빠르고 정확함)
+            grayscale=False,  # 컬러 유지 (표와 도표 인식 향상)
+            transparent=False  # 투명도 제거
+        )
+        ocr_processing_logger.info(f"[PDF OCR INFO] PDF -> 이미지 변환 완료: {pdf_path}, 페이지 수: {len(images)}")
         logger.info(f"PDF 이미지 변환 완료: {len(images)} 페이지")
         
-        # 각 이미지에 OCR 적용 (병렬 처리)
-        async def process_page(i, image):
+        # 각 이미지에 OCR 적용 (순차 처리)
+        page_texts = []
+        for i, image in enumerate(images):
             ocr_processing_logger.info(f"[PDF OCR INFO] 페이지 {i+1}/{len(images)} OCR 처리 시작...")
             logger.info(f"페이지 {i+1}/{len(images)} OCR 처리 중...")
             
@@ -289,7 +278,7 @@ async def extract_text_from_pdf_with_ocr(pdf_path: str, min_confidence: float = 
                 os.unlink(temp_path)
                 
                 ocr_processing_logger.info(f"[PDF OCR INFO] 페이지 {i+1}/{len(images)} OCR 처리 완료, 글자수: {len(page_text)}")
-                return page_text
+                page_texts.append(page_text)
             except Exception as e:
                 # 오류 발생 시 임시 파일 삭제 시도
                 ocr_processing_logger.error(f"[PDF OCR ERROR] 페이지 {i+1}/{len(images)} OCR 처리 중 오류: {e}", exc_info=True)
@@ -299,12 +288,6 @@ async def extract_text_from_pdf_with_ocr(pdf_path: str, min_confidence: float = 
                     pass
                 raise e
         
-        # 각 페이지 처리 작업 생성
-        tasks = [process_page(i, image) for i, image in enumerate(images)]
-        
-        # 병렬로 모든 페이지 처리
-        page_texts = await asyncio.gather(*tasks)
-        
         # 모든 페이지 텍스트 결합
         all_text = ""
         for i, page_text in enumerate(page_texts):
@@ -312,15 +295,15 @@ async def extract_text_from_pdf_with_ocr(pdf_path: str, min_confidence: float = 
         
         logger.info(f"PDF OCR 처리 완료: {len(all_text)} 글자")
         ocr_processing_logger.info(f"[PDF OCR SUCCESS] 전체 PDF OCR 처리 완료: {pdf_path}, 총 글자수: {len(all_text)}")
+        
         return all_text
     
     except Exception as e:
-        logger.error(f"PDF 텍스트 추출 중 오류 발생: {e}")
         ocr_processing_logger.error(f"[PDF OCR ERROR] PDF 처리 중 심각한 오류 발생: {pdf_path}, 오류: {e}", exc_info=True)
         traceback.print_exc()
         return ""
 
-async def extract_text_from_file(file_path: str, min_confidence: float = 0.5) -> str:
+def extract_text_from_file_sync(file_path: str, min_confidence: float = 0.5) -> str:
     """
     파일 확장자에 따라 적절한 텍스트 추출 방식을 적용합니다.
     
@@ -334,15 +317,34 @@ async def extract_text_from_file(file_path: str, min_confidence: float = 0.5) ->
     file_ext = Path(file_path).suffix.lower()
     
     try:
+        # 텍스트 파일 처리 (OCR 없이 직접 읽기)
+        if file_ext == '.txt':
+            logger.info(f"텍스트 파일 직접 읽기: {file_path}")
+            with open(file_path, 'r', encoding='utf-8') as file:
+                return file.read()
+        
         # 이미지 파일 처리
         if file_ext in ['.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.tif', '.webp']:
             logger.info(f"이미지 파일 OCR 처리 중: {file_path}")
-            return await extract_text_from_image(file_path, min_confidence)
+            return extract_text_from_image_sync(file_path, min_confidence)
         
         # PDF 파일 처리
         elif file_ext == '.pdf':
             logger.info(f"PDF 파일 처리 중: {file_path}")
-            return await extract_text_from_pdf_with_ocr(file_path, min_confidence)
+            return extract_text_from_pdf_with_ocr_sync(file_path, min_confidence)
+        
+        # Office 파일 처리 (PDF로 변환 후 OCR)
+        elif file_ext in ['.pptx', '.xlsx', '.docx']:
+            logger.info(f"Office 파일 처리 중: {file_path}")
+            from .indexing_utils import convert_office_to_pdf_sync
+            temp_dir = "temp_conversions"
+            pdf_path = convert_office_to_pdf_sync(file_path, temp_dir)
+            if pdf_path:
+                logger.info(f"Office 파일을 PDF로 변환 성공: {pdf_path}")
+                return extract_text_from_pdf_with_ocr_sync(pdf_path, min_confidence)
+            else:
+                logger.error(f"Office 파일을 PDF로 변환 실패: {file_path}")
+                return None
         
         # 기타 파일은 None 반환 (기존 로더 사용)
         else:
@@ -423,56 +425,65 @@ async def extract_images_from_pdf_with_layout(pdf_path: str, doc_id: str) -> Tup
         # PP-Structure 실행
         import numpy as np
         img_array = np.array(page_image)
-        layout_result = structure(img_array)
-        
-        # 텍스트 추출
         page_texts = []
         
-        for region in layout_result:
-            region_type = region.get('type', '')
-            
-            if region_type in ['text', 'title']:
-                # res가 리스트이므로 각 OCR 결과에서 텍스트 추출
-                res_list = region.get('res', [])
-                if isinstance(res_list, list):
-                    for ocr_item in res_list:
-                        if isinstance(ocr_item, dict):
-                            text = ocr_item.get('text', '').strip()
-                            if text:
-                                prefix = "[제목]" if region_type == 'title' else "[텍스트]"
-                                page_texts.append(f"{prefix} {text}")
-            
-            elif region_type == 'table':
-                # 테이블의 경우 html 키가 있는지 확인 후 처리
-                res_list = region.get('res', [])
-                if isinstance(res_list, list):
-                    for ocr_item in res_list:
-                        if isinstance(ocr_item, dict) and 'html' in ocr_item:
-                            html = ocr_item.get('html', '')
-                            if html:
-                                table_text = parse_table_html_to_text(html)
-                                page_texts.append(f"[테이블] {table_text}")
-                        elif isinstance(ocr_item, dict):
-                            # html이 없으면 일반 텍스트로 처리
-                            text = ocr_item.get('text', '').strip()
-                            if text:
-                                page_texts.append(f"[테이블텍스트] {text}")
-            
-            elif region_type == 'figure':
-                bbox = region.get('bbox', [])
-                page_texts.append(f"[이미지] 좌표: {bbox}")
+        try:
+            if structure is not None:
+                layout_result = structure(img_array)
+                
+                # 텍스트 추출
+                for region in layout_result:
+                    region_type = region.get('type', '')
+                    
+                    if region_type in ['text', 'title']:
+                        # res가 리스트이므로 각 OCR 결과에서 텍스트 추출
+                        res_list = region.get('res', [])
+                        if isinstance(res_list, list):
+                            for ocr_item in res_list:
+                                if isinstance(ocr_item, dict):
+                                    text = ocr_item.get('text', '').strip()
+                                    if text:
+                                        prefix = "[제목]" if region_type == 'title' else "[텍스트]"
+                                        page_texts.append(f"{prefix} {text}")
+                    
+                    elif region_type == 'table':
+                        # 테이블의 경우 html 키가 있는지 확인 후 처리
+                        res_list = region.get('res', [])
+                        if isinstance(res_list, list):
+                            for ocr_item in res_list:
+                                if isinstance(ocr_item, dict) and 'html' in ocr_item:
+                                    html = ocr_item.get('html', '')
+                                    if html:
+                                        table_text = parse_table_html_to_text(html)
+                                        page_texts.append(f"[테이블] {table_text}")
+                                elif isinstance(ocr_item, dict):
+                                    # html이 없으면 일반 텍스트로 처리
+                                    text = ocr_item.get('text', '').strip()
+                                    if text:
+                                        page_texts.append(f"[테이블텍스트] {text}")
+                    
+                    elif region_type == 'figure':
+                        bbox = region.get('bbox', [])
+                        page_texts.append(f"[이미지] 좌표: {bbox}")
+        except Exception as e:
+            logger.error(f"PP-Structure 처리 중 오류: {e}")
+            traceback.print_exc()
         
-        # PP-Structure 결과 없으면 일반 OCR
+        # PP-Structure 결과 없거나 오류 발생 시 일반 OCR
         if not page_texts:
-            ocr_result = ocr.ocr(img_array, cls=True)
-            if ocr_result and ocr_result[0]:
-                for line in ocr_result[0]:
-                    if line and len(line) >= 2:
-                        text = line[1][0] if isinstance(line[1], (list, tuple)) else str(line[1])
-                        confidence = line[1][1] if isinstance(line[1], (list, tuple)) and len(line[1]) > 1 else 0.0
-                        
-                        if confidence > 0.6 and text.strip():
-                            page_texts.append(f"[OCR] {text.strip()}")
+            try:
+                ocr_result = ocr.ocr(img_array, cls=True)
+                if ocr_result and ocr_result[0]:
+                    for line in ocr_result[0]:
+                        if line and len(line) >= 2:
+                            text = line[1][0] if isinstance(line[1], (list, tuple)) else str(line[1])
+                            confidence = line[1][1] if isinstance(line[1], (list, tuple)) and len(line[1]) > 1 else 0.0
+                            
+                            if confidence > 0.6 and text.strip():
+                                page_texts.append(f"[OCR] {text.strip()}")
+            except Exception as e:
+                logger.error(f"OCR 처리 중 오류: {e}")
+                traceback.print_exc()
         
         # 결과 저장
         image_texts[page_num] = page_texts
@@ -499,3 +510,5 @@ def parse_table_html_to_text(html_content: str) -> str:
             rows.append(' | '.join(cells))
     
     return '\n'.join(rows)
+
+# save_ocr_result 함수 제거됨 - race condition 방지

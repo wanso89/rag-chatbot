@@ -1,0 +1,113 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1751522407016",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "버티카 금융 레퍼런스 알려줘.",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "[버티카 국내 레퍼런스_2024.pdf]에 따르면, 버티카는 금융 산업에 특화된 데이터 관리 솔루션을 제공합니다. 이 솔루션은 금융 기관들이 복잡한 데이터 환경에서 효율적으로 운영될 수 있도록 설계되었습니다.",
+      "sources": [
+        {
+          "path": "버티카 국내 레퍼런스_2024.pdf",
+          "display_name": "버티카 국내 레퍼런스_2024.pdf",
+          "page": 1,
+          "chunk_id": "batch1_0",
+          "score": 0.32690125703811646,
+          "element_type": "text",
+          "is_cited": true
+        },
+        {
+          "path": "3S소프트 회사소개-250514.pdf",
+          "display_name": "3S소프트 회사소개-250514.pdf",
+          "page": 12,
+          "chunk_id": "batch1_11",
+          "score": 0.024503568187355995,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "3S소프트 회사소개-250514.pdf",
+          "display_name": "3S소프트 회사소개-250514.pdf",
+          "page": 9,
+          "chunk_id": "batch1_8",
+          "score": 0.024403993040323257,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "NDT User Guide(Win).pdf",
+          "display_name": "NDT User Guide(Win).pdf",
+          "page": 12,
+          "chunk_id": "batch1_11",
+          "score": 0.023773586377501488,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "NDT User Guide(Win).pdf",
+          "display_name": "NDT User Guide(Win).pdf",
+          "page": 18,
+          "chunk_id": "batch1_17",
+          "score": 0.023773586377501488,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "자료전송 시스템 SSL인증서 갱신 매뉴얼.pdf",
+          "display_name": "자료전송 시스템 SSL인증서 갱신 매뉴얼.pdf",
+          "page": 5,
+          "chunk_id": "batch1_4",
+          "score": 0.02376488596200943,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "제2024-05호 대한건설기계안전관리원 채용공고문 및 직무기술서.pdf",
+          "display_name": "제2024-05호 대한건설기계안전관리원 채용공고문 및 직무기술서.pdf",
+          "page": 6,
+          "chunk_id": "batch1_5",
+          "score": 0.023477597162127495,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "사내규정모음집20100129_개정.pdf",
+          "display_name": "사내규정모음집20100129_개정.pdf",
+          "page": 16,
+          "chunk_id": "batch1_15",
+          "score": 0.02344341017305851,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "3S소프트 회사소개-250514.pdf",
+          "display_name": "3S소프트 회사소개-250514.pdf",
+          "page": 17,
+          "chunk_id": "batch1_16",
+          "score": 0.023440657183527946,
+          "element_type": "text",
+          "is_cited": false
+        },
+        {
+          "path": "사내규정모음집20100129_개정.pdf",
+          "display_name": "사내규정모음집20100129_개정.pdf",
+          "page": 37,
+          "chunk_id": "batch1_36",
+          "score": 0.02324373833835125,
+          "element_type": "text",
+          "is_cited": false
+        }
+      ]
+    }
+  ],
+  "timestamp": "2025-07-03T15:00:12.544327"
+}

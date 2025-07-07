@@ -104,13 +104,6 @@ def apply_highlighting(content: str, keywords: List[str], original_query: str = 
     
     has_highlights = False
     
-    # 1. 간단한 접근: 답변 텍스트에서 중요한 정보가 포함된 문장 찾기
-    if not original_query:
-        # 답변 텍스트가 없으면 기존 키워드 하이라이트 방식 사용
-        highlighted_content = _apply_keyword_highlighting(content, keywords)
-        has_highlights = '<span class="highlight-strong">' in highlighted_content
-        return highlighted_content, has_highlights
-    
     # 2. 답변에서 핵심 정보 추출 (NER 스타일)
     answer_entities = _extract_key_entities(original_query)
     
@@ -141,7 +134,7 @@ def apply_highlighting(content: str, keywords: List[str], original_query: str = 
 def _extract_key_entities(text: str) -> Dict[str, List[str]]:
     """답변 텍스트에서 중요한 엔티티들을 추출합니다."""
     entities = {
-        'numbers': re.findall(r'\d+(?:[일개월년원달러주차회번째])?', text),
+        'numbers': re.findall(r'\d+(?:[일개월년원달러주차회번째원만원천원])?', text),
         'dates': re.findall(r'\d{4}[-./]\d{1,2}[-./]\d{1,2}|\d{1,2}[-./]\d{1,2}', text),
         'periods': re.findall(r'\d+[일개월년주]', text),
         'parenthetical': re.findall(r'\(([^)]+)\)', text),
@@ -157,15 +150,6 @@ def _split_into_sentences(content: str) -> List[str]:
     return [s.strip() for s in sentences if s.strip()]
 
 
-def _sigmoid(x: float, k: float = 10.0, x0: float = 0.7) -> float:
-    """시그모이드 함수를 사용하여 점수를 비선형적으로 변환합니다."""
-    try:
-        import math
-        return 1 / (1 + math.exp(-k * (x - x0)))
-    except Exception as e:
-        print(f"시그모이드 계산 중 오류: {e}")
-        return 0.0
-
 def _calculate_sentence_importance(sentence: str, answer_entities: Dict, keywords: List[str], metadata: Dict[str, Any] = None, original_query: str = None, embedding_function: Any = None) -> float:
     """문장의 중요도 점수를 계산합니다."""
     score = 0.0
@@ -177,66 +161,34 @@ def _calculate_sentence_importance(sentence: str, answer_entities: Dict, keyword
                 if entity_type == 'numbers':
                     # 숫자가 쿼리와 관련이 있는지 확인
                     if original_query and entity.strip() in original_query:
-                        score += 0.3  # 쿼리와 관련된 숫자는 높은 점수
+                        score += 0.1  # 쿼리와 관련된 숫자는 낮은 점수 부여
                     else:
-                        # 쿼리와 관련 없고 주변 키워드도 없으면 점수 부여하지 않음
-                        entity_pos = sentence.find(entity.strip())
-                        context_range = 20  # 숫자 주변 20자 내에서 키워드 확인
-                        context = sentence[max(0, entity_pos - context_range):entity_pos + context_range + len(entity.strip())]
-                        context_keywords = sum(1 for k in keywords if k.lower() in context.lower())
-                        if context_keywords > 0:
-                            score += 0.1  # 주변에 키워드가 있으면 추가 점수
-                        else:
-                            score += 0.0  # 관련 없는 숫자는 점수 부여하지 않음
+                        score += 0.0  # 관련 없는 숫자는 점수 부여하지 않음
                 elif entity_type == 'periods':
-                    score += 0.3  # 기간도 중요
+                    score += 0.1  # 기간도 낮은 점수 부여
                 else:
-                    score += 0.2
+                    score += 0.0  # 기타 엔티티는 점수 부여하지 않음
     
-    # 2. 키워드 밀도 (점수 비중 높임)
+    # 2. 키워드 밀도
     matching_keywords = sum(1 for k in keywords if k.lower() in sentence.lower())
     if keywords and matching_keywords >= 1:  # 최소 1개 이상 키워드 일치해야 점수 부여
         keyword_density = matching_keywords / len(keywords)
-        score += keyword_density * 0.25  # 키워드 비중 높임
-    
-    # 3. 문서 메타데이터에서 리랭킹 점수 반영
-    if metadata and 'relevance_score' in metadata:
-        relevance_score = metadata.get('relevance_score', 0.0)
-        adjusted_relevance = _sigmoid(relevance_score)
-        score += adjusted_relevance * 0.35  # 리랭킹 점수 비중 낮춤
-    
-    # 4. 문장과 쿼리 간의 임베딩 유사성 반영
-    if original_query and embedding_function:
-        try:
-            query_embedding = embedding_function(original_query)
-            sentence_embedding = embedding_function(sentence)
-            if query_embedding is not None and sentence_embedding is not None:
-                from numpy import dot
-                from numpy.linalg import norm
-                similarity = dot(query_embedding, sentence_embedding) / (norm(query_embedding) * norm(sentence_embedding))
-                adjusted_similarity = _sigmoid(similarity)
-                score += adjusted_similarity * 0.3  # 유사성 점수 비중 낮춤
-        except Exception as e:
-            print(f"임베딩 유사성 계산 중 오류: {e}")
+        score += keyword_density * 0.4  # 키워드 비중 0.4    
+    # 3. 문서 메타데이터에서 리랭킹 점수 반영 (BM25 + FAISS 결합 점수)
+    if metadata:
+        if 'relevance_score' in metadata:
+            relevance_score = metadata.get('relevance_score', 0.0)
+            score += relevance_score * 0.6  # 리랭킹 점수 비중 0.6
+        else:
+            print("⚠️ 메타데이터에 relevance_score가 없습니다.")
+    else:
+        print("⚠️ 메타데이터가 전달되지 않았습니다.")
     
     # 5. 문장 길이 보정 (너무 짧거나 긴 문장은 덜 중요)
     sentence_length = len(sentence.split())
     if 5 <= sentence_length <= 30:  # 적절한 길이
         score += 0.1
-    
-    return min(score, 1.0)  # 최대 1.0으로 제한
-
-
-def _apply_keyword_highlighting(content: str, keywords: List[str]) -> str:
-    """기본 키워드 하이라이트 (fallback)"""
-    if not keywords:
-        return content
-        
-    for keyword in keywords:
-        pattern = re.compile(re.escape(keyword), re.IGNORECASE)
-        content = pattern.sub(f'<span class="highlight-strong">{keyword}</span>', content)
-    
-    return content
+    return score
 
 
 def format_source_metadata(metadata: Dict[str, Any], doc_source: Dict[str, Any] = None) -> Dict[str, Any]:
@@ -348,3 +300,50 @@ def _extract_clean_filename(file_path: str) -> str:
             return parts[1]
     
     return filename
+
+def filter_meaningful_keywords(keywords):
+    """무의미한 키워드 제외"""
+    meaningless_keywords = {
+        'pdf', 'p', 'docx', 'doc', 'txt',  # 파일 확장자
+        '25', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10',  # 단순 숫자
+        '11', '12', '13', '14', '15', '16', '17', '18', '19', '20',
+        '21', '22', '23', '24', '25', '26', '27', '28', '29', '30',
+        '이야', '에서', '니다', '니까', '해주', '니???', '???',  # 불용어/특수문자
+        '회사', '문서', '파일', '페이지',  # 너무 일반적인 단어
+        '개정', '20100129', '20230109', '250514'  # 날짜 형식들
+    }
+    
+    meaningful_keywords = [
+        kw for kw in keywords 
+        if len(kw) > 2 and kw not in meaningless_keywords and not kw.isdigit()
+    ]
+    
+    return meaningful_keywords
+
+
+def excel_to_html(path: str) -> Dict[str, str]:
+    """
+    엑셀 파일을 불러와 각 시트를 HTML <table> 문자열로 변환하여 딕셔너리로 반환합니다.
+    
+    Args:
+        path (str): 엑셀 파일 경로
+        
+    Returns:
+        Dict[str, str]: 시트 이름을 키로 하고 HTML 테이블 문자열을 값으로 하는 딕셔너리
+    """
+    import pandas as pd
+    
+    try:
+        # 엑셀 파일의 모든 시트 읽기
+        sheets_dict = pd.read_excel(path, sheet_name=None)
+        html_dict = {}
+        
+        for sheet_name, df in sheets_dict.items():
+            # DataFrame을 HTML 테이블로 변환
+            html_table = df.to_html(index=False, render_links=True, escape=False)
+            html_dict[sheet_name] = html_table
+            
+        return html_dict
+    except Exception as e:
+        print(f"엑셀 파일 처리 중 오류 발생: {e}")
+        return {}

@@ -7,4 +7,5 @@ nohup uvicorn app.main:app \
        --port 8000 \
        --log-level debug \
        --access-log \
+       --workers 1 \
        >> ./chatbot.log 2>&1 &
