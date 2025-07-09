@@ -3,6 +3,7 @@ import Sidebar from "./components/Sidebar";
 import ChatContainer from "./components/ChatContainer";
 import SQLQueryPage from "./components/SQLQueryPage";
 import Dashboard from "./components/dashboard/Dashboard";
+import ImageModal from "./components/ImageModal";
 import {
   FiChevronLeft,
   FiChevronRight,
@@ -129,6 +130,10 @@ function App() {
   const [mode, setMode] = useState('chat');
   // 파일 매니저 상태 추가
   const [fileManagerOpen, setFileManagerOpen] = useState(false);
+  
+  // 이미지 모달 상태 추가
+  const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [selectedImageSource, setSelectedImageSource] = useState(null);
 
   // 대시보드 관련 상태
   const [dashboardStats, setDashboardStats] = useState({
@@ -1681,6 +1686,19 @@ function App() {
     }
   };
 
+  // 이미지 보기 핸들러
+  const handleViewImages = (source) => {
+    console.log("이미지 보기 요청:", source);
+    setSelectedImageSource(source);
+    setImageModalOpen(true);
+  };
+
+  // 이미지 모달 닫기 핸들러
+  const handleCloseImageModal = () => {
+    setImageModalOpen(false);
+    setSelectedImageSource(null);
+  };
+
   return (
     <div className="flex flex-col md:flex-row h-screen bg-gray-900 text-gray-100 overflow-hidden relative">
       {/* 임베딩 처리 오버레이 */}
@@ -1767,11 +1785,19 @@ function App() {
               isStreaming={isStreaming}
               setIsStreaming={setIsStreaming}
               onStopGeneration={handleStopGeneration}
+              onViewImages={handleViewImages}
               key="chat-container-component"
             />
           </div>
         )}
       </div>
+      
+      {/* 이미지 모달 */}
+      <ImageModal
+        isOpen={imageModalOpen}
+        onClose={handleCloseImageModal}
+        source={selectedImageSource}
+      />
     </div>
   );
 }

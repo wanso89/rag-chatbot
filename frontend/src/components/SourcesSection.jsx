@@ -8,8 +8,9 @@ import SourceItem from './SourceItem';
  * @param {Array} props.sources - 출처 문서 목록
  * @param {Array} props.citedSources - 인용된 출처 문서 목록
  * @param {Function} props.onViewSource - 출처 문서 보기 핸들러
+ * @param {Function} props.onViewImages - 이미지 보기 핸들러
  */
-const SourcesSection = ({ sources = [], citedSources = [], onViewSource }) => {
+const SourcesSection = ({ sources = [], citedSources = [], onViewSource, onViewImages }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [filterText, setFilterText] = useState("");
   
@@ -105,6 +106,7 @@ const SourcesSection = ({ sources = [], citedSources = [], onViewSource }) => {
                   key={`cited-${source.source || source.path}-${source.page}-${index}`}
                   source={source}
                   onClick={onViewSource}
+                  onViewImages={onViewImages}
                   isCited={true}
                 />
               ))}
@@ -124,6 +126,7 @@ const SourcesSection = ({ sources = [], citedSources = [], onViewSource }) => {
                   key={`ref-${source.source || source.path}-${source.page}-${index}`}
                   source={source}
                   onClick={onViewSource}
+                  onViewImages={onViewImages}
                   isReference={true}
                 />
               ))}
@@ -142,4 +145,4 @@ const SourcesSection = ({ sources = [], citedSources = [], onViewSource }) => {
   );
 };
 
-export default SourcesSection; 
+export default SourcesSection;

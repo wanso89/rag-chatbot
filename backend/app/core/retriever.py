@@ -5,7 +5,7 @@ import time
 import json
 import re
 import asyncio
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Set
 from dataclasses import dataclass
 
 from elasticsearch import Elasticsearch
@@ -15,7 +15,7 @@ import numpy as np
 from langchain.schema import Document
 from app.utils.feedback_analyzer import SearchQualityOptimizer
 from app.utils.indexing_utils import ES_INDEX_NAME
-from app.utils.qwen3_prompts import create_chat_messages
+from app.utils.qwen3_prompts import create_chat_messages, create_image_only_prompt
 from app.utils.search_enhancer import QueryExpander
 import logging
 
@@ -85,12 +85,34 @@ class ElasticsearchRetriever:
         return asyncio.run(self.async_get_relevant_documents(query))
 
     async def async_get_relevant_documents(self, query: str) -> List[Document]:
-        """2단계 검색 방식: 1차 검색 후 히트된 문서 내에서 추가 검색"""
+        """3단계 검색 방식: 3단계 타겟팅 조건 만족 시 1-2단계 건너뛰고 3단계만 실행"""
         
         if not self.es_client or not self.embedding_function:
             return []
 
-        print(f"🔍 1단계 검색 시작: {query[:30]}...")
+        # 키워드 추출
+        keywords = self.query_expander.extract_keywords(query)
+        print(f"🔍 키워드 추출 완료: {len(keywords)}개 - {keywords}")
+        
+        # 먼저 3단계 타겟팅 조건 확인 (기존 문서 없이 전체 소스에서 확인)
+        target_docs = await self._check_targeting_conditions(query, keywords)
+        
+        if target_docs:
+            print(f"✅ 3단계 타겟팅 조건 만족: 1-2단계 완전히 건너뛰고 3단계 결과만 반환")
+            tertiary_docs = target_docs
+            unique_docs = self._deduplicate_results_with_higher_score(tertiary_docs)
+            
+            # 소프트맥스 정규화 없이 점수 기준 정렬
+            unique_docs.sort(key=lambda x: x.metadata.get('relevance_score', 0), reverse=True)
+            result = unique_docs[:10]  # 상위 10개 문서로 제한
+            
+            print(f"✅ 최종 검색 완료 (3단계만 실행): 총 {len(result)}개 문서")
+            print("🔍 최종 랭킹 (점수 기준):")
+            for i, doc in enumerate(result, 1):
+                print(f"  {i}. {doc.metadata.get('source', 'unknown')} p.{doc.metadata.get('page', 'N/A')} (score: {doc.metadata.get('relevance_score', 0):.3f})")
+            return result
+            
+        print(f"🔍 3단계 타겟팅 조건 불만족: 1단계 검색 시작 - {query[:30]}...")
         
         # 1단계: 기본 검색
         primary_docs = await self._search_single_query(query, boost_factor=1.0)
@@ -103,16 +125,27 @@ class ElasticsearchRetriever:
         
         # 2단계: 히트된 문서들 내에서 추가 검색
         secondary_docs = await self._search_within_hit_documents(query, primary_docs)
+        print(f"✅ 2단계 검색 완료: {len(secondary_docs)}개 추가 문서")
         
-        # 결과 결합 및 중복 제거
-        all_docs = primary_docs + secondary_docs
-        unique_docs = self._deduplicate_results(all_docs)
+        # 3단계: 문서명 타겟팅 검색
+        tertiary_docs = await self._search_document_targeting(query, primary_docs + secondary_docs)
+        print(f"✅ 3단계 검색 완료: {len(tertiary_docs)}개 타겟팅 문서")
+        
+        # 결과 결합 및 중복 제거 (더 높은 점수 우선)
+        all_docs = primary_docs + secondary_docs + tertiary_docs
+        unique_docs = self._deduplicate_results_with_higher_score(all_docs)
+        
+        # 소프트맥스 정규화 적용
+        unique_docs = self._apply_document_boosting(unique_docs, query)
         
         # 점수 기준 정렬
         unique_docs.sort(key=lambda x: x.metadata.get('relevance_score', 0), reverse=True)
         result = unique_docs[:10]  # 상위 10개 문서로 제한하여 컨텍스트 길이 줄이기
         
-        print(f"✅ 2단계 검색 완료: 총 {len(result)}개 문서 (1단계: {len(primary_docs)}, 2단계: {len(secondary_docs)})")
+        print(f"✅ 최종 검색 완료: 총 {len(result)}개 문서 (1단계: {len(primary_docs)}, 2단계: {len(secondary_docs)}, 3단계: {len(tertiary_docs)})")
+        print("🔍 최종 랭킹 (소프트맥스 정규화 점수 기준):")
+        for i, doc in enumerate(result, 1):
+            print(f"  {i}. {doc.metadata.get('source', 'unknown')} p.{doc.metadata.get('page', 'N/A')} (score: {doc.metadata.get('relevance_score', 0):.3f})")
         return result
     
     async def _search_within_hit_documents(self, original_query: str, hit_docs: List[Document]) -> List[Document]:
@@ -149,30 +182,270 @@ class ElasticsearchRetriever:
                 source, page, expanded_keywords, original_query
             )
             secondary_docs.extend(additional_chunks)
-        # ✨ 2단계 검색 결과 상세 로그
-        for chunk in secondary_docs:
-            chunk_page = chunk.metadata.get('page', 0)
-            chunk_source = chunk.metadata.get('source', '')
-            
-            if chunk_page == 25 and '사내규정모음집' in chunk_source:
-                print(f"🚨🚨 p.25 발견!! 2단계 검색에서 유입됨!")
-                print(f"   점수: {chunk.metadata.get('relevance_score', 0):.3f}")
-                print(f"   search_stage: {chunk.metadata.get('search_stage', 'unknown')}")
-                print(f"   내용 일부: {chunk.page_content[:200]}...")
-                print(f"   이 청크가 final_docs에 포함되는지 확인 필요!")
-                break
         
-        # 점수 조정 (2단계 검색 결과는 약간 낮은 점수)
+        # 2단계 검색 결과에 대해 소프트맥스 정규화 적용
+        secondary_docs = self._apply_document_boosting(secondary_docs, original_query)
+        
+        #(2단계 검색 결과)
         for doc in secondary_docs:
             current_score = doc.metadata.get("relevance_score", 0)
-            doc.metadata["relevance_score"] = current_score * 0.7  # 2단계 페널티
             doc.metadata["search_stage"] = "secondary"
+            print(f"🔍 2단계 검색 문서 추가: {doc.metadata.get('source', 'unknown')} p.{doc.metadata.get('page', 'N/A')} - 최종 점수: {current_score:.3f}")
         
         print(f"✅ 2단계 검색 완료: {len(secondary_docs)}개 추가 문서")
         return secondary_docs
+        
+    async def _check_targeting_conditions(self, query: str, keywords: List[str]) -> List[Document]:
+        """3단계 타겟팅 조건 확인 및 타겟 문서 검색"""
+        
+        try:
+            # 모든 문서 소스 가져오기
+            existing_sources = set()
+            query_body = {
+                "size": 0,
+                "aggs": {
+                    "unique_sources": {
+                        "terms": {
+                            "field": "source",
+                            "size": 1000
+                        }
+                    }
+                },
+                "query": {
+                    "bool": {
+                        "must": [
+                            {"term": {"category": self.category}}
+                        ]
+                    }
+                }
+            }
+            response = self.es_client.search(index=self.index_name, body=query_body, request_timeout=15)
+            buckets = response.get("aggregations", {}).get("unique_sources", {}).get("buckets", [])
+            for bucket in buckets:
+                existing_sources.add(bucket["key"])
+            
+            print(f"🎯 전체 문서 소스: {len(existing_sources)}개")
+            
+            # 키워드와 매칭되는 문서 찾기
+            target_documents = self._find_matching_documents(keywords, existing_sources)
+            
+            if not target_documents:
+                print("🎯 타겟 문서 없음")
+                return []
+            
+            print(f"🎯 타겟 문서 발견: {target_documents}")
+            
+            # BM25와 FAISS용 쿼리 생성
+            bm25_query = self.query_expander.get_bm25_query(query)
+            faiss_query = self.query_expander.get_faiss_query(query)
+            print(f"🎯 BM25 쿼리: {bm25_query}")
+            print(f"🎯 FAISS 쿼리: {faiss_query}")
+            
+            # 타겟 문서들에서만 집중 검색
+            targeted_docs = []
+            for target_doc in target_documents:
+                docs = await self._search_within_specific_document(bm25_query, keywords, target_doc, faiss_query)
+                targeted_docs.extend(docs)
+            
+            return targeted_docs
+            
+        except Exception as e:
+            print(f"⚠️ 타겟팅 조건 확인 오류: {e}")
+            return []
+            
+    async def _search_document_targeting(self, query: str, existing_docs: List[Document]) -> List[Document]:
+        """3단계: 문서명이 키워드에 있으면 해당 문서만 집중 검색"""
+        
+        try:
+            # 키워드 추출
+            keywords = self.query_expander.extract_keywords(query)
+            print(f"🎯 문서 타겟팅 키워드: {keywords}")
+            
+            # BM25와 FAISS용 쿼리 생성
+            bm25_query = self.query_expander.get_bm25_query(query)
+            faiss_query = self.query_expander.get_faiss_query(query)
+            print(f"🎯 BM25 쿼리: {bm25_query}")
+            print(f"🎯 FAISS 쿼리: {faiss_query}")
+            
+            # 기존 검색된 문서들의 소스명 수집
+            existing_sources = set()
+            for doc in existing_docs:
+                source = doc.metadata.get('source', '')
+                if source:
+                    existing_sources.add(source)
+            
+            print(f"🎯 기존 문서 소스: {list(existing_sources)[:3]}...")  # 처음 3개만 출력
+            
+            # 키워드와 매칭되는 문서 찾기
+            target_documents = self._find_matching_documents(keywords, existing_sources)
+            
+            if not target_documents:
+                print("🎯 타겟 문서 없음")
+                return []
+            
+            print(f"🎯 타겟 문서 발견: {target_documents}")
+            
+            # 타겟 문서들에서만 집중 검색
+            targeted_docs = []
+            for target_doc in target_documents:
+                docs = await self._search_within_specific_document(bm25_query, keywords, target_doc, faiss_query)
+                targeted_docs.extend(docs)
+            
+            return targeted_docs
+            
+        except Exception as e:
+            print(f"⚠️ 문서 타겟팅 검색 오류: {e}")
+            return []
+
+    def _find_matching_documents(self, keywords: List[str], existing_sources: Set[str]) -> List[str]:
+        """키워드와 매칭되는 문서명 찾기"""
+        
+        matching_docs = []
+        
+        # 키워드 조합으로 문서명 매칭 체크
+        for source in existing_sources:
+            source_lower = source.lower()
+            matched_keywords = []
+            
+            # 각 키워드가 문서명에 포함되는지 체크
+            for keyword in keywords:
+                if keyword.lower() in source_lower:
+                    matched_keywords.append(keyword)
+            
+            # 2개 이상 키워드가 매칭되면 타겟 문서로 선정
+            if len(matched_keywords) >= 2:
+                matching_docs.append(source)
+                print(f"🎯 매칭 문서 발견: {source} (키워드: {matched_keywords})")
+        
+        return matching_docs
+
+    async def _search_within_specific_document(self, bm25_query: str, keywords: List[str], target_source: str, faiss_query: str = "") -> List[Document]:
+        """특정 문서 내에서만 키워드 기반 집중 검색"""
+        
+        try:
+            # 키워드들로 should 쿼리 구성 (해당 문서 내에서만)
+            should_clauses = []
+            
+            for keyword in keywords[:8]:  # 상위 8개 키워드 사용
+                should_clauses.extend([
+                    {"match": {"text": {"query": keyword, "boost": 5.0}}},
+                    {"match": {"caption": {"query": keyword, "boost": 4.0}}},
+                    {"match": {"table_caption": {"query": keyword, "boost": 3.5}}},
+                    {"wildcard": {"text": {"value": f"*{keyword}*", "boost": 2.0}}}
+                ])
+            
+            # BM25 쿼리 추가
+            should_clauses.extend([
+                {"match": {"text": {"query": bm25_query, "boost": 3.0}}},
+                {"match_phrase": {"text": {"query": bm25_query, "boost": 4.0, "slop": 2}}}
+            ])
+            
+            # 특정 문서만 필터링
+            must_clauses = [
+                {"term": {"source": target_source}},
+                {"term": {"category": self.category}}
+            ]
+            
+            search_query = {
+                "size": 15,  # 해당 문서에서 더 많은 청크 검색
+                "_source": {"excludes": ["embedding"]},
+                "query": {
+                    "bool": {
+                        "must": must_clauses,
+                        "should": should_clauses,
+                        "minimum_should_match": 1
+                    }
+                }
+            }
+            
+            response = self.es_client.search(index=self.index_name, body=search_query, request_timeout=15)
+            
+            # 결과 처리 (BM25 점수)
+            docs = []
+            for hit in response["hits"]["hits"]:
+                meta_src = hit["_source"]
+                metadata = {k: v for k, v in meta_src.items() if k not in ["text", "embedding"]}
+                metadata.update({
+                    "document_id": hit["_id"],
+                    "bm25_score": hit["_score"] * 7.0,  # 타겟팅 검색 보너스
+                    "source": meta_src.get("source", target_source),
+                    "page": meta_src.get("page"),
+                    "search_stage": "targeting",  # 3단계 검색 표시
+                    "hit_content": meta_src.get("text", ""),
+                    "element_type": meta_src.get("element_type", "text"),
+                })
+                
+                if chunk_id := meta_src.get("chunk_id"):
+                    metadata["chunk_id"] = str(chunk_id)
+                
+                docs.append(Document(page_content=meta_src.get("text", ""), metadata=metadata))
+            
+            # FAISS를 사용한 벡터 검색
+            faiss_docs = []
+            if self.faiss_index is not None and self.doc_metadata and faiss_query:
+                query_embedding = self.embedding_function([faiss_query])[0]
+                query_emb = np.array(query_embedding, dtype=np.float32)
+                D, I = self.faiss_index.search(query_emb.reshape(1, -1), self.k)
+                for i, idx in enumerate(I[0]):
+                    if idx >= 0 and idx < len(self.doc_metadata):
+                        metadata = self.doc_metadata[idx].copy()
+                        if metadata.get('source') == target_source:
+                            metadata['faiss_score'] = (1.0 / (1.0 + float(D[0][i]))) * 2.0  # 타겟팅 검색 보너스
+                            faiss_docs.append(Document(page_content=self.doc_metadata[idx].get('text', ''), metadata=metadata))
+            
+            # BM25와 FAISS 결과 결합
+            combined_docs = []
+            seen_docs = set()
+            for doc in docs:
+                doc_id = doc.metadata.get("document_id")
+                if doc_id not in seen_docs:
+                    combined_docs.append(doc)
+                    seen_docs.add(doc_id)
+                else:
+                    for c_doc in combined_docs:
+                        if c_doc.metadata.get("document_id") == doc_id:
+                            c_doc.metadata['bm25_score'] = max(c_doc.metadata.get('bm25_score', 0), doc.metadata.get('bm25_score', 0))
+                            break
+            
+            for doc in faiss_docs:
+                doc_id = doc.metadata.get("document_id")
+                if doc_id not in seen_docs:
+                    combined_docs.append(doc)
+                    seen_docs.add(doc_id)
+                else:
+                    for c_doc in combined_docs:
+                        if c_doc.metadata.get("document_id") == doc_id:
+                            c_doc.metadata['faiss_score'] = max(c_doc.metadata.get('faiss_score', 0), doc.metadata.get('faiss_score', 0))
+                            break
+            
+            # 최종 점수 계산
+            bm25_scores = [doc.metadata.get('bm25_score', 0) for doc in combined_docs]
+            faiss_scores = [doc.metadata.get('faiss_score', 0) for doc in combined_docs]
+            
+            max_bm25 = max(bm25_scores) if bm25_scores and any(s > 0 for s in bm25_scores) else 1.0
+            max_faiss = max(faiss_scores) if faiss_scores and any(s > 0 for s in faiss_scores) else 1.0
+            
+            for doc in combined_docs:
+                bm25_score = doc.metadata.get('bm25_score', 0) / max_bm25 if max_bm25 > 0 else 0
+                faiss_score = doc.metadata.get('faiss_score', 0) / max_faiss if max_faiss > 0 else 0
+                
+                if faiss_score > 0:
+                    combined_score = bm25_score * 0.2 + faiss_score * 0.8
+                else:
+                    combined_score = bm25_score * 0.1
+                
+                combined_score = max(0.0, min(1.0, combined_score)) * 2.0  # 타겟팅 검색 보너스
+                doc.metadata['relevance_score'] = combined_score
+            
+            print(f"🎯 {target_source} 내 검색 결과: {len(combined_docs)}개")
+            return combined_docs
+            
+        except Exception as e:
+            print(f"⚠️ 특정 문서 내 검색 오류: {e}")
+            return []
     
     def _extract_and_expand_keywords(self, query: str) -> List[str]:
-        """쿼리에서 키워드 추출 및 확장 (search_enhancer의 개선된 로직 사용, 저장된 동의어 사전 활용)"""
+        """쿼리에서 키워드 추출 및 확장 (search_enhancer의 개선된 로직 사용)"""
         
         try:
             # search_enhancer의 QueryExpander 사용
@@ -194,13 +467,16 @@ class ElasticsearchRetriever:
                 '이것', '그것', '저것', '무엇', '어떤', '어떻게', '왜', '어디서', '언제', 
                 '누구', '어느', '얼마', '없는', '있는', '되는', '하는', '같은', '다른',
                 '때문', '위해', '통해', '따라', '의해', '관련', '부분', '내용', '정보',
-                '방법', '경우', '때는', '있습니다', '없습니다', '됩니다', '합니다', '대한'
+                '방법', '경우', '때는', '있습니다', '없습니다', '됩니다', '합니다', '대한',
+                '그럼', '그리고', '는', '은'
             }
             
             keywords = []
             for word in words:
-                if word.lower() not in stopwords and len(word) >= 2:
-                    keywords.append(word)
+                # 특수문자 제거
+                cleaned_word = re.sub(r'[^\w\s]', '', word)
+                if cleaned_word.lower() not in stopwords and len(cleaned_word) >= 2:
+                    keywords.append(cleaned_word)
             
             return keywords[:6]  # 기본 키워드만 반환
     
@@ -215,10 +491,10 @@ class ElasticsearchRetriever:
             
             for keyword in keywords[:10]:  # 상위 10개 키워드만 사용
                 should_clauses.extend([
-                    {"match": {"text": {"query": keyword, "boost": 2.5}}},
-                    {"match": {"caption": {"query": keyword, "boost": 2.2}}},
-                    {"match": {"table_caption": {"query": keyword, "boost": 2.0}}},
-                    {"wildcard": {"text": {"value": f"*{keyword}*", "boost": 1.0}}}
+                    {"match": {"text": {"query": keyword, "boost": 3.0}}},
+                    {"match": {"caption": {"query": keyword, "boost": 2.5}}},
+                    {"match": {"table_caption": {"query": keyword, "boost": 2.2}}},
+                    {"wildcard": {"text": {"value": f"*{keyword}*", "boost": 1.5}}}
                 ])
             
             # 동일 문서/페이지 필터
@@ -229,7 +505,7 @@ class ElasticsearchRetriever:
             ]
             
             query = {
-                "size": 8,  # 추가로 가져올 청크 수
+                "size": 10,  # 추가로 가져올 청크 수 증가
                 "_source": {"excludes": ["embedding"]},
                 "query": {
                     "bool": {
@@ -289,8 +565,12 @@ class ElasticsearchRetriever:
             for old_key in oldest_keys:
                 del self._cache[old_key]
 
-        # 임베딩 생성
-        query_embedding = self.embedding_function([query_normalized])[0]
+        # BM25와 FAISS용 쿼리 생성
+        bm25_query = self.query_expander.get_bm25_query(query_normalized)
+        faiss_query = self.query_expander.get_faiss_query(query_normalized)
+
+        # 임베딩 생성 (FAISS용)
+        query_embedding = self.embedding_function([faiss_query])[0]
 
         # 키워드 추출 (조합 검색용)
         extracted_keywords = self.query_expander.extract_keywords(query_normalized)
@@ -298,20 +578,28 @@ class ElasticsearchRetriever:
 
         # 하이브리드 검색 쿼리 구성 (조합 검색 추가)
         base_should = [
-            # BM25 / phrase match (부스팅 조정: 10)
-            {"match_phrase": {"text": {"query": query, "boost": 10.0 * boost_factor, "slop": 3}}},
+            # BM25 / phrase match (부스팅 조정: 내용 중심)
+            {"match_phrase": {"text": {"query": bm25_query, "boost": 15.0 * boost_factor, "slop": 3}}},
             {"match": {
-                "text": {"query": query, "boost": 8.0 * boost_factor,
+                "text": {"query": bm25_query, "boost": 10.0 * boost_factor,
                         "operator": "OR", "minimum_should_match": "60%"}
             }},
-            # 기존 캡션 필드들 활용 (부스팅 조정: 8)
+            # 기존 캡션 필드들 활용 (부스팅 조정: 제목 의존도 감소)
             {"match": {
-                "caption": {"query": query, "boost": 150.0 * boost_factor,
+                "caption": {"query": bm25_query, "boost": 2.0 * boost_factor,
                         "operator": "OR", "minimum_should_match": "10%"}
             }},
             {"match": {
-                "table_caption": {"query": query, "boost": 150.0 * boost_factor,
+                "table_caption": {"query": bm25_query, "boost": 2.0 * boost_factor,
                                 "operator": "OR", "minimum_should_match": "10%"}
+            }},
+            # 제목(source) 기반 부스팅 추가 (부분 매칭에도 부스팅 적용)
+            {"match": {
+                "source": {"query": bm25_query, "boost": 1.0 * boost_factor,
+                          "operator": "OR", "minimum_should_match": "10%"}
+            }},
+            {"wildcard": {
+                "source": {"value": f"*{bm25_query}*", "boost": 8.0 * boost_factor}
             }},
         ]
 
@@ -349,7 +637,7 @@ class ElasticsearchRetriever:
                 {"match": {
                     "text": {
                         "query": "30만원 OR 300000 OR 삼십만원",
-                        "boost": 5.0 * boost_factor
+                        "boost": 3.0 * boost_factor
                     }
                 }}
             ]
@@ -359,7 +647,7 @@ class ElasticsearchRetriever:
         table_boost = []
         if wants_table:
             table_boost = [
-                {"terms": {"element_type": ["table", "table_row"], "boost": 8.0 * boost_factor}}
+                {"terms": {"element_type": ["table", "table_row"], "boost": 15.0 * boost_factor}}
             ]
 
         should_clauses = base_should + table_boost
@@ -412,12 +700,16 @@ class ElasticsearchRetriever:
             if chunk_id := meta_src.get("chunk_id"):
                 metadata["chunk_id"] = str(chunk_id)
 
+            # 문서 제목과 내용이 정확히 일치하거나 유사한 경우 페널티 적용 (1페이지 제목 저격용)
+            text_content = meta_src.get("text", "").lower()
+            source_name = meta_src.get("source", "unknown").lower()
+            query_lower = bm25_query.lower()
+            if (query_lower in text_content or query_lower in source_name) and metadata.get("page") == 1:
+                metadata["bm25_score"] *= 0.3  # 1페이지 문서에 대해 점수를 70% 낮춤
+                print(f"⚠️ 1페이지 제목 유사성 페널티 적용: {source_name}")
+
             docs.append(Document(page_content=meta_src.get("text", ""), metadata=metadata))
 
-        for i, doc in enumerate(docs):
-            if doc.metadata.get('page') == 25 and '사내규정모음집' in doc.metadata.get('source', ''):
-                score = doc.metadata.get('bm25_score', 0)
-                print(f"  ES 직후 p.25: {i+1}위 (bm25_score: {score:.6f})")
         # FAISS를 사용한 벡터 검색
         faiss_docs = []
         if self.faiss_index is not None and self.doc_metadata:
@@ -474,29 +766,24 @@ class ElasticsearchRetriever:
             
             # 가중 평균 계산
             if faiss_score > 0:
-                combined_score = bm25_score * 0.7 + faiss_score * 0.3
+                combined_score = bm25_score * 0.2 + faiss_score * 0.8
             else:
-                combined_score = bm25_score * 0.7  # BM25만 있는 경우
+                combined_score = bm25_score * 0.1
+                
             
+            # 특정 키워드에 대한 페널티 적용 (예: '버티카 레퍼런스')
+            if '버티카 레퍼런스' in doc.page_content.lower() or '버티카 레퍼런스' in doc.metadata.get('source', '').lower():
+                combined_score *= 0.5
+                
             # 점수 범위 보정 (0~1 범위 보장)
             combined_score = max(0.0, min(1.0, combined_score))
+           
             
             normalized_scores.append(combined_score)
             doc.metadata['relevance_score'] = combined_score
-        print(f"🔍 FAISS 결합 후 p.25 확인:")
-        for i, doc in enumerate(combined_docs):
-            if doc.metadata.get('page') == 25 and '사내규정모음집' in doc.metadata.get('source', ''):
-                bm25 = doc.metadata.get('bm25_score', 0)
-                faiss = doc.metadata.get('faiss_score', 0)
-                print(f"  결합 후 p.25: {i+1}위 (bm25: {bm25:.6f}, faiss: {faiss:.6f})")
         combined_docs = self._apply_document_boosting(combined_docs, query_normalized)     
         # 점수 기준 정렬
         combined_docs.sort(key=lambda x: x.metadata.get('relevance_score', 0), reverse=True)
-        print(f"🔍 부스팅 후 p.25 확인:")
-        for i, doc in enumerate(combined_docs):
-            if doc.metadata.get('page') == 25 and '사내규정모음집' in doc.metadata.get('source', ''):
-                score = doc.metadata.get('relevance_score', 0)
-                print(f"  부스팅 후 p.25: {i+1}위 (score: {score:.6f})")
         # 캐싱
         self._cache[cache_key] = {"results": combined_docs, "timestamp": current_time}
         return combined_docs
@@ -514,9 +801,34 @@ class ElasticsearchRetriever:
             if key not in seen:
                 seen.add(key)
                 unique_docs.append(doc)
-        p25_after = [d for d in unique_docs if d.metadata.get('page') == 25 and '사내규정모음집' in d.metadata.get('source', '')]
 
         return unique_docs
+
+    def _deduplicate_results_with_higher_score(self, docs: List[Document]) -> List[Document]:
+        """중복 제거 시 더 높은 점수를 우선으로 유지하며, 3단계 검색 결과를 보호"""
+        doc_dict = {}
+        for doc in docs:
+            key = (
+                doc.metadata.get("document_id"),
+                doc.metadata.get("page"),
+                doc.metadata.get("chunk_id"),
+            )
+            current_score = doc.metadata.get('relevance_score', 0)
+            current_stage = doc.metadata.get('search_stage', 'primary')
+            if key not in doc_dict:
+                doc_dict[key] = doc
+            else:
+                existing_score = doc_dict[key].metadata.get('relevance_score', 0)
+                existing_stage = doc_dict[key].metadata.get('search_stage', 'primary')
+                # 3단계 검색 결과(targeting)를 우선적으로 유지하거나, 점수가 더 높은 경우 업데이트
+                if current_stage == 'targeting' and existing_stage != 'targeting':
+                    doc_dict[key] = doc
+                elif current_stage != 'targeting' and existing_stage == 'targeting':
+                    continue
+                elif current_score > existing_score:
+                    doc_dict[key] = doc
+
+        return list(doc_dict.values())
     def _apply_document_boosting(self, docs: List[Document], query: str) -> List[Document]:
         """사내규정모음집 부스팅 + 소프트맥스 정규화 (조정된 부스팅 로직)"""
         
@@ -528,7 +840,7 @@ class ElasticsearchRetriever:
             
             if '사내규정모음집' in source and ('회갑' in content or '환갑' in content) and '사내규정' in query_lower:
                 current_score = doc.metadata.get("relevance_score", 0.0)
-                doc.metadata["relevance_score"] = current_score * 5.0  # 부스팅 배수를 50에서 5로 낮춤
+                doc.metadata["relevance_score"] = current_score * 7.0  # 부스팅 배수를 50에서 7로 낮춤
         
         # 2. 소프트맥스 정규화
         import torch
@@ -700,9 +1012,10 @@ async def generate_llm_response(
     conversation_history=None,
 ) -> dict:
     """LLM 답변 생성"""
-    conversation_history = []
+    conversation_history = conversation_history or []
     # 컨텍스트 구성 - 각 문서를 명확하게 구분
     context_parts = []
+    image_only = True
     for i, doc in enumerate(top_docs, 1):
         source_path = doc.metadata.get("source", "unknown")
         clean_filename = extract_clean_filename(source_path)
@@ -711,21 +1024,34 @@ async def generate_llm_response(
         source_info = f"[{clean_filename} p.{page_num}]" if page_num and page_num > 1 else f"[{clean_filename}]"
         
         # 각 문서를 명확하게 구분하여 할루시네이션 방지
-        document_block = f"""==== 문서 {i}: {source_info} ====
+        if doc.page_content:
+            image_only = False
+            document_block = f"""==== 문서 {i}: {source_info} ====
 {doc.page_content}
 ==== 문서 {i} 끝 ===="""
-        
-        context_parts.append(document_block)
+            context_parts.append(document_block)
 
-    context_str = "\\n\\n".join(context_parts)
+    context_str = "\\n\\n".join(context_parts) if context_parts else ""
     
     # 프롬프트 생성
-    messages = create_chat_messages(
-        question=question,
-        context=context_str,
-        conversation_history=conversation_history,
-        language="ko"
-    )
+    if image_only and top_docs:
+        messages = create_image_only_prompt(
+            question=question,
+            image_info=[{
+                "display_name": extract_clean_filename(doc.metadata.get("source", "unknown")),
+                "page": doc.metadata.get("page", 1),
+                "processed_images": doc.metadata.get("processed_images", [])
+            } for doc in top_docs],
+            conversation_history=conversation_history,
+            language="ko"
+        )
+    else:
+        messages = create_chat_messages(
+            question=question,
+            context=context_str,
+            conversation_history=conversation_history,
+            language="ko"
+        )
     
     # 템플릿 적용
     if hasattr(tokenizer_for_template_application, 'apply_chat_template'):
@@ -748,10 +1074,7 @@ async def generate_llm_response(
         images = doc.metadata.get("images", [])
         image_captions = doc.metadata.get("image_captions", [])
         
-        # 디버깅을 위한 로그
-        if has_images or images:
-            print(f"📸 이미지 발견: {extract_clean_filename(source_path)} - has_images: {has_images}, images: {len(images) if images else 0}")
-        
+
         # 이미지 정보를 구조화하여 프론트엔드에서 사용하기 쉽게 처리
         processed_images = []
         if has_images and images:

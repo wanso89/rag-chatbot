@@ -1,0 +1,55 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1752031091652",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "버티카 국내 레퍼런스에 대한 자료가 있어?",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "네, 버티카 국내 레퍼런스에 대한 자료가 있습니다. 이 자료는 \"버티카 국내 레퍼런스_2024.pdf\"라는 이름의 파일에 포함되어 있으며, 이를 통해 다양한 정보를 얻을 수 있습니다. 이 레퍼런스에는 버티카 관련 데이터베이스 및 분석 솔루션에 대한 상세한 정보와 사용법이 포함되어 있습니다. 필요한 특정 정보나 내용을 알려주시면, 해당 부분에 대한 자세한 답변을 드릴 수 있습니다.",
+      "sources": [
+        {
+          "path": "버티카 국내 레퍼런스_2024.pdf",
+          "display_name": "버티카 국내 레퍼런스_2024.pdf",
+          "page": 1,
+          "chunk_id": "batch1_0",
+          "score": 2,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/버티카 국내 레퍼런스_2024/page_1.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/버티카 국내 레퍼런스_2024/page_1.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: 버티카 국내 레퍼런스과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/버티카 국내 레퍼런스_2024/page_1.png",
+              "url": "/api/image-viewer/document_images/버티카 국내 레퍼런스_2024/page_1.png",
+              "caption": "이미지 1: 버티카 국내 레퍼런스과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1: 버티카 국내 레퍼런스과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": false
+        }
+      ]
+    }
+  ],
+  "timestamp": "2025-07-09T12:18:25.863941"
+}

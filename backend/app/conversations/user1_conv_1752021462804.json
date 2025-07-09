@@ -1,0 +1,22 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1752021462804",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "보안서약서 2조 및 4조 내용 설명해줘",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "sources": []
+    }
+  ],
+  "timestamp": "2025-07-09T09:37:55.382992"
+}

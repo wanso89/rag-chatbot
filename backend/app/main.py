@@ -375,7 +375,7 @@ async def search_and_combine(
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 
-        # 1. 검색 (비동기 처리) - 검색 결과 수 최적화
+        # 1. 검색  - 검색 결과 수 최적화
         retrieval_start = time.time()
         # ElasticsearchRetriever - 2단계 검색 방식으로 개선 (Qwen 대안쿼리 제거)
         retriever = ElasticsearchRetriever(
@@ -383,7 +383,7 @@ async def search_and_combine(
             index_name=ES_INDEX_NAME,
             embedding_function=embedding_function,
             category=category,
-            k=30,
+            k=15,
             llm_model=None,      # Qwen 대안쿼리 비활성화
             tokenizer=None       # Qwen 대안쿼리 비활성화
         )
@@ -410,7 +410,7 @@ async def search_and_combine(
         #reranker = EnhancedLocalReranker(reranker_model, top_n=18)
 
         try:
-            #reranked_docs = reranker.rerank(query, docs)
+            #reranked_docs = reranker.rerank(query, docs) 현재 리랭킹 비활성화 -> except로 빠지게하였음 
             rerank_time = time.time() - rerank_start
             print(f"Reranking time: {rerank_time:.2f}s, Reranked to {len(reranked_docs)} docs.")
             print(f"리랭킹 성능 분석: 리랭킹 시간 {rerank_time:.2f}초, 문서 수 {len(reranked_docs)}개")
@@ -420,7 +420,7 @@ async def search_and_combine(
             # 리랭킹 실패 시 원본 문서 사용
             reranked_docs = docs[:15]  # 상위 15개만 사용
             rerank_time = time.time() - rerank_start
-            print(f"Reranking time (error case): {rerank_time:.2f}s")
+            print(f"docs rank : {rerank_time:.2f}s")
 
         # 최종 토큰 수 제한
         # 컨텍스트 크기를 최대 8,192 토큰으로 제한
@@ -444,9 +444,6 @@ async def search_and_combine(
             page = doc.metadata.get('page', 0)
             score = doc.metadata.get('relevance_score', 0)
             print(f"  {i+1}. {source} p.{page} (score: {score:.3f})")
-        for doc in final_docs:
-            if doc.metadata.get('page') == 25 and '사내규정모음집' in doc.metadata.get('source', ''):
-                print(f"🚨 final_docs에 p.25 발견!!")
         # LLM 입력 형식으로 변환
         # 리랭킹 결과 문서들을 하나의 컨텍스트로 결합
         context_chunks = []
@@ -527,8 +524,6 @@ async def search_and_combine(
                     "processed_images": processed_images,
                     "image_count": len(processed_images)
                 })
-                
-                print(f"📸 이미지 정보 추가: {clean_filename} - {len(processed_images)}개 이미지")
             else:
                 metadata_item.update({
                     "has_images": False,
@@ -541,7 +536,11 @@ async def search_and_combine(
 
         full_context = "\n\n".join(context_chunks)
         print(f"Combined context length: {len(full_context)} characters.")
-        # LLM으로 답변 생성
+        # LLM이 프롬프트 텍스트를 생성하는단계 
+        '''요약이나 제목 생성을 쓸때도 사용하면 여러가지 답변형식이 가능하나 현재는 안쓰고 있음 
+        -> history 기반으로 답변을 생성하나 통계기반 답변으로 답변에 노이즈가 낄 수 있고 추후 개선 필요함
+        -> 멀티턴 방식으로 진행하기 위해 히스토리를 살리되 각각의 채팅세션으로 캐시나 히스토리를 분리해야함
+        '''
         llm_start = time.time()
         answer = await generate_llm_response(
             tokenizer,
@@ -557,7 +556,7 @@ async def search_and_combine(
         with torch.no_grad():
             outputs = llm_model.generate(
                 **inputs,
-                max_new_tokens=1024,
+                max_new_tokens=2048,
                 temperature=0.2,
                 do_sample=True,
                 repetition_penalty=1.1,  # 반복 억제를 위한 페널티 추가
@@ -610,89 +609,26 @@ async def search_and_combine(
             
     # 응답 정제 적용
         cleaned_answer = clean_response(answer)
-        print(f"원본 응답 시작 부분: {answer[:50]}...")
-        print(f"정제된 응답 시작 부분: {cleaned_answer[:50]}...")
         
         # 검색해서 히트된 모든 문서를 출처로 표시 (간단하고 직관적)
         cited_sources = []
-        
-        # 응답 처리 - 정제된 응답 사용
-        if not cleaned_answer or cleaned_answer.strip() == "":
-            print("정제된 응답이 비어있어 원본 응답을 사용합니다.")
-            cleaned_answer = "안녕하세요! 어떻게 도와드릴까요?"
-        
+            
         # 문서와 이미지를 쌍으로 묶어서 출처 생성 (2n개 방식)
         print(f"문서-이미지 쌍 생성 시작: 총 {len(source_metadata)}개 문서")
         cited_sources = []
         qualified_sources = []
         
-        # 스코어 임계값 설정 (상위 30% 이상만 선택) - 이미지 포함을 위해 더 관대하게
-        scores = [meta.get("score", 0) for meta in source_metadata]
-        if scores:
-            score_threshold = sorted(scores, reverse=True)[min(len(scores)//3, len(scores)-1)]  # 상위 30% 기준
-            score_threshold = max(score_threshold, 0.25)  # 최소 0.25 이상
-        else:
-            score_threshold = 0.25
+        # 스코어 임계값 설정 제거 - 직접 인용된 문서만 출처로 포함
+        print("스코어 임계값 설정 없이 직접 인용된 문서만 출처로 포함합니다.")
         
-        print(f"스코어 임계값: {score_threshold:.3f}")
-        
-        # 문서와 이미지 쌍으로 처리
+        # 초기화
         for i, meta in enumerate(source_metadata):
-            score = meta.get("score", 0)
-            display_name = meta.get('display_name', 'unknown')
-            has_images = meta.get("has_images", False)
-            images = meta.get("images", [])
-            
-            # 임계값 이상의 문서만 선택
-            if score >= score_threshold:
-                # 1. 문서 자체를 출처로 추가
-                qualified_sources.append({
-                    'meta': meta,
-                    'score': score,
-                    'index': i,
-                    'directly_cited': False,
-                    'reason': 'high_score'
-                })
-                print(f"  ✅ 고품질 출처: {display_name} (스코어: {score:.3f})")
-                
-                # 2. 이미지가 있는 경우 이미지도 별도 출처로 추가
-                if has_images and images:
-                    for img_index, img_path in enumerate(images):
-                        img_meta = {
-                            'path': img_path,
-                            'display_name': f"{display_name} - 이미지 {img_index + 1}",
-                            'page': meta.get('page', 1),
-                            'chunk_id': f"{meta.get('chunk_id', i)}_img_{img_index}",
-                            'score': score,  # 부모 문서와 동일한 스코어
-                            'element_type': 'image',
-                            'has_images': True,
-                            'images': [img_path],
-                            'processed_images': meta.get('processed_images', []),
-                            'image_count': 1,
-                            'is_cited': True,
-                            'parent_document': meta.get('path', ''),    
-                            'image_index': img_index
-                        }
-                        
-                        qualified_sources.append({
-                            'meta': img_meta,
-                            'score': score,
-                            'index': len(qualified_sources),  # 새로운 인덱스
-                            'directly_cited': False,
-                            'reason': 'related_image'
-                        })
-                        print(f"  🖼️ 연관 이미지 추가: {display_name} - 이미지 {img_index + 1}")
+            meta["is_cited"] = False  # 초기값 설정
         
-        # 메타데이터에 is_cited 설정
-        cited_indices = {source['index'] for source in qualified_sources}
-        for i, meta in enumerate(source_metadata):
-            if i in cited_indices:
-                meta["is_cited"] = True
-                cited_sources.append(meta)
-            else:
-                meta["is_cited"] = False
-        
-        print(f"엄격한 선별된 출처: {len(cited_sources)}개 (임계값 {score_threshold:.3f} 이상)")
+        # 메타데이터에 is_cited 설정 - 초기화
+        cited_sources = []
+        qualified_sources = []
+        print("직접 인용 여부에 따라 출처를 선별합니다.")
         
         # 유효한 응답이 있는 경우 추가적으로 인용 기반 출처 선별
         if cleaned_answer and isinstance(cleaned_answer, str) and cleaned_answer.strip():
@@ -772,11 +708,9 @@ async def search_and_combine(
                                 })
                                 print(f"  ✅ 관련 이미지 추가: {display_name} - 이미지 {img_index + 1} (스코어: {max(score, 0.95):.3f})")
 
-            # 직접 인용이 없으면 기본 점수 기준으로 폴백
+            # 직접 인용이 없으면 출처를 추가하지 않음
             if not new_qualified_sources:
-                print("  ⚠️ 직접 인용 매칭 실패, 기본 점수 기준으로 폴백")
-                # 기본 qualified_sources 사용
-                new_qualified_sources = qualified_sources
+                print("  ⚠️ 직접 인용 매칭 실패, 출처 추가 없음")
 
             # 정렬: 직접 인용 > 스코어 순
             new_qualified_sources.sort(key=lambda x: (x.get('directly_cited', False), x['score']), reverse=True)
@@ -793,7 +727,7 @@ async def search_and_combine(
             document_sources = [source for source in final_sources if source['meta'].get('element_type', 'text') != 'image'][:2]
             image_sources = [source for source in final_sources if source['meta'].get('element_type', 'text') == 'image'][:2]
             final_limited_sources = document_sources + image_sources
-            cited_indices = {source['index'] for source in final_limited_sources}
+            cited_indices = {source['index'] for source in final_limited_sources if 'index' in source}
             for i, meta in enumerate(source_metadata):
                 if i in cited_indices:
                     meta["is_cited"] = True
@@ -2616,8 +2550,8 @@ def extract_keywords_from_text(text, max_keywords=12):
             'the', 'a', 'an', 'is', 'are', 'was', 'were', 'in', 'on', 'at', 'to', 'for', 'of',
             '있는', '없는', '경우', '때문', '위해', '통해', '따라', '의해', '의한', '때는',
             '있습니다', '없습니다', '합니다', '입니다', '됩니다', '관련', '때문에', '위하여',
-            '만약', '그러나', '하지만', '또한', '그리고', '따라서', '이러한', '그러한', 
-            '이것', '그것', '저것', '무엇', '어디', '언제', '누구'
+            '만약', '그러나', '하지만', '또한', '그리고', '따라서', '이러한', '그러한','다른','그럼', 
+            '이것', '그것', '저것', '무엇', '어디', '언제', '누구', '받을', '있니', '는', '?', '!'
         }
         
         # 중복 제거 및 단어 개수 세기

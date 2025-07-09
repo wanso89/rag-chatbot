@@ -1,0 +1,22 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1751936079468",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "VDI 점검리포트에서 VM사용현황을 알려줘",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "sources": []
+    }
+  ],
+  "timestamp": "2025-07-08T09:54:55.968955"
+}

@@ -65,7 +65,7 @@ Reference Documents:
     return messages
 
 
-
+#사용자 자연어 질문을 -> ES에 적합한 키워드 검색으로 대체하려했으나 성능이 좋지않아 폐기
 def create_query_optimization_prompt(query: str, category: str | None = None) -> str:
     """
     사용자의 자연어 질문 → 검색 엔진용 키워드 세트로 변환하기 위한 프롬프트.
@@ -157,3 +157,86 @@ def create_title_generation_prompt(conversation_history: List[Dict[str, Any]]) -
 
 <|im_start|>assistant
 """
+
+def create_image_only_prompt(
+    question: str, 
+    image_info: List[Dict[str, Any]], 
+    conversation_history: Optional[List[Dict[str, Any]]] = None,
+    language: str = "ko"
+) -> List[Dict[str, str]]:
+    """
+    이미지 검색 결과만 있을 때 사용자 쿼리를 기반으로 답변을 생성하는 프롬프트
+    
+    Args:
+        question: 사용자 질문
+        image_info: 이미지 정보 리스트
+        conversation_history: 대화 기록
+        language: 언어 설정
+        
+    Returns:
+        List[Dict]: messages 형식으로 반환
+    """
+    messages = []
+    
+    if conversation_history:
+        recent_history = conversation_history[-3:] if len(conversation_history) > 3 else conversation_history
+        for msg in recent_history:
+            if isinstance(msg, dict) and "role" in msg and "content" in msg:
+                messages.append({"role": msg["role"], "content": msg["content"]})
+    
+    # 시스템 메시지
+    if language == "ko":
+        system_content = f"""당신은 사용자 질문에 대해 주어진 이미지 정보를 기반으로 답변하는 한국어 AI 어시스턴트입니다.
+
+**중요한 출처 인용 규칙:**
+1. 답변할 때는 반드시 실제로 사용한 이미지의 출처를 정확히 명시하세요.
+2. 절대로 잘못된 출처를 인용하지 마세요.
+3. 답변 내용이 어떤 이미지에서 나온 것인지 신중히 확인하고 그 이미지만 인용하세요.
+4. 형식: "[이미지: 파일명 p.페이지번호]" 또는 "[이미지: 파일명]"
+
+**답변 지침:**
+- 반드시 한국어로만 답변하세요
+- 답변은 아래 '참고 이미지 정보' 섹션의 내용에 근거하거나, 사용자 질문에 직접적으로 답변해야 합니다
+- 근거가 없는 경우 정보 제공이 어렵다고 정중히 안내하세요
+- 사용자가 이미지나 표를 요청할 때는 아래에 이미지 출처가 있으니 그쪽으로 안내하세요
+
+참고 이미지 정보:
+{format_image_info(image_info)}"""
+    else:
+        system_content = f"""You are an AI assistant answering questions based on provided image information.
+
+**Important Citation Rules:**
+1. Always cite the exact source image you actually use for your answer.
+2. Never cite incorrect sources.
+3. Check carefully which image your answer content comes from and cite only that image.
+4. Format: "[Image: Filename p.PageNumber]" or "[Image: Filename]"
+
+Reference Image Information:
+{format_image_info(image_info)}"""
+    
+    messages.insert(0, {"role": "system", "content": system_content})
+    messages.append({"role": "user", "content": question})
+    
+    return messages
+
+def format_image_info(image_info: List[Dict[str, Any]]) -> str:
+    """
+    이미지 정보를 포맷팅하여 문자열로 반환
+    
+    Args:
+        image_info: 이미지 정보 리스트
+        
+    Returns:
+        str: 포맷팅된 이미지 정보 문자열
+    """
+    if not image_info:
+        return "이미지 정보가 없습니다."
+    
+    formatted_info = []
+    for i, info in enumerate(image_info, 1):
+        filename = info.get("display_name", "unknown")
+        page = info.get("page", 1)
+        caption = info.get("processed_images", [{}])[0].get("caption", "캡션 없음") if info.get("processed_images") else "캡션 없음"
+        formatted_info.append(f"==== 이미지 {i}: {filename} p.{page} ====\n{caption}\n==== 이미지 {i} 끝 ====")
+    
+    return "\\n\\n".join(formatted_info)

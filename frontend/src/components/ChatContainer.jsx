@@ -418,6 +418,21 @@ const IndexedFilesModal = ({ isOpen, onClose }) => {
     // 새 탭에서 열기
     window.open(viewerUrl, '_blank');
   };
+  
+  const handlePreviewClick = (filePath) => {
+    const ext = filePath.split('.').pop().toLowerCase();
+    const isExcel = ext === 'xls' || ext === 'xlsx';
+
+    if (isExcel) {
+      // 엑셀만 전용 미리보기
+      const excelUrl = `/preview/excel?file_path=${encodeURIComponent(filePath)}`;
+      window.open(excelUrl, '_blank');
+    } else {
+      // 나머지는 기존 파일 뷰어 엔드포인트
+      const viewerUrl = `/api/file-viewer/${encodeURIComponent(filePath)}`;
+      window.open(viewerUrl, '_blank');
+    }
+  };
 
   // 검색어로 필터링된 파일 목록
   const filteredFiles = searchQuery 
@@ -631,9 +646,9 @@ const IndexedFilesModal = ({ isOpen, onClose }) => {
                     </div>
                     <div className="flex items-center gap-2">
                       <button 
-                        onClick={() => handleFileClick(filename)}
+                        onClick={() => handlePreviewClick(filename)}
                         className="p-2 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-full transition-colors"
-                        title="새 탭에서 보기"
+                        title="미리보기"
                       >
                         <FiExternalLink size={16} />
                       </button>
@@ -823,6 +838,7 @@ function ChatContainer({
   const [selectedSourceHighlights, setSelectedSourceHighlights] = useState([]);
   const prevMessageLengthRef = useRef(messages.length);
   const [filesToUpload, setFilesToUpload] = useState([]);
+  const [imageModal, setImageModal] = useState({ isOpen: false, images: [], title: '' });
   
   // 응답 스트리밍 중지 컨트롤러
   const abortControllerRef = useRef(new AbortController());
@@ -1166,7 +1182,7 @@ function ChatContainer({
     return (
       <>
         {/* 메시지 목록 출력 */}
-        {messagesToRender.map((message, index) => {
+          {messagesToRender.map((message, index) => {
           const prevMessage = index > 0 ? messagesToRender[index - 1] : null;
           const nextMessage = index < messagesToRender.length - 1 ? messagesToRender[index + 1] : null;
           
@@ -1182,6 +1198,7 @@ function ChatContainer({
               prevMessage={prevMessage}
               nextMessage={nextMessage}
               onAskFollowUp={handleAskFollowUp}
+              onViewImages={onViewImages}
             />
           );
         })}
@@ -1200,7 +1217,7 @@ function ChatContainer({
   };
   
   // 후속 질문 핸들러
-  const handleAskFollowUp = (question) => {
+  const handleAskFollowUp = useCallback((question) => {
     if (!question || !chatInputRef.current) return;
     
     // 채팅 입력창에 질문 설정 후 자동 포커스
@@ -1211,7 +1228,59 @@ function ChatContainer({
         chatInputRef.current.focus();
       }
     }, 50);
-  };
+  }, []);
+
+  // 이미지 보기 핸들러
+  const onViewImages = useCallback(async (source) => {
+    try {
+      console.log('이미지 보기 요청:', source);
+      
+      // 소스에서 path 또는 source 속성 가져오기
+      const sourcePath = source.path || source.source;
+      if (!sourcePath) {
+        console.error('출처 경로가 없습니다:', source);
+        return;
+      }
+
+      // 백엔드 API 호출하여 해당 출처의 이미지 목록 가져오기
+      const response = await fetch('/api/source-images', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          source_path: sourcePath,
+          page: source.page || null
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`서버 응답 오류: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.status === 'success' && data.images && data.images.length > 0) {
+        // 이미지 모달 열기
+        setImageModal({
+          isOpen: true,
+          images: data.images.map(img => ({
+            url: img.url,
+            caption: img.caption || `페이지 ${img.page} 이미지`,
+            ocr_text: img.ocr_text
+          })),
+          title: `${source.display_name || '문서'} 이미지`
+        });
+      } else {
+        console.log('이미지가 없습니다:', data.message || '이미지를 찾을 수 없습니다');
+        // 사용자에게 알림 (선택사항)
+        alert('해당 출처에 이미지가 없습니다.');
+      }
+    } catch (error) {
+      console.error('이미지 가져오기 오류:', error);
+      alert('이미지를 가져오는 중 오류가 발생했습니다.');
+    }
+  }, []);
   
   // 새 대화 시작 핸들러 - 모달 없이 바로 새 대화 생성으로 수정
   const handleStartNewChat = () => {
@@ -1682,6 +1751,65 @@ function ChatContainer({
           isOpen={fileManagerOpen}
           onClose={() => setFileManagerOpen(false)}
         />
+      )}
+
+      {/* 이미지 모달 */}
+      {imageModal.isOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4" onClick={() => setImageModal({ isOpen: false, images: [], title: '' })}>
+          <div className="relative max-w-7xl max-h-[90vh] w-full h-full flex items-center justify-center">
+            {/* 닫기 버튼 */}
+            <button
+              onClick={() => setImageModal({ isOpen: false, images: [], title: '' })}
+              className="absolute top-4 right-4 z-10 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors"
+            >
+              <FiX size={24} />
+            </button>
+            
+            {/* 이미지 컨테이너 */}
+            <div className="relative max-w-full max-h-full flex flex-col" onClick={(e) => e.stopPropagation()}>
+              {/* 제목 */}
+              {imageModal.title && (
+                <div className="mb-4 bg-black/60 backdrop-blur-sm rounded-lg p-3 text-white text-center">
+                  <h3 className="text-lg font-medium">{imageModal.title}</h3>
+                </div>
+              )}
+              
+              {/* 이미지 그리드 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                {imageModal.images.map((image, index) => (
+                  <div key={index} className="relative bg-gray-800 rounded-lg overflow-hidden">
+                    <img
+                      src={image.url}
+                      alt={image.caption}
+                      className="w-full h-64 object-contain bg-gray-900"
+                      loading="lazy"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        if (e.target.nextSibling) {
+                          e.target.nextSibling.style.display = 'flex';
+                        }
+                      }}
+                    />
+                    {/* 이미지 로딩 실패 시 표시할 대체 요소 */}
+                    <div className="hidden w-full h-64 bg-gray-800 rounded-lg items-center justify-center text-gray-400">
+                      <div className="text-center">
+                        <FiAlertCircle size={48} className="mx-auto mb-2" />
+                        <p className="text-sm">이미지를 불러올 수 없습니다</p>
+                      </div>
+                    </div>
+                    
+                    {/* 캡션 */}
+                    {image.caption && (
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/70 backdrop-blur-sm p-2">
+                        <p className="text-white text-sm text-center">{image.caption}</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

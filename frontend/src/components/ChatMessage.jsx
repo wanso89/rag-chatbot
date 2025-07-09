@@ -6,6 +6,8 @@ import remarkMath from "remark-math";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus as oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { useState, memo, useCallback, useMemo, useEffect, useRef } from "react";
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import {
   FiEye,
   FiZoomIn,
@@ -48,6 +50,7 @@ import {
 import rehypeRaw from 'rehype-raw';  // HTML 태그 처리를 위한 플러그인 추가
 import parse from 'html-react-parser'; // HTML 파싱을 위한 라이브러리 추가
 import DOMPurify from 'dompurify';
+import SourcesSection from './SourcesSection';
 
 // 키워드 하이라이트 애니메이션을 위한 키프레임 스타일 정의
 const keyframesStyle = `
@@ -555,6 +558,293 @@ const FeedbackToast = ({ isVisible, message, type, onClose }) => {
   );
 };
 
+// 간단한 마크다운 렌더러 컴포넌트
+const SimpleMarkdownRenderer = ({ content }) => {
+  if (!content || typeof content !== 'string') {
+    return <div className="text-gray-500">내용이 없습니다.</div>;
+  }
+
+  const parseMarkdown = (text) => {
+    const lines = text.split('\n');
+    const elements = [];
+    let currentList = null;
+    let currentListType = null;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      
+      // 빈 줄 처리
+      if (line.trim() === '') {
+        if (currentList) {
+          elements.push(currentList);
+          currentList = null;
+          currentListType = null;
+        }
+        elements.push(<br key={`br-${i}`} />);
+        continue;
+      }
+
+      // 헤딩 처리
+      if (line.startsWith('#')) {
+        if (currentList) {
+          elements.push(currentList);
+          currentList = null;
+          currentListType = null;
+        }
+        
+        const level = line.match(/^#+/)[0].length;
+        const text = line.replace(/^#+\s*/, '');
+        const className = level === 1 ? 'text-2xl font-bold mb-4 mt-6 text-gray-900 dark:text-gray-100' :
+                         level === 2 ? 'text-xl font-bold mb-3 mt-5 text-gray-900 dark:text-gray-100' :
+                         level === 3 ? 'text-lg font-semibold mb-2 mt-4 text-gray-900 dark:text-gray-100' :
+                         'text-base font-semibold mb-2 mt-3 text-gray-900 dark:text-gray-100';
+        
+        elements.push(
+          React.createElement(`h${Math.min(level, 6)}`, {
+            key: `h${level}-${i}`,
+            className
+          }, parseInlineMarkdown(text))
+        );
+        continue;
+      }
+
+      // 순서 없는 리스트 처리 (-, *, +)
+      if (line.match(/^\s*[-*+]\s+/)) {
+        const text = line.replace(/^\s*[-*+]\s+/, '');
+        const listItem = (
+          <li key={`li-${i}`} className="text-gray-700 dark:text-gray-300 mb-1">
+            {parseInlineMarkdown(text)}
+          </li>
+        );
+
+        if (currentListType !== 'ul') {
+          if (currentList) {
+            elements.push(currentList);
+          }
+          currentList = (
+            <ul key={`ul-${i}`} className="list-disc list-inside mb-4 ml-4 space-y-1">
+              {listItem}
+            </ul>
+          );
+          currentListType = 'ul';
+        } else {
+          currentList = React.cloneElement(currentList, {}, [
+            ...React.Children.toArray(currentList.props.children),
+            listItem
+          ]);
+        }
+        continue;
+      }
+
+      // 순서 있는 리스트 처리
+      if (line.match(/^\s*\d+\.\s+/)) {
+        const text = line.replace(/^\s*\d+\.\s+/, '');
+        const listItem = (
+          <li key={`li-${i}`} className="text-gray-700 dark:text-gray-300 mb-1">
+            {parseInlineMarkdown(text)}
+          </li>
+        );
+
+        if (currentListType !== 'ol') {
+          if (currentList) {
+            elements.push(currentList);
+          }
+          currentList = (
+            <ol key={`ol-${i}`} className="list-decimal list-inside mb-4 ml-4 space-y-1">
+              {listItem}
+            </ol>
+          );
+          currentListType = 'ol';
+        } else {
+          currentList = React.cloneElement(currentList, {}, [
+            ...React.Children.toArray(currentList.props.children),
+            listItem
+          ]);
+        }
+        continue;
+      }
+
+      // 코드 블록 처리
+      if (line.startsWith('```')) {
+        if (currentList) {
+          elements.push(currentList);
+          currentList = null;
+          currentListType = null;
+        }
+        
+        const language = line.replace('```', '').trim();
+        let codeContent = '';
+        let j = i + 1;
+        
+        while (j < lines.length && !lines[j].startsWith('```')) {
+          codeContent += lines[j] + '\n';
+          j++;
+        }
+        
+        elements.push(
+          <div key={`code-${i}`} className="my-3 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+            {language && (
+              <div className="px-3 py-1 text-xs text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700">
+                {language}
+              </div>
+            )}
+            <pre className="p-4 overflow-x-auto">
+              <code className="text-sm text-gray-800 dark:text-gray-200 font-mono">
+                {codeContent.trim()}
+              </code>
+            </pre>
+          </div>
+        );
+        
+        i = j; // 코드 블록 끝까지 스킵
+        continue;
+      }
+
+      // 인용문 처리
+      if (line.startsWith('>')) {
+        if (currentList) {
+          elements.push(currentList);
+          currentList = null;
+          currentListType = null;
+        }
+        
+        const text = line.replace(/^>\s*/, '');
+        elements.push(
+          <blockquote key={`quote-${i}`} className="border-l-4 border-indigo-500 pl-4 my-4 italic text-gray-600 dark:text-gray-400">
+            {parseInlineMarkdown(text)}
+          </blockquote>
+        );
+        continue;
+      }
+
+      // 일반 문단 처리
+      if (currentList) {
+        elements.push(currentList);
+        currentList = null;
+        currentListType = null;
+      }
+      
+      elements.push(
+        <p key={`p-${i}`} className="mb-2 last:mb-0 text-base leading-relaxed text-gray-700 dark:text-gray-300">
+          {parseInlineMarkdown(line)}
+        </p>
+      );
+    }
+
+    // 마지막 리스트 추가
+    if (currentList) {
+      elements.push(currentList);
+    }
+
+    return elements;
+  };
+
+  const parseInlineMarkdown = (text) => {
+    if (!text || typeof text !== 'string') return text;
+
+    const elements = [];
+    let currentIndex = 0;
+    
+    // 인라인 코드 (`code`)
+    const codeRegex = /`([^`]+)`/g;
+    let match;
+    
+    while ((match = codeRegex.exec(text)) !== null) {
+      // 매치 이전 텍스트 추가
+      if (match.index > currentIndex) {
+        const beforeText = text.substring(currentIndex, match.index);
+        elements.push(...parseOtherInline(beforeText, elements.length));
+      }
+      
+      // 인라인 코드 추가
+      elements.push(
+        <code key={`code-${elements.length}`} className="px-1.5 py-0.5 rounded-md bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm font-mono">
+          {match[1]}
+        </code>
+      );
+      
+      currentIndex = codeRegex.lastIndex;
+    }
+    
+    // 남은 텍스트 처리
+    if (currentIndex < text.length) {
+      const remainingText = text.substring(currentIndex);
+      elements.push(...parseOtherInline(remainingText, elements.length));
+    }
+    
+    return elements.length > 0 ? elements : text;
+  };
+
+  const parseOtherInline = (text, startIndex) => {
+    if (!text) return [];
+    
+    const elements = [];
+    let processedText = text;
+    
+    // 볼드 처리 (**text**)
+    processedText = processedText.replace(/\*\*([^*]+)\*\*/g, (match, content) => {
+      const placeholder = `__BOLD_${startIndex + elements.length}__`;
+      elements.push(
+        <strong key={`bold-${startIndex + elements.length}`} className="font-bold">
+          {content}
+        </strong>
+      );
+      return placeholder;
+    });
+    
+    // 이탤릭 처리 (*text*)
+    processedText = processedText.replace(/\*([^*]+)\*/g, (match, content) => {
+      const placeholder = `__ITALIC_${startIndex + elements.length}__`;
+      elements.push(
+        <em key={`italic-${startIndex + elements.length}`} className="italic">
+          {content}
+        </em>
+      );
+      return placeholder;
+    });
+    
+    // 링크 처리 [text](url)
+    processedText = processedText.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, linkText, url) => {
+      const placeholder = `__LINK_${startIndex + elements.length}__`;
+      elements.push(
+        <a key={`link-${startIndex + elements.length}`} 
+           href={url} 
+           target="_blank" 
+           rel="noopener noreferrer"
+           className="text-indigo-500 dark:text-indigo-400 hover:underline">
+          {linkText}
+          <FiExternalLink className="inline-block ml-1 mb-1" size={12} />
+        </a>
+      );
+      return placeholder;
+    });
+    
+    // 플레이스홀더를 실제 요소로 교체
+    const parts = processedText.split(/(__(?:BOLD|ITALIC|LINK)_\d+__)/);
+    const result = [];
+    
+    for (const part of parts) {
+      if (part.startsWith('__') && part.endsWith('__')) {
+        const index = parseInt(part.match(/\d+/)[0]);
+        const element = elements.find(el => el.key && el.key.includes(index));
+        if (element) {
+          result.push(element);
+        }
+      } else if (part) {
+        result.push(part);
+      }
+    }
+    
+    return result.length > 0 ? result : [text];
+  };
+
+  return (
+    <div className="markdown-content">
+      {parseMarkdown(content)}
+    </div>
+  );
+};
+
 // UUID 제거 함수 정의
 const getCleanFileName = (filePath) => {
   if (!filePath) return '알 수 없는 출처';
@@ -1017,7 +1307,18 @@ const SourceItem = ({ source, onClick, isFiltered = false }) => {
     if (source.element_type === 'table_row') {
       return <FiList size={16} />;
     } else if (source.has_images) {
-      return <FiImage size={16} />;
+      return (
+        <button onClick={(e) => {
+          e.stopPropagation();
+          setSelectedImage({
+            src: source.images[0].startsWith('http') ? source.images[0] : `/api/image-viewer/${source.images[0]}`,
+            alt: source.display_name || '이미지',
+            caption: `${source.display_name || '문서'} (페이지 ${source.page || 'N/A'})`
+          });
+        }}>
+          <FiImage size={16} />
+        </button>
+      );
     } else {
       return <FiFileText size={16} />;
     }
@@ -1069,7 +1370,7 @@ const SourceItem = ({ source, onClick, isFiltered = false }) => {
   );
 };
 
-function ChatMessage({ message, searchTerm = "", isSearchMode, prevMessage, nextMessage, onAskFollowUp }) {
+function ChatMessage({ message, searchTerm = "", isSearchMode, prevMessage, nextMessage, onAskFollowUp, onViewImages }) {
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
   const [feedback, setFeedback] = useState(null);
@@ -1109,45 +1410,398 @@ function ChatMessage({ message, searchTerm = "", isSearchMode, prevMessage, next
   // 메시지 내용 준비 - 모든 관련 함수보다 먼저 실행
   // 봇 메시지인 경우 bot_response 사용, 사용자 메시지는 content 사용
   const messageContent = useMemo(() => {
-    const rawContent = message.role === 'user' ? message.content : (message.bot_response || message.content || "");
-    if (!rawContent) return "";
+    // 메시지 자체가 없는 경우
+    if (!message) return "";
     
-    // 마크다운 노드를 문자열로 변환하는 함수
-    const mdNodeToString = (node) => {
-      if (node == null) return '';
-      if (typeof node === 'string') return node;
-      if (Array.isArray(node)) return node.map(mdNodeToString).join('\n');
+    // 로딩 상태 감지 - 다양한 로딩 상태 패턴 확인
+    const isLoading = () => {
+      // 메시지에 로딩 상태 플래그가 있는 경우
+      if (message.loading || message.isLoading || message.pending) return true;
       
-      if (typeof node === 'object' && node !== null) {
-        switch (node.type) {
-          case 'heading':
-            return `${'#'.repeat(node.depth || 1)} ${mdNodeToString(node.children || node.value || '')}`;
-          case 'listItem':
-            return `- ${mdNodeToString(node.children || node.value || '')}`;
-          case 'code':
-            return `\`\`\`${node.lang || ''}\n${node.value || ''}\n\`\`\``;
-          case 'paragraph':
-            return mdNodeToString(node.children || node.value || '');
-          case 'text':
-            return node.value || '';
-          default:
-            return mdNodeToString(node.children || node.value || '');
+      // 내용이 아직 완성되지 않은 상태
+      if (message.role === 'assistant') {
+        const content = message.bot_response || message.content;
+        
+        // 완전히 비어있는 경우
+        if (!content) return true;
+        
+        // undefined나 null 문자열인 경우
+        if (content === "undefined" || content === "null" || content === undefined || content === null) return true;
+        
+        // 스트리밍 중인 것으로 보이는 패턴들
+        if (typeof content === 'string') {
+          // 매우 짧거나 불완전한 응답
+          if (content.length < 3) return true;
+          
+          // 스트리밍 중단 패턴
+          if (content.endsWith('...') || content.endsWith('…')) return true;
+          
+          // 백엔드 오류 메시지 패턴
+          if (content.includes('서버 오류') || content.includes('응답 생성 중')) return true;
         }
       }
-      return String(node);
+      
+      return false;
     };
     
-    // 데이터 평탄화: 배열이나 객체를 문자열로 변환
-    const content = mdNodeToString(rawContent);
+    // 로딩 중인 경우 로딩 메시지 표시
+    if (isLoading()) {
+      return "응답을 생성하고 있습니다...";
+    }
     
-    // 디버그 로그 추가
-    console.log("messageContent type:", typeof content);
-    console.log("messageContent isArray:", Array.isArray(content));
-    console.log("messageContent includes [object Object]:", content.includes('[object Object]'));
-    console.log("messageContent:", content);
+    const rawContent = message.role === 'user' ? message.content : (message.bot_response || message.content || "");
+    
+    // 빈 내용 처리
+    if (!rawContent) return "";
+    
+    // 초기 상태 문자열들 처리
+    if (rawContent === undefined || rawContent === null) return "";
+    if (rawContent === "undefined" || rawContent === "null") return "";
+    if (rawContent === "Loading..." || rawContent === "로딩 중...") return "응답을 생성하고 있습니다...";
+    
+    // 완전한 객체 분석 및 변환 함수
+    const deepStringify = (value, depth = 0, seen = new WeakSet()) => {
+      // 최대 깊이 제한
+      if (depth > 20) {
+        return '';
+      }
+      
+      // null, undefined 처리
+      if (value == null) {
+        return '';
+      }
+      
+      // 순환 참조 방지
+      if (typeof value === 'object' && seen.has(value)) {
+        return '';
+      }
+      
+      // 이미 문자열인 경우
+      if (typeof value === 'string') {
+        // 이미 [object Object]가 포함된 문자열인 경우 정리
+        if (value.includes('[object Object]')) {
+          return value.replace(/\[object Object\]/gi, '').trim();
+        }
+        return value;
+      }
+      
+      // 숫자, 불린값 등 기본 타입
+      if (typeof value === 'number' || typeof value === 'boolean') {
+        return String(value);
+      }
+      
+      // 배열 처리
+      if (Array.isArray(value)) {
+        if (value.length === 0) return '';
+        
+        const results = value
+          .map(item => deepStringify(item, depth + 1, seen))
+          .filter(result => result && result.trim() !== '');
+        
+        return results.join('\n');
+      }
+      
+      // 객체 처리
+      if (typeof value === 'object' && value !== null) {
+        seen.add(value);
+        
+        try {
+          // 특별한 속성들 우선 확인
+          if (value.value !== undefined && value.value !== null) {
+            const result = deepStringify(value.value, depth + 1, seen);
+            if (result) return result;
+          }
+          
+          if (value.text !== undefined && value.text !== null) {
+            const result = deepStringify(value.text, depth + 1, seen);
+            if (result) return result;
+          }
+          
+          if (value.content !== undefined && value.content !== null) {
+            const result = deepStringify(value.content, depth + 1, seen);
+            if (result) return result;
+          }
+          
+          // 백엔드 응답 구조 처리
+          if (value.response !== undefined && value.response !== null) {
+            const result = deepStringify(value.response, depth + 1, seen);
+            if (result) return result;
+          }
+          
+          if (value.data !== undefined && value.data !== null) {
+            const result = deepStringify(value.data, depth + 1, seen);
+            if (result) return result;
+          }
+          
+          // 스트리밍 응답 구조 처리 (OpenAI, Claude 등)
+          if (value.choices && Array.isArray(value.choices) && value.choices.length > 0) {
+            const choice = value.choices[0];
+            if (choice.message && choice.message.content) {
+              const result = deepStringify(choice.message.content, depth + 1, seen);
+              if (result) return result;
+            }
+            if (choice.delta && choice.delta.content) {
+              const result = deepStringify(choice.delta.content, depth + 1, seen);
+              if (result) return result;
+            }
+          }
+          
+          // FastAPI, Flask 등 웹 프레임워크 응답 구조
+          if (value.message !== undefined && value.message !== null) {
+            const result = deepStringify(value.message, depth + 1, seen);
+            if (result) return result;
+          }
+          
+          if (value.result !== undefined && value.result !== null) {
+            const result = deepStringify(value.result, depth + 1, seen);
+            if (result) return result;
+          }
+          
+          if (value.answer !== undefined && value.answer !== null) {
+            const result = deepStringify(value.answer, depth + 1, seen);
+            if (result) return result;
+          }
+          
+          // 백엔드 특별 구조 처리
+          if (value.bot_response !== undefined && value.bot_response !== null) {
+            const result = deepStringify(value.bot_response, depth + 1, seen);
+            if (result) return result;
+          }
+          
+          if (value.generated_text !== undefined && value.generated_text !== null) {
+            const result = deepStringify(value.generated_text, depth + 1, seen);
+            if (result) return result;
+          }
+          
+          // 마크다운 노드 처리
+          if (value.type && typeof value.type === 'string') {
+            return convertMarkdownNode(value, depth, seen);
+          }
+          
+          // 일반 객체의 모든 속성 처리 - 더 강력한 접근법
+          const entries = Object.entries(value);
+          if (entries.length === 0) {
+            return '';
+          }
+          
+          // 먼저 의미있는 텍스트 속성을 찾아보기
+          const meaningfulKeys = ['name', 'title', 'label', 'description', 'text_content', 'body'];
+          for (const key of meaningfulKeys) {
+            if (value[key] && typeof value[key] === 'string') {
+              return value[key];
+            }
+          }
+          
+          const results = entries
+            .map(([key, val]) => {
+              // 시스템 속성이나 메타데이터 속성 무시
+              if ([
+                'type', 'position', 'depth', 'index', 'toString', 'valueOf',
+                'id', 'uuid', 'timestamp', 'created_at', 'updated_at',
+                'metadata', 'schema', 'version', 'status', 'debug'
+              ].includes(key)) {
+                return null;
+              }
+              
+              const convertedValue = deepStringify(val, depth + 1, seen);
+              if (!convertedValue) return null;
+              
+              // 키가 의미있는 경우에만 키와 함께 표시
+              if (['error', 'warning', 'info', 'note'].includes(key.toLowerCase())) {
+                return `${key}: ${convertedValue}`;
+              }
+              
+              // 일반적으로는 값만 반환
+              return convertedValue;
+            })
+            .filter(Boolean);
+          
+          return results.join('\n');
+          
+        } catch (e) {
+          console.warn(`객체 변환 실패:`, e);
+          return '';
+        } finally {
+          seen.delete(value);
+        }
+      }
+      
+      // 함수나 기타 타입
+      if (typeof value === 'function') {
+        return '';
+      }
+      
+      // Symbol 타입 처리
+      if (typeof value === 'symbol') {
+        return '';
+      }
+      
+      // BigInt 타입 처리
+      if (typeof value === 'bigint') {
+        return String(value);
+      }
+      
+      // 마지막 시도: toString 사용 (더 안전하게)
+      try {
+        // toString()이 [object Object]를 반환하는 경우를 미리 체크
+        if (value.toString === Object.prototype.toString) {
+          return '';
+        }
+        
+        const strValue = String(value);
+        if (strValue === '[object Object]' || strValue === '[object object]' || strValue.startsWith('[object ')) {
+          return '';
+        }
+        return strValue;
+      } catch (e) {
+        return '';
+      }
+    };
+    
+    // 마크다운 노드를 문자열로 변환하는 함수
+    const convertMarkdownNode = (node, depth = 0, seen = new WeakSet()) => {
+      if (!node || typeof node !== 'object') {
+        return '';
+      }
+      
+      switch (node.type) {
+        case 'heading':
+          const level = Math.min(Math.max(node.depth || 1, 1), 6);
+          const headingText = deepStringify(node.children || node.value || '', depth + 1, seen);
+          return `${'#'.repeat(level)} ${headingText}`;
+          
+        case 'paragraph':
+          return deepStringify(node.children || node.value || '', depth + 1, seen);
+          
+        case 'text':
+          return node.value || '';
+          
+        case 'code':
+          const lang = node.lang || '';
+          const code = node.value || '';
+          return `\`\`\`${lang}\n${code}\n\`\`\``;
+          
+        case 'inlineCode':
+          return `\`${node.value || ''}\``;
+          
+        case 'list':
+        case 'orderedList':
+        case 'unorderedList':
+          return deepStringify(node.children || '', depth + 1, seen);
+          
+        case 'listItem':
+          const itemText = deepStringify(node.children || node.value || '', depth + 1, seen);
+          return `- ${itemText}`;
+          
+        case 'link':
+          const linkText = deepStringify(node.children || node.title || '', depth + 1, seen);
+          const url = node.url || '';
+          return `[${linkText}](${url})`;
+          
+        case 'image':
+          const alt = node.alt || '';
+          const src = node.url || '';
+          return `![${alt}](${src})`;
+          
+        case 'blockquote':
+          const quoteText = deepStringify(node.children || node.value || '', depth + 1, seen);
+          return `> ${quoteText}`;
+          
+        case 'strong':
+          const strongText = deepStringify(node.children || node.value || '', depth + 1, seen);
+          return `**${strongText}**`;
+          
+        case 'emphasis':
+          const emText = deepStringify(node.children || node.value || '', depth + 1, seen);
+          return `*${emText}*`;
+          
+        case 'break':
+          return '\n';
+          
+        case 'thematicBreak':
+          return '\n---\n';
+          
+        default:
+          if (node.children) {
+            return deepStringify(node.children, depth + 1, seen);
+          } else if (node.value) {
+            return deepStringify(node.value, depth + 1, seen);
+          } else {
+            console.warn(`처리되지 않은 마크다운 노드 타입: ${node.type}`);
+            return '';
+          }
+      }
+    };
+    
+    // 메인 변환 로직
+    let content = deepStringify(rawContent);
+    
+    // 극도로 강력한 [object Object] 제거
+    const cleanObjectPatterns = (text) => {
+      if (!text || typeof text !== 'string') return '';
+      
+      return text
+        // 모든 [object *] 패턴들
+        .replace(/\[object\s+\w+\]/gi, '')
+        .replace(/\[Object\s+\w+\]/gi, '')
+        .replace(/\[\s*object\s+\w+\s*\]/gi, '')
+        // 특별한 케이스들
+        .replace(/\[object Object\]/gi, '')
+        .replace(/\[Object object\]/gi, '')
+        .replace(/\[OBJECT OBJECT\]/gi, '')
+        // 콤마와 함께
+        .replace(/,\s*\[object\s+\w+\]/gi, '')
+        .replace(/\[object\s+\w+\]\s*,/gi, '')
+        .replace(/,\s*\[object\s+\w+\]\s*,/gi, ',')
+        // 줄바꿈과 함께
+        .replace(/\n\s*\[object\s+\w+\]\s*\n/gi, '\n')
+        .replace(/^\s*\[object\s+\w+\]\s*$/gm, '')
+        // 다른 구분자들과 함께
+        .replace(/\(\s*\[object\s+\w+\]\s*\)/gi, '')
+        .replace(/\{\s*\[object\s+\w+\]\s*\}/gi, '')
+        .replace(/"\s*\[object\s+\w+\]\s*"/gi, '')
+        .replace(/'\s*\[object\s+\w+\]\s*'/gi, '')
+        // 연속된 패턴들
+        .replace(/(\[object\s+\w+\]\s*){2,}/gi, '')
+        // undefined나 null 문자열
+        .replace(/\bundefined\b/gi, '')
+        .replace(/\bnull\b/gi, '')
+        // 빈 줄 정리
+        .replace(/\n{3,}/g, '\n\n')
+        .replace(/^\s*\n+/g, '')
+        .replace(/\n+\s*$/g, '')
+        // 중복 콤마 정리
+        .replace(/,+/g, ',')
+        .replace(/,\s*,/g, ',')
+        .replace(/^\s*,+/gm, '')
+        .replace(/,+\s*$/gm, '')
+        .trim();
+    };
+    
+    // 여러 번 정리 (일부 패턴이 중첩되어 있을 수 있음)
+    for (let i = 0; i < 3; i++) {
+      content = cleanObjectPatterns(content);
+      if (!content.includes('[object') && !content.includes('undefined') && !content.includes('null')) {
+        break;
+      }
+    }
+    
+    // 최종 검증
+    if (!content || content === ',' || content === '\n' || /^[\s,\n]*$/.test(content)) {
+      console.warn("변환 후 내용이 비어있음, 원본 재확인");
+      
+      // 원본이 완전한 문자열인지 확인
+      if (typeof rawContent === 'string' && rawContent.length > 0) {
+        // 원본에서도 [object Object] 패턴 제거
+        const cleaned = cleanObjectPatterns(rawContent);
+        return cleaned || "내용을 불러오는 중...";
+      }
+      
+      return "내용을 불러오는 중...";
+    }
     
     return content;
-  }, [message.role, message.content, message.bot_response]);
+  }, [message, message.role, message.content, message.bot_response]);
 
   // 추천 질문 관련 상태
   const suggestedQuestions = useMemo(() => {
@@ -2048,24 +2702,24 @@ function ChatMessage({ message, searchTerm = "", isSearchMode, prevMessage, next
   };
   
   // 출처 정보 디버깅 로그 추가
-  useEffect(() => {
-    if (message.role === 'assistant') {
-      console.log('출처 정보 상태:', JSON.stringify({
-        hasSources: Boolean(message.sources),
-        sourcesLength: message.sources?.length || 0,
-        hasCitedSources: Boolean(message.cited_sources),
-        citedSourcesLength: message.cited_sources?.length || 0,
-        filteredSourcesLength: message.sources?.filter(s => s.is_cited)?.length || 0,
-        sourcesVisible,
-        isLastInGroup
-      }, null, 2));
-    }
-  }, [message, sourcesVisible, isLastInGroup]);
+  // useEffect(() => {
+  //   if (message.role === 'assistant') {
+  //     console.log('출처 정보 상태:', JSON.stringify({
+  //       hasSources: Boolean(message.sources),
+  //       sourcesLength: message.sources?.length || 0,
+  //       hasCitedSources: Boolean(message.cited_sources),
+  //       citedSourcesLength: message.cited_sources?.length || 0,
+  //       filteredSourcesLength: message.sources?.filter(s => s.is_cited)?.length || 0,
+  //       sourcesVisible,
+  //       isLastInGroup
+  //     }, null, 2));
+  //   }
+  // }, [message, sourcesVisible, isLastInGroup]);
   
   // 출처 표시 관련 로직 개선
   const filteredSources = useMemo(() => {
     if (!message.sources || !Array.isArray(message.sources) || message.sources.length === 0) {
-      console.log("유효한 sources 배열이 없습니다:", message.sources);
+      //console.log("유효한 sources 배열이 없습니다:", message.sources);
       return [];
     }
 
@@ -2263,93 +2917,21 @@ function ChatMessage({ message, searchTerm = "", isSearchMode, prevMessage, next
 
     // Ensure content is a string before passing to ReactMarkdown
     const contentAsString = String(content || '');
+    
+    // 사용자 메시지는 간단하게 텍스트만 표시
+    if (isUser) {
+      return (
+        <div className="whitespace-pre-wrap leading-relaxed">
+          {contentAsString}
+        </div>
+      );
+    }
+    
+    // 어시스턴트 메시지는 마크다운 렌더링
     return (
       <div className="message-content-wrapper">
-        {/* 기본 마크다운 콘텐츠 */}
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm, remarkMath]}
-          rehypePlugins={[rehypeKatex, rehypeHighlight, rehypeRaw]}
-          components={{
-            code({ node, inline, className, children, ...props }) {
-              const match = /language-(\w+)/.exec(className || "");
-              const language = match && match[1] ? match[1] : "";
-              
-              // 인라인 코드
-              if (inline) {
-                return (
-                  <code
-                    className="px-1.5 py-0.5 rounded-md bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm font-mono"
-                    {...props}
-                  >
-                    {children}
-                  </code>
-                );
-              }
-              
-              // 코드 블록
-              return (
-                <div className="relative my-0 rounded-lg overflow-hidden">
-                  {language && (
-                    <div className="absolute top-0 right-0 px-0.5 py-0 text-[18px] font-large text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-bl h-4 flex items-center">
-                      {language}
-                    </div>
-                  )}
-                  <SyntaxHighlighter
-                    style={oneDark}
-                    language={language}
-                    PreTag="div"
-                    className="!bg-gray-100 dark:!bg-gray-800 !rounded-xs !text-xs"
-                    customStyle={{ lineHeight: '1.2', padding: '2px' }}
-                  >
-                    {String(children).replace(/\n$/, "")}
-                  </SyntaxHighlighter>
-                </div>
-              );
-            },
-            p({ node, children, ...props }) {
-              return (
-                <p className="mb-0 last:mb-0 text-base" style={{ lineHeight: '1.2', verticalAlign: 'baseline' }} {...props}>
-                  {children}
-                </p>
-              );
-            },
-            a({ node, children, href, ...props }) {
-              // 이미지 URL 처리
-              if (href && /\.(jpg|jpeg|png|gif|webp)$/i.test(href)) {
-                return (
-                  <div className="my-4">
-                    <img
-                      src={href}
-                      alt={children}
-                      className="max-w-full h-auto rounded-lg shadow-md"
-                      onClick={() => {
-                        setImageUrl(href);
-                        setShowImagePreview(true);
-                      }}
-                      style={{ cursor: 'pointer' }}
-                    />
-                  </div>
-                );
-              }
-              
-              // 일반 링크
-              return (
-                <a
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-indigo-500 dark:text-indigo-400 hover:underline"
-                  {...props}
-                >
-                  {children}
-                  <FiExternalLink className="inline-block ml-1 mb-1" size={12} />
-                </a>
-              );
-            }
-          }}
-        >
-          {contentAsString}
-        </ReactMarkdown>
+        {/* 커스텀 마크다운 렌더러 */}
+        <SimpleMarkdownRenderer content={contentAsString} />
 
         {/* 표 데이터 렌더링 */}
         {tables.length > 0 && (
