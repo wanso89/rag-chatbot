@@ -1,0 +1,210 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1752468705562",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "금융 및 통신 발주처 리스트를 말해줘",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "금융 및 통신 발주처 리스트는 다음과 같습니다:\n\n- 신한은행\n- 우리은행\n- KT\n- SKT\n- LGU+\n- 한국신용정보원\n- 새마을금고연합회\n- 롯데손해보험\n- 하나은행\n- 기술보증기금\n- 빗썸 코리아\n- 한화생명금융서비스\n- 한국 조폐공사\n\n위 리스트는 [버티카 국내 레퍼런스_2024.pdf p.2]에 기반하여 추출되었습니다.",
+      "sources": [
+        {
+          "path": "버티카 국내 레퍼런스_2024.pdf",
+          "display_name": "버티카 국내 레퍼런스_2024.pdf",
+          "page": 2,
+          "chunk_id": "batch1_1",
+          "score": 0.5317673087120056,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/버티카 국내 레퍼런스_2024/page_2.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/버티카 국내 레퍼런스_2024/page_2.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: 2OpenText © 2024 All rights reserved\n발주처 사업내용 도입 용량 비고\n신한은행 통합DW 구축 1 2PB ▪ Teradata / IBM DB2 대체 \n▪ EON 모드 구축\n우리은행 빅데이터 플랫폼 재구축 500TB ▪ Oracle BDA replace\nKT 차세대 BI/DW 500TB ▪ Teradata 대체\nSKT 유레카 CDR 분석 시스템 250TB ▪ Hadoop 대체(MapR)\nLGU+ BS 통합 정보계 / IFRS7 시스템 300TB ▪ 정보계 \n▪ Enterprise 모드에서 Eon 모드 마이그레이션\n한국신용정보원 빅데이터 분석 285TB ▪ 빅데이터 분석 및 마이데이터 분석\n새마을금고연합회 상시감시 분석시스템 25TB\n롯데손해보험 정보계 재구축 50TB ▪ Sybase IQ replace\n하나은행 정보계 재구축 500TB ▪ Sybase IQ replace\n기술보증기금 정보계 재구축 10TB ▪ Oracle Database replace\n빗썸 코리아 Enterprise Data Warehouse 40TB ▪ 신규 EDW\n한화생명금융서비스 Enterprise Data Warehouse 2TB\n한국 조폐공사 Enterprise Data Warehouse 5TB\n금융 및 통신과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/버티카 국내 레퍼런스_2024/page_2.png",
+              "url": "/api/image-viewer/document_images/버티카 국내 레퍼런스_2024/page_2.png",
+              "caption": "이미지 1: 2OpenText © 2024 All rights reserved\n발주처 사업내용 도입 용량 비고\n신한은행 통합DW 구축 1 2PB ▪ Teradata / IBM DB2 대체 \n▪ EON 모드 구축\n우리은행 빅데이터 플랫폼 재구축 500TB ▪ Oracle BDA replace\nKT 차세대 BI/DW 500TB ▪ Teradata 대체\nSKT 유레카 CDR 분석 시스템 250TB ▪ Hadoop 대체(MapR)\nLGU+ BS 통합 정보계 / IFRS7 시스템 300TB ▪ 정보계 \n▪ Enterprise 모드에서 Eon 모드 마이그레이션\n한국신용정보원 빅데이터 분석 285TB ▪ 빅데이터 분석 및 마이데이터 분석\n새마을금고연합회 상시감시 분석시스템 25TB\n롯데손해보험 정보계 재구축 50TB ▪ Sybase IQ replace\n하나은행 정보계 재구축 500TB ▪ Sybase IQ replace\n기술보증기금 정보계 재구축 10TB ▪ Oracle Database replace\n빗썸 코리아 Enterprise Data Warehouse 40TB ▪ 신규 EDW\n한화생명금융서비스 Enterprise Data Warehouse 2TB\n한국 조폐공사 Enterprise Data Warehouse 5TB\n금융 및 통신과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1: 2OpenText © 2024 All rights reserved\n발주처 사업내용 도입 용량 비고\n신한은행 통합DW 구축 1 2PB ▪ Teradata / IBM DB2 대체 \n▪ EON 모드 구축\n우리은행 빅데이터 플랫폼 재구축 500TB ▪ Oracle BDA replace\nKT 차세대 BI/DW 500TB ▪ Teradata 대체\nSKT 유레카 CDR 분석 시스템 250TB ▪ Hadoop 대체(MapR)\nLGU+ BS 통합 정보계 / IFRS7 시스템 300TB ▪ 정보계 \n▪ Enterprise 모드에서 Eon 모드 마이그레이션\n한국신용정보원 빅데이터 분석 285TB ▪ 빅데이터 분석 및 마이데이터 분석\n새마을금고연합회 상시감시 분석시스템 25TB\n롯데손해보험 정보계 재구축 50TB ▪ Sybase IQ replace\n하나은행 정보계 재구축 500TB ▪ Sybase IQ replace\n기술보증기금 정보계 재구축 10TB ▪ Oracle Database replace\n빗썸 코리아 Enterprise Data Warehouse 40TB ▪ 신규 EDW\n한화생명금융서비스 Enterprise Data Warehouse 2TB\n한국 조폐공사 Enterprise Data Warehouse 5TB\n금융 및 통신과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": true
+        },
+        {
+          "path": "사내규정모음집20100129_개정.pdf",
+          "display_name": "사내규정모음집20100129_개정.pdf",
+          "page": 13,
+          "chunk_id": "batch1_74",
+          "score": 0.024519404396414757,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "3S소프트 회사소개-250514.pdf",
+          "display_name": "3S소프트 회사소개-250514.pdf",
+          "page": 9,
+          "chunk_id": "batch1_9",
+          "score": 0.02414281666278839,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/3S소프트 회사소개-250514/page_9.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/3S소프트 회사소개-250514/page_9.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: - 9 -\n주요 고객사\n금융\n유통, IT서비스\n고객추가과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/3S소프트 회사소개-250514/page_9.png",
+              "url": "/api/image-viewer/document_images/3S소프트 회사소개-250514/page_9.png",
+              "caption": "이미지 1: - 9 -\n주요 고객사\n금융\n유통, IT서비스\n고객추가과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1: - 9 -\n주요 고객사\n금융\n유통, IT서비스\n고객추가과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": false
+        },
+        {
+          "path": "3S소프트 회사소개-250514.pdf",
+          "display_name": "3S소프트 회사소개-250514.pdf",
+          "page": 10,
+          "chunk_id": "batch1_10",
+          "score": 0.02393748238682747,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/3S소프트 회사소개-250514/page_10.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/3S소프트 회사소개-250514/page_10.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: - 10 -\n주요 고객사\n공공\n제조, 통신\n고객추가과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/3S소프트 회사소개-250514/page_10.png",
+              "url": "/api/image-viewer/document_images/3S소프트 회사소개-250514/page_10.png",
+              "caption": "이미지 1: - 10 -\n주요 고객사\n공공\n제조, 통신\n고객추가과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1: - 10 -\n주요 고객사\n공공\n제조, 통신\n고객추가과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": false
+        },
+        {
+          "path": "리소스 - CPU 쿼리.txt",
+          "display_name": "리소스 - CPU 쿼리.txt",
+          "page": 1,
+          "chunk_id": "batch1_0",
+          "score": 0.02348688431084156,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "Outlook 메일계정 메뉴얼.pptx",
+          "display_name": "Outlook 메일계정 메뉴얼.pptx",
+          "page": 8,
+          "chunk_id": "batch1_7",
+          "score": 0.02347986400127411,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "LlamaFirewall - 가로스크롤테스트문서몇자까지인지 확인이 어려움 가나다라마마사마자어오ㅓ린아리나어리나어롤ㅇ니ㅏㅓ리낭린아ㅓㄹㄴ이ㅏ렁ㄹㄴ.pdf",
+          "display_name": "LlamaFirewall - 가로스크롤테스트문서몇자까지인지 확인이 어려움 가나다라마마사마자어오ㅓ린아리나어리나어롤ㅇ니ㅏㅓ리낭린아ㅓㄹㄴ이ㅏ렁ㄹㄴ.pdf",
+          "page": 24,
+          "chunk_id": "batch1_23",
+          "score": 0.023472750559449196,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "LlamaFirewall - 가로스크롤테스트문서몇자까지인지 확인이 어려움 가나다라마마사마자어오ㅓ린아리나어리나어롤ㅇ니ㅏㅓ리낭린아ㅓㄹㄴ이ㅏ렁ㄹㄴ.pdf",
+          "display_name": "LlamaFirewall - 가로스크롤테스트문서몇자까지인지 확인이 어려움 가나다라마마사마자어오ㅓ린아리나어리나어롤ㅇ니ㅏㅓ리낭린아ㅓㄹㄴ이ㅏ렁ㄹㄴ.pdf",
+          "page": 25,
+          "chunk_id": "batch1_24",
+          "score": 0.023339688777923584,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "사내규정모음집20100129_개정.pdf",
+          "display_name": "사내규정모음집20100129_개정.pdf",
+          "page": 30,
+          "chunk_id": "batch1_135",
+          "score": 0.02332693338394165,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "사내규정모음집20100129_개정.pdf",
+          "display_name": "사내규정모음집20100129_개정.pdf",
+          "page": 13,
+          "chunk_id": "batch1_71",
+          "score": 0.023316580802202225,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        }
+      ]
+    }
+  ],
+  "timestamp": "2025-07-14T13:51:51.332270"
+}

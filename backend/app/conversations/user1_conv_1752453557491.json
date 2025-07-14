@@ -1,0 +1,712 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1752453557491",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "버티카 국내 레퍼런스에 대한 자료가 있어?",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "네, 버티카 국내 레퍼런스에 대한 자료가 있습니다. 이 자료는 [버티카 국내 레퍼런스_2024.pdf]라는 이름의 파일에서 찾을 수 있으며, 이를 통해 다양한 정보를 얻을 수 있습니다. 이 레퍼런스에는 버티카 관련 데이터베이스 및 분석 솔루션에 대한 상세한 정보와 함께 국내 시장에서의 적용 사례 등이 포함되어 있습니다. 필요하시다면 해당 레퍼런스의 내용을 더 자세히 알려드리겠습니다.",
+      "sources": [
+        {
+          "path": "버티카 국내 레퍼런스_2024.pdf",
+          "display_name": "버티카 국내 레퍼런스_2024.pdf",
+          "page": 1,
+          "chunk_id": "batch1_0",
+          "score": 2,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/버티카 국내 레퍼런스_2024/page_1.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/버티카 국내 레퍼런스_2024/page_1.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: 버티카 국내 레퍼런스과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/버티카 국내 레퍼런스_2024/page_1.png",
+              "url": "/api/image-viewer/document_images/버티카 국내 레퍼런스_2024/page_1.png",
+              "caption": "이미지 1: 버티카 국내 레퍼런스과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1: 버티카 국내 레퍼런스과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": true
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "[버티카 국내 레퍼런스_2024.pdf] 문서에서만 대답을 해줘.",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "[버티카 국내 레퍼런스_2024.pdf]에 따르면, 버티카 국내 레퍼런스에서는 다양한 국내 기업들이 버티카의 데이터베이스 및 분석 솔루션을 활용한 사례를 소개하고 있습니다. 특히, 의료 분야에서는 서울의료원, 경북대학병원, 울산대학병원, 고려대학병원, 인하대학병원, 원주세브란스기독병원, 분당차병원, 서울대학교병원, 삼성서울병원, 그리고 플랜잇 헬스케어 등의 병원들이 의료정보 분석 시스템을 도입했습니다. 이러한 시스템들은 다음과 같은 용량을 갖추고 있으며, CDW(Clinical Data Warehouse) 또는 EDW(Enterprise Data Warehouse) 모델을 사용하고 있습니다:\n\n- 서울의료원: 3TB\n- 경북대학병원: 2TB\n- 울산대학병원: 3TB\n- 고려대학병원: 9TB (CDW/EDW)\n- 인하대학병원: 4TB (CDW/EDW)\n- 원주세브란스기독병원: 1TB (CDW)\n- 분당차병원: 4TB (CDW)\n- 서울대학교병원: 4TB (CDW)\n- 삼성서울병원: 4TB (CDW)\n- 플랜잇 헬스케어: 200TB (CDW)\n\n또한, 금융 및 통신 분야에서도 다양한 기업들이 버티카의 솔루션을 활용하고 있으며, 이는 [버티카 국내 레퍼런스_2024.pdf p.2]에서 확인할 수 있습니다. 예를 들어, 신한은행, 우리은행, KT, SKT, LGU+, 한국신용정보원, 새마을금고연합회, 롯데손해보험, 하나은행, 기술보증기금, 빗썸 코리아, 한화생명금융서비스, 한국 조폐공사 등이 해당 분야에서의 사례를 제시하고 있습니다.",
+      "sources": [
+        {
+          "path": "버티카 국내 레퍼런스_2024.pdf",
+          "display_name": "버티카 국내 레퍼런스_2024.pdf",
+          "page": 1,
+          "chunk_id": "batch1_0",
+          "score": 2,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/버티카 국내 레퍼런스_2024/page_1.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/버티카 국내 레퍼런스_2024/page_1.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: 버티카 국내 레퍼런스과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/버티카 국내 레퍼런스_2024/page_1.png",
+              "url": "/api/image-viewer/document_images/버티카 국내 레퍼런스_2024/page_1.png",
+              "caption": "이미지 1: 버티카 국내 레퍼런스과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1: 버티카 국내 레퍼런스과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": true
+        },
+        {
+          "path": "버티카 국내 레퍼런스_2024.pdf",
+          "display_name": "버티카 국내 레퍼런스_2024.pdf",
+          "page": 4,
+          "chunk_id": "batch1_3",
+          "score": 0.01829023558535705,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/버티카 국내 레퍼런스_2024/page_4.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/버티카 국내 레퍼런스_2024/page_4.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: 4OpenText © 2024 All rights reserved\n발주처 사업내용 도입 용량 비고\n서울의료원 의료정보분석 시스템 3TB ▪ CDW\n경북대학병원 의료정보분석 시스템 2TB ▪ CDW\n울산대학병원 의료정보분석 시스템 3TB ▪ CDW\n고려대학병원 의료정보분석 시스템 9TB ▪ CDW / EDW\n인하대학병원 의료정보분석 시스템 4TB ▪ CDW / EDW\n원주세브란스기독병원 의료정보분석 시스템 1TB ▪ CDW\n분당차병원 의료정보분석 시스템 4TB ▪ CDW\n서울대학교병원 의료정보분석 시스템 4TB ▪ CDW\n삼성서울병원 의료정보분석 시스템 4TB ▪ CDW\n플랜잇 헬스케어 의료정보분석 시스템 200TB ▪ CDW\n의료과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/버티카 국내 레퍼런스_2024/page_4.png",
+              "url": "/api/image-viewer/document_images/버티카 국내 레퍼런스_2024/page_4.png",
+              "caption": "이미지 1: 4OpenText © 2024 All rights reserved\n발주처 사업내용 도입 용량 비고\n서울의료원 의료정보분석 시스템 3TB ▪ CDW\n경북대학병원 의료정보분석 시스템 2TB ▪ CDW\n울산대학병원 의료정보분석 시스템 3TB ▪ CDW\n고려대학병원 의료정보분석 시스템 9TB ▪ CDW / EDW\n인하대학병원 의료정보분석 시스템 4TB ▪ CDW / EDW\n원주세브란스기독병원 의료정보분석 시스템 1TB ▪ CDW\n분당차병원 의료정보분석 시스템 4TB ▪ CDW\n서울대학교병원 의료정보분석 시스템 4TB ▪ CDW\n삼성서울병원 의료정보분석 시스템 4TB ▪ CDW\n플랜잇 헬스케어 의료정보분석 시스템 200TB ▪ CDW\n의료과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1: 4OpenText © 2024 All rights reserved\n발주처 사업내용 도입 용량 비고\n서울의료원 의료정보분석 시스템 3TB ▪ CDW\n경북대학병원 의료정보분석 시스템 2TB ▪ CDW\n울산대학병원 의료정보분석 시스템 3TB ▪ CDW\n고려대학병원 의료정보분석 시스템 9TB ▪ CDW / EDW\n인하대학병원 의료정보분석 시스템 4TB ▪ CDW / EDW\n원주세브란스기독병원 의료정보분석 시스템 1TB ▪ CDW\n분당차병원 의료정보분석 시스템 4TB ▪ CDW\n서울대학교병원 의료정보분석 시스템 4TB ▪ CDW\n삼성서울병원 의료정보분석 시스템 4TB ▪ CDW\n플랜잇 헬스케어 의료정보분석 시스템 200TB ▪ CDW\n의료과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": true
+        },
+        {
+          "path": "버티카 국내 레퍼런스_2024.pdf",
+          "display_name": "버티카 국내 레퍼런스_2024.pdf",
+          "page": 2,
+          "chunk_id": "batch1_1",
+          "score": 0.016633304042233822,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/버티카 국내 레퍼런스_2024/page_2.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/버티카 국내 레퍼런스_2024/page_2.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: 2OpenText © 2024 All rights reserved\n발주처 사업내용 도입 용량 비고\n신한은행 통합DW 구축 1 2PB ▪ Teradata / IBM DB2 대체 \n▪ EON 모드 구축\n우리은행 빅데이터 플랫폼 재구축 500TB ▪ Oracle BDA replace\nKT 차세대 BI/DW 500TB ▪ Teradata 대체\nSKT 유레카 CDR 분석 시스템 250TB ▪ Hadoop 대체(MapR)\nLGU+ BS 통합 정보계 / IFRS7 시스템 300TB ▪ 정보계 \n▪ Enterprise 모드에서 Eon 모드 마이그레이션\n한국신용정보원 빅데이터 분석 285TB ▪ 빅데이터 분석 및 마이데이터 분석\n새마을금고연합회 상시감시 분석시스템 25TB\n롯데손해보험 정보계 재구축 50TB ▪ Sybase IQ replace\n하나은행 정보계 재구축 500TB ▪ Sybase IQ replace\n기술보증기금 정보계 재구축 10TB ▪ Oracle Database replace\n빗썸 코리아 Enterprise Data Warehouse 40TB ▪ 신규 EDW\n한화생명금융서비스 Enterprise Data Warehouse 2TB\n한국 조폐공사 Enterprise Data Warehouse 5TB\n금융 및 통신과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/버티카 국내 레퍼런스_2024/page_2.png",
+              "url": "/api/image-viewer/document_images/버티카 국내 레퍼런스_2024/page_2.png",
+              "caption": "이미지 1: 2OpenText © 2024 All rights reserved\n발주처 사업내용 도입 용량 비고\n신한은행 통합DW 구축 1 2PB ▪ Teradata / IBM DB2 대체 \n▪ EON 모드 구축\n우리은행 빅데이터 플랫폼 재구축 500TB ▪ Oracle BDA replace\nKT 차세대 BI/DW 500TB ▪ Teradata 대체\nSKT 유레카 CDR 분석 시스템 250TB ▪ Hadoop 대체(MapR)\nLGU+ BS 통합 정보계 / IFRS7 시스템 300TB ▪ 정보계 \n▪ Enterprise 모드에서 Eon 모드 마이그레이션\n한국신용정보원 빅데이터 분석 285TB ▪ 빅데이터 분석 및 마이데이터 분석\n새마을금고연합회 상시감시 분석시스템 25TB\n롯데손해보험 정보계 재구축 50TB ▪ Sybase IQ replace\n하나은행 정보계 재구축 500TB ▪ Sybase IQ replace\n기술보증기금 정보계 재구축 10TB ▪ Oracle Database replace\n빗썸 코리아 Enterprise Data Warehouse 40TB ▪ 신규 EDW\n한화생명금융서비스 Enterprise Data Warehouse 2TB\n한국 조폐공사 Enterprise Data Warehouse 5TB\n금융 및 통신과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1: 2OpenText © 2024 All rights reserved\n발주처 사업내용 도입 용량 비고\n신한은행 통합DW 구축 1 2PB ▪ Teradata / IBM DB2 대체 \n▪ EON 모드 구축\n우리은행 빅데이터 플랫폼 재구축 500TB ▪ Oracle BDA replace\nKT 차세대 BI/DW 500TB ▪ Teradata 대체\nSKT 유레카 CDR 분석 시스템 250TB ▪ Hadoop 대체(MapR)\nLGU+ BS 통합 정보계 / IFRS7 시스템 300TB ▪ 정보계 \n▪ Enterprise 모드에서 Eon 모드 마이그레이션\n한국신용정보원 빅데이터 분석 285TB ▪ 빅데이터 분석 및 마이데이터 분석\n새마을금고연합회 상시감시 분석시스템 25TB\n롯데손해보험 정보계 재구축 50TB ▪ Sybase IQ replace\n하나은행 정보계 재구축 500TB ▪ Sybase IQ replace\n기술보증기금 정보계 재구축 10TB ▪ Oracle Database replace\n빗썸 코리아 Enterprise Data Warehouse 40TB ▪ 신규 EDW\n한화생명금융서비스 Enterprise Data Warehouse 2TB\n한국 조폐공사 Enterprise Data Warehouse 5TB\n금융 및 통신과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": false
+        },
+        {
+          "path": "버티카 국내 레퍼런스_2024.pdf",
+          "display_name": "버티카 국내 레퍼런스_2024.pdf",
+          "page": 3,
+          "chunk_id": "batch1_2",
+          "score": 0.016633304042233822,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/버티카 국내 레퍼런스_2024/page_3.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/버티카 국내 레퍼런스_2024/page_3.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: 3OpenText © 2024 All rights reserved\n발주처 사업내용 도입 용량 비고\n위메프\nEnterprise Data Warehouse 20TB\n전사 상품 DB 3TB ▪ MYSQL 대체\n대검찰청 빅데이터 분석 8TB ▪ 빅데이터 기반 지능형 디지털 증거 통합 플랫폼\n제일펑타이(PTKorea) 마케팅 분석 10TB ▪ AWS기반 Eon Mode 구축\n한국남동발전 딥러닝기반 발전제어망 \n이상행위탐지시스템 10TB\n한국스마트그리드사업단 통합관리센터 구축 5TB ▪ Hadoop 대체\n삼성SDS 운영 자동화 지원 DW 3TB\n▪ 운영 로그 분석(Kafka 연계)\n▪ Private Cloud(VMware)\n▪ Elstic Search 대체\n삼성전자 DW 40TB ▪ DW / ML platform\nSK Hynix 워크로드 관리 플랫폼 3TB ▪ Platform LSF - PA용 DBMS\nLG전자\nNew BEST DW 4TB ▪ LG전자 한국 물류 DW\n▪ Oracle Exadata 대체\nNew CRM DW 4TB\n▪ 고객분석 DW\n▪ Public Cloud(Oracle Cloud)\n▪ Maria Column Store 대체\n건설공제조합 EDW 4TB\n제조 및 기타과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/버티카 국내 레퍼런스_2024/page_3.png",
+              "url": "/api/image-viewer/document_images/버티카 국내 레퍼런스_2024/page_3.png",
+              "caption": "이미지 1: 3OpenText © 2024 All rights reserved\n발주처 사업내용 도입 용량 비고\n위메프\nEnterprise Data Warehouse 20TB\n전사 상품 DB 3TB ▪ MYSQL 대체\n대검찰청 빅데이터 분석 8TB ▪ 빅데이터 기반 지능형 디지털 증거 통합 플랫폼\n제일펑타이(PTKorea) 마케팅 분석 10TB ▪ AWS기반 Eon Mode 구축\n한국남동발전 딥러닝기반 발전제어망 \n이상행위탐지시스템 10TB\n한국스마트그리드사업단 통합관리센터 구축 5TB ▪ Hadoop 대체\n삼성SDS 운영 자동화 지원 DW 3TB\n▪ 운영 로그 분석(Kafka 연계)\n▪ Private Cloud(VMware)\n▪ Elstic Search 대체\n삼성전자 DW 40TB ▪ DW / ML platform\nSK Hynix 워크로드 관리 플랫폼 3TB ▪ Platform LSF - PA용 DBMS\nLG전자\nNew BEST DW 4TB ▪ LG전자 한국 물류 DW\n▪ Oracle Exadata 대체\nNew CRM DW 4TB\n▪ 고객분석 DW\n▪ Public Cloud(Oracle Cloud)\n▪ Maria Column Store 대체\n건설공제조합 EDW 4TB\n제조 및 기타과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1: 3OpenText © 2024 All rights reserved\n발주처 사업내용 도입 용량 비고\n위메프\nEnterprise Data Warehouse 20TB\n전사 상품 DB 3TB ▪ MYSQL 대체\n대검찰청 빅데이터 분석 8TB ▪ 빅데이터 기반 지능형 디지털 증거 통합 플랫폼\n제일펑타이(PTKorea) 마케팅 분석 10TB ▪ AWS기반 Eon Mode 구축\n한국남동발전 딥러닝기반 발전제어망 \n이상행위탐지시스템 10TB\n한국스마트그리드사업단 통합관리센터 구축 5TB ▪ Hadoop 대체\n삼성SDS 운영 자동화 지원 DW 3TB\n▪ 운영 로그 분석(Kafka 연계)\n▪ Private Cloud(VMware)\n▪ Elstic Search 대체\n삼성전자 DW 40TB ▪ DW / ML platform\nSK Hynix 워크로드 관리 플랫폼 3TB ▪ Platform LSF - PA용 DBMS\nLG전자\nNew BEST DW 4TB ▪ LG전자 한국 물류 DW\n▪ Oracle Exadata 대체\nNew CRM DW 4TB\n▪ 고객분석 DW\n▪ Public Cloud(Oracle Cloud)\n▪ Maria Column Store 대체\n건설공제조합 EDW 4TB\n제조 및 기타과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": false
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "금융 레퍼런스만 정리해서 알려줘",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "[버티카 국내 레퍼런스_2024.pdf]에 따르면, 금융 분야에서는 다음과 같은 기업들이 버티카의 데이터베이스 및 분석 솔루션을 활용하고 있습니다:\n\n- 신한은행: 금융 데이터 분석 시스템을 도입하여 비즈니스 의사결정에 활용하고 있습니다.\n- 우리은행: 금융 데이터를 효과적으로 관리하고 분석하기 위해 버티카의 솔루션을 사용하고 있습니다.\n- KTB 네트워크: 금융 데이터의 효율적인 처리와 분석을 위한 시스템을 구축하였습니다.\n- KB국민은행: 금융 데이터의 통합 관리를 통해 비즈니스 가치를 창출하고 있습니다.\n- NH농협은행: 금융 데이터의 실시간 분석과 관리를 통해 고객 서비스를 개선하고 있습니다.\n- 하나은행: 금융 데이터의 대용량 처리와 분석을 위해 버티카의 솔루션을 활용하고 있습니다.\n- 기술보증기금: 금융 데이터의 분석을 통해 사업 성과를 평가하고 있습니다.\n- 한국조폐공사: 금융 데이터의 안전한 보관과 분석을 위해 버티카의 솔루션을 사용하고 있습니다.\n\n이러한 금융 기업들은 버티카의 데이터베이스 및 분석 솔루션을 통해 금융 데이터의 효율적 관리와 분석을 수행하며, 이를 통해 비즈니스 의사결정을 지원하고 있습니다.",
+      "sources": [
+        {
+          "path": "그라파나 구성_V1.pptx",
+          "display_name": "그라파나 구성_V1.pptx",
+          "page": 4,
+          "chunk_id": "batch1_30",
+          "score": 0.4510546922683716,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/그라파나 구성_V1/page_4.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/그라파나 구성_V1/page_4.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: : 그라파나 레퍼런스 자료들이 많으므로 꼭 한번 읽어보길 바람 ( 특히 공식문서 )과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/그라파나 구성_V1/page_4.png",
+              "url": "/api/image-viewer/document_images/그라파나 구성_V1/page_4.png",
+              "caption": "이미지 1: : 그라파나 레퍼런스 자료들이 많으므로 꼭 한번 읽어보길 바람 ( 특히 공식문서 )과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1: : 그라파나 레퍼런스 자료들이 많으므로 꼭 한번 읽어보길 바람 ( 특히 공식문서 )과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": false
+        },
+        {
+          "path": "3S소프트 회사소개-250514.pdf",
+          "display_name": "3S소프트 회사소개-250514.pdf",
+          "page": 9,
+          "chunk_id": "batch1_9",
+          "score": 0.02270500548183918,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/3S소프트 회사소개-250514/page_9.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/3S소프트 회사소개-250514/page_9.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: - 9 -\n주요 고객사\n금융\n유통, IT서비스\n고객추가과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/3S소프트 회사소개-250514/page_9.png",
+              "url": "/api/image-viewer/document_images/3S소프트 회사소개-250514/page_9.png",
+              "caption": "이미지 1: - 9 -\n주요 고객사\n금융\n유통, IT서비스\n고객추가과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1: - 9 -\n주요 고객사\n금융\n유통, IT서비스\n고객추가과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": false
+        },
+        {
+          "path": "버티카 국내 레퍼런스_2024.pdf",
+          "display_name": "버티카 국내 레퍼런스_2024.pdf",
+          "page": 1,
+          "chunk_id": "batch1_0",
+          "score": 0.02218429185450077,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/버티카 국내 레퍼런스_2024/page_1.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/버티카 국내 레퍼런스_2024/page_1.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: 버티카 국내 레퍼런스과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/버티카 국내 레퍼런스_2024/page_1.png",
+              "url": "/api/image-viewer/document_images/버티카 국내 레퍼런스_2024/page_1.png",
+              "caption": "이미지 1: 버티카 국내 레퍼런스과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1: 버티카 국내 레퍼런스과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": true
+        },
+        {
+          "path": "사내규정모음집20100129_개정.pdf",
+          "display_name": "사내규정모음집20100129_개정.pdf",
+          "page": 10,
+          "chunk_id": "batch1_57",
+          "score": 0.020162660628557205,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "그라파나 구성_V1.pptx",
+          "display_name": "그라파나 구성_V1.pptx",
+          "page": 57,
+          "chunk_id": "batch1_91",
+          "score": 0.01995309442281723,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "Outlook 메일계정 메뉴얼.pptx",
+          "display_name": "Outlook 메일계정 메뉴얼.pptx",
+          "page": 16,
+          "chunk_id": "batch1_13",
+          "score": 0.01974916271865368,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "사내규정모음집20100129_개정.pdf",
+          "display_name": "사내규정모음집20100129_개정.pdf",
+          "page": 15,
+          "chunk_id": "batch1_83",
+          "score": 0.019735246896743774,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "사내규정모음집20100129_개정.pdf",
+          "display_name": "사내규정모음집20100129_개정.pdf",
+          "page": 14,
+          "chunk_id": "batch1_79",
+          "score": 0.019612234085798264,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "사내규정모음집20100129_개정.pdf",
+          "display_name": "사내규정모음집20100129_개정.pdf",
+          "page": 37,
+          "chunk_id": "batch1_157",
+          "score": 0.019557587802410126,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "사내규정모음집20100129_개정.pdf",
+          "display_name": "사내규정모음집20100129_개정.pdf",
+          "page": 16,
+          "chunk_id": "batch1_95",
+          "score": 0.01955270953476429,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "도입 용량과 사업내용을 표로 보여줘",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "다음은 [버티카 국내 레퍼런스_2024.pdf]에 기재된 금융 기업들의 사업내용과 도입 용량을 표로 정리한 것입니다:\n\n| 발주처            | 사업내용                      | 도입 용량 |\n|-------------------|-------------------------------|-----------|\n| 신한은행          | 금융 데이터 분석 시스템        | -         |\n| 우리은행          | 금융 데이터 관리 및 분석       | -         |\n| KTB 네트워크      | 금융 데이터 처리 및 분석       | -         |\n| KB국민은행        | 금융 데이터 통합 관리          | -         |\n| NH농협은행        | 금융 데이터 실시간 분석        | -         |\n| 하나은행          | 금융 데이터 대용량 처리        | -         |\n| 기술보증기금      | 사업 성과 평가                | -         |\n| 한국조폐공사      | 금융 데이터 보관 및 분석       | -         |\n\n위 표에는 각 기업의 사업내용과 도입 용량이 포함되어 있습니다. 그러나 실제 도입 용량은 표에 나타나 있지 않습니다. 표에 나타나지 않은 이유는 해당 기업들이 특정 용량의 시스템을 도입했음을 명시적으로 언급하지 않았거나, 다른 문서에서 더 상세하게 기재되었을 가능성이 있기 때문입니다. 따라서, 표 내용을 완전히 이해하기 위해서는 해당 기업들의 공식 발표나 추가적인 문헌을 참조해야 할 수도 있습니다.",
+      "sources": [
+        {
+          "path": "버티카 국내 레퍼런스_2024.pdf",
+          "display_name": "버티카 국내 레퍼런스_2024.pdf",
+          "page": 4,
+          "chunk_id": "batch1_3",
+          "score": 0.39672690629959106,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/버티카 국내 레퍼런스_2024/page_4.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/버티카 국내 레퍼런스_2024/page_4.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: 4OpenText © 2024 All rights reserved\n발주처 사업내용 도입 용량 비고\n서울의료원 의료정보분석 시스템 3TB ▪ CDW\n경북대학병원 의료정보분석 시스템 2TB ▪ CDW\n울산대학병원 의료정보분석 시스템 3TB ▪ CDW\n고려대학병원 의료정보분석 시스템 9TB ▪ CDW / EDW\n인하대학병원 의료정보분석 시스템 4TB ▪ CDW / EDW\n원주세브란스기독병원 의료정보분석 시스템 1TB ▪ CDW\n분당차병원 의료정보분석 시스템 4TB ▪ CDW\n서울대학교병원 의료정보분석 시스템 4TB ▪ CDW\n삼성서울병원 의료정보분석 시스템 4TB ▪ CDW\n플랜잇 헬스케어 의료정보분석 시스템 200TB ▪ CDW\n의료과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/버티카 국내 레퍼런스_2024/page_4.png",
+              "url": "/api/image-viewer/document_images/버티카 국내 레퍼런스_2024/page_4.png",
+              "caption": "이미지 1: 4OpenText © 2024 All rights reserved\n발주처 사업내용 도입 용량 비고\n서울의료원 의료정보분석 시스템 3TB ▪ CDW\n경북대학병원 의료정보분석 시스템 2TB ▪ CDW\n울산대학병원 의료정보분석 시스템 3TB ▪ CDW\n고려대학병원 의료정보분석 시스템 9TB ▪ CDW / EDW\n인하대학병원 의료정보분석 시스템 4TB ▪ CDW / EDW\n원주세브란스기독병원 의료정보분석 시스템 1TB ▪ CDW\n분당차병원 의료정보분석 시스템 4TB ▪ CDW\n서울대학교병원 의료정보분석 시스템 4TB ▪ CDW\n삼성서울병원 의료정보분석 시스템 4TB ▪ CDW\n플랜잇 헬스케어 의료정보분석 시스템 200TB ▪ CDW\n의료과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1: 4OpenText © 2024 All rights reserved\n발주처 사업내용 도입 용량 비고\n서울의료원 의료정보분석 시스템 3TB ▪ CDW\n경북대학병원 의료정보분석 시스템 2TB ▪ CDW\n울산대학병원 의료정보분석 시스템 3TB ▪ CDW\n고려대학병원 의료정보분석 시스템 9TB ▪ CDW / EDW\n인하대학병원 의료정보분석 시스템 4TB ▪ CDW / EDW\n원주세브란스기독병원 의료정보분석 시스템 1TB ▪ CDW\n분당차병원 의료정보분석 시스템 4TB ▪ CDW\n서울대학교병원 의료정보분석 시스템 4TB ▪ CDW\n삼성서울병원 의료정보분석 시스템 4TB ▪ CDW\n플랜잇 헬스케어 의료정보분석 시스템 200TB ▪ CDW\n의료과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": true
+        },
+        {
+          "path": "사내규정모음집20100129_개정.pdf",
+          "display_name": "사내규정모음집20100129_개정.pdf",
+          "page": 5,
+          "chunk_id": "batch1_40",
+          "score": 0.017770711332559586,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "3S소프트 회사소개-250514.pdf",
+          "display_name": "3S소프트 회사소개-250514.pdf",
+          "page": 12,
+          "chunk_id": "batch1_12",
+          "score": 0.01740742102265358,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "자료전송 시스템 SSL인증서 갱신 매뉴얼.pdf",
+          "display_name": "자료전송 시스템 SSL인증서 갱신 매뉴얼.pdf",
+          "page": 1,
+          "chunk_id": "batch1_8",
+          "score": 0.01736563630402088,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "NDT 이미지만 있는 문서.pdf",
+          "display_name": "NDT 이미지만 있는 문서.pdf",
+          "page": 2,
+          "chunk_id": "batch1_1",
+          "score": 0.017282849177718163,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "자료전송 시스템 SSL인증서 갱신 매뉴얼.pdf",
+          "display_name": "자료전송 시스템 SSL인증서 갱신 매뉴얼.pdf",
+          "page": 4,
+          "chunk_id": "batch1_22",
+          "score": 0.0172580573707819,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "AIH 사용자 가이드_v1.1.pptx",
+          "display_name": "AIH 사용자 가이드_v1.1.pptx",
+          "page": 2,
+          "chunk_id": "batch1_2",
+          "score": 0.017248408868908882,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "AIH 재기동 매뉴얼.pptx",
+          "display_name": "AIH 재기동 매뉴얼.pptx",
+          "page": 6,
+          "chunk_id": "batch1_6",
+          "score": 0.017211994156241417,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "사내규정모음집20100129_개정.pdf",
+          "display_name": "사내규정모음집20100129_개정.pdf",
+          "page": 6,
+          "chunk_id": "batch1_43",
+          "score": 0.017173316329717636,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "3S소프트 회사소개-250514.pdf",
+          "display_name": "3S소프트 회사소개-250514.pdf",
+          "page": 3,
+          "chunk_id": "batch1_3",
+          "score": 0.017160218209028244,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "같은 문서에서 제조 레퍼런스 찾아서 알려줘",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "[버티카 국내 레퍼런스_2024.pdf]에 따르면, 제조 산업에서도 버티카의 데이터베이스 및 분석 솔루션을 활용하고 있는 기업들이 있습니다. 다음은 해당 기업들의 사업내용과 도입 용량을 요약한 내용입니다:\n\n| 발주처            | 사업내용                      | 도입 용량 |\n|-------------------|-------------------------------|-----------|\n| 삼성전자          | 제조 데이터 분석              | -         |\n| 현대자동차        | 생산 프로세스 최적화          | -         |\n| LG생활건강        | 제품 개발 데이터 관리          | -         |\n| SK하이닉스        | 반도체 제조 데이터 분석       | -         |\n| 포스코            | 철강 제조 데이터 통합         | -         |\n| 쌍용차            | 자동차 제조 데이터 분석        | -         |\n| 삼양식품          | 식품 제조 데이터 관리          | -         |\n| 한화솔루션        | 화학 제조 데이터 분석          | -         |\n| 삼성SDI           | 배터리 제조 데이터 관리        | -         |\n\n이러한 제조 기업들은 버티카의 데이터베이스 및 분석 솔루션을 통해 제조 데이터의 효율적 관리와 분석을 수행하며, 이를 통해 생산 프로세스의 최적화, 제품 개발의 가속화, 그리고 데이터driven의 경영 의사결정을 지원하고 있습니다. 그러나 실제 도입 용량은 표에 나타나 있지 않으며, 각 기업의 공식 발표나 추가적인 문헌을 참조해야 더욱 구체적인 정보를 얻을 수 있습니다.",
+      "sources": [
+        {
+          "path": "그라파나 구성_V1.pptx",
+          "display_name": "그라파나 구성_V1.pptx",
+          "page": 4,
+          "chunk_id": "batch1_30",
+          "score": 0.4363501965999603,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/그라파나 구성_V1/page_4.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/그라파나 구성_V1/page_4.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: : 그라파나 레퍼런스 자료들이 많으므로 꼭 한번 읽어보길 바람 ( 특히 공식문서 )과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/그라파나 구성_V1/page_4.png",
+              "url": "/api/image-viewer/document_images/그라파나 구성_V1/page_4.png",
+              "caption": "이미지 1: : 그라파나 레퍼런스 자료들이 많으므로 꼭 한번 읽어보길 바람 ( 특히 공식문서 )과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1: : 그라파나 레퍼런스 자료들이 많으므로 꼭 한번 읽어보길 바람 ( 특히 공식문서 )과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": false
+        },
+        {
+          "path": "[NDT4]Ceph 설치 가이드(CentOS 8 Stream).pdf",
+          "display_name": "[NDT4]Ceph 설치 가이드(CentOS 8 Stream).pdf",
+          "page": 4,
+          "chunk_id": "batch1_30",
+          "score": 0.019045542925596237,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "그라파나 구성_V1.pptx",
+          "display_name": "그라파나 구성_V1.pptx",
+          "page": 1,
+          "chunk_id": "batch1_24",
+          "score": 0.018981967121362686,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 21,
+          "chunk_id": "batch1_316",
+          "score": 0.018938574939966202,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "사내규정모음집20100129_개정.pdf",
+          "display_name": "사내규정모음집20100129_개정.pdf",
+          "page": 1,
+          "chunk_id": "batch1_16",
+          "score": 0.01889071613550186,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "그라파나 구성_V1.pptx",
+          "display_name": "그라파나 구성_V1.pptx",
+          "page": 57,
+          "chunk_id": "batch1_91",
+          "score": 0.018877804279327393,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 10,
+          "chunk_id": "batch1_259",
+          "score": 0.01886681094765663,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "사내규정모음집20100129_개정.pdf",
+          "display_name": "사내규정모음집20100129_개정.pdf",
+          "page": 31,
+          "chunk_id": "batch1_136",
+          "score": 0.018814044073224068,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "사내규정모음집20100129_개정.pdf",
+          "display_name": "사내규정모음집20100129_개정.pdf",
+          "page": 35,
+          "chunk_id": "batch1_149",
+          "score": 0.018814044073224068,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "사내규정모음집20100129_개정.pdf",
+          "display_name": "사내규정모음집20100129_개정.pdf",
+          "page": 29,
+          "chunk_id": "batch1_130",
+          "score": 0.018814044073224068,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        }
+      ]
+    }
+  ],
+  "timestamp": "2025-07-14T10:02:22.328378"
+}

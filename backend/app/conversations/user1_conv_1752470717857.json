@@ -1,0 +1,343 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1752470717857",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "AIH 재기동 절차가 어떻게 돼?",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "AIH 재기동 절차는 다음과 같습니다:\n\n1. **AIH 아키텍처**: AIH(AI Health) 시스템의 기본적인 구조와 구성 요소를 이해합니다. 이에는 REDIS, MariaDB, NEXT.JS, FASTAPI 등의 서비스들이 포함됩니다.[AIH 재기동 매뉴얼.pptx p.2]\n\n2. **AIH 서비스 구성**:\n   - **REDIS**: 채팅 세션을 관리하기 위해 사용됩니다.\n   - **MariaDB**: 고정 FAQ를 저장 및 관리하는 용도로 사용됩니다.\n   - **NEXT.JS**: 프론트엔드를 개발하는 데 필요한 서비스입니다.\n   - **FASTAPI**: 백엔드를 개발하기 위한 서비스로, AIH에서 백엔드 개발에 사용됩니다.[AIH 재기동 매뉴얼.pptx p.2]\n\n3. **재기동 절차**:\n   - AIH 재기동 절차는 각각의 서비스(REDIS, MariaDB, NEXT.JS, FASTAPI)를 순차적으로 재기동합니다.\n   - REDIS와 MariaDB는 데이터베이스 관련 서비스이므로, 먼저 해당 서비스들을 재기동하여 데이터의 일관성을 유지합니다.\n   - 다음으로 NEXT.JS와 FASTAPI와 같은 애플리케이션 서버들은 순차적으로 재기동됩니다.\n   - 모든 서비스가 정상적으로 재기동되면 AIH 전체 시스템이 다시 시작됩니다.\n\n이 과정은 AIH 재기동 매뉴얼에 상세히 기술되어 있으며, 매뉴얼에서는 각 단계별로 명확한 지침과 절차를 제공합니다. 이를 통해 AIH 시스템의 안정적인 재기동을 보장할 수 있습니다.[AIH 재기동 매뉴얼.pptx p.8]\n\n        참고로, 실제 재기동 작업은 전문가의 감독 하에 이루어져야 하며, 시스템의 상태를 모니터링하면서 진행해야 합니다.",
+      "sources": [
+        {
+          "path": "AIH 재기동 매뉴얼.pdf",
+          "display_name": "AIH 재기동 매뉴얼.pdf",
+          "page": 1,
+          "chunk_id": "batch1_0",
+          "score": 2,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/AIH 재기동 매뉴얼/page_1.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/AIH 재기동 매뉴얼/page_1.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: NEPYX NDT (NetDesktop)\nAIH 재기동 매뉴얼과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/AIH 재기동 매뉴얼/page_1.png",
+              "url": "/api/image-viewer/document_images/AIH 재기동 매뉴얼/page_1.png",
+              "caption": "이미지 1: NEPYX NDT (NetDesktop)\nAIH 재기동 매뉴얼과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1: NEPYX NDT (NetDesktop)\nAIH 재기동 매뉴얼과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": false
+        },
+        {
+          "path": "AIH 재기동 매뉴얼.pptx",
+          "display_name": "AIH 재기동 매뉴얼.pptx",
+          "page": 8,
+          "chunk_id": "batch1_8",
+          "score": 2,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/AIH 재기동 매뉴얼/page_8.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/AIH 재기동 매뉴얼/page_8.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: 8\n\n\n\nAIH 재기동 절차과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/AIH 재기동 매뉴얼/page_8.png",
+              "url": "/api/image-viewer/document_images/AIH 재기동 매뉴얼/page_8.png",
+              "caption": "이미지 1: 8\n\n\n\nAIH 재기동 절차과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1: 8\n\n\n\nAIH 재기동 절차과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": true
+        },
+        {
+          "path": "AIH 재기동 매뉴얼.pptx",
+          "display_name": "AIH 재기동 매뉴얼.pptx",
+          "page": 2,
+          "chunk_id": "batch1_1",
+          "score": 1.5656942092596084,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/AIH 재기동 매뉴얼/page_2.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/AIH 재기동 매뉴얼/page_2.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1:  AIH 아키텍처\n2  AIH 서비스 구성\n2과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/AIH 재기동 매뉴얼/page_2.png",
+              "url": "/api/image-viewer/document_images/AIH 재기동 매뉴얼/page_2.png",
+              "caption": "이미지 1:  AIH 아키텍처\n2  AIH 서비스 구성\n2과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1:  AIH 아키텍처\n2  AIH 서비스 구성\n2과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": true
+        },
+        {
+          "path": "AIH 재기동 매뉴얼.pptx",
+          "display_name": "AIH 재기동 매뉴얼.pptx",
+          "page": 9,
+          "chunk_id": "batch1_9",
+          "score": 1.359123260875644,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/AIH 재기동 매뉴얼/page_9.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/AIH 재기동 매뉴얼/page_9.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: 9\n감사합니다  \nAIH 재기동 매뉴얼 - 끝과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/AIH 재기동 매뉴얼/page_9.png",
+              "url": "/api/image-viewer/document_images/AIH 재기동 매뉴얼/page_9.png",
+              "caption": "이미지 1: 9\n감사합니다  \nAIH 재기동 매뉴얼 - 끝과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1: 9\n감사합니다  \nAIH 재기동 매뉴얼 - 끝과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": false
+        },
+        {
+          "path": "AIH 재기동 매뉴얼.pptx",
+          "display_name": "AIH 재기동 매뉴얼.pptx",
+          "page": 1,
+          "chunk_id": "batch1_0",
+          "score": 0.07004765147973648,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/AIH 재기동 매뉴얼/page_1.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/AIH 재기동 매뉴얼/page_1.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: \n2 \n3과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/AIH 재기동 매뉴얼/page_1.png",
+              "url": "/api/image-viewer/document_images/AIH 재기동 매뉴얼/page_1.png",
+              "caption": "이미지 1: \n2 \n3과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1: \n2 \n3과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": false
+        },
+        {
+          "path": "AIH 재기동 매뉴얼.pptx",
+          "display_name": "AIH 재기동 매뉴얼.pptx",
+          "page": 3,
+          "chunk_id": "batch1_3",
+          "score": 0.05734542579198566,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/AIH 재기동 매뉴얼/page_3.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/AIH 재기동 매뉴얼/page_3.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: 3\nAIH 아키텍처과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/AIH 재기동 매뉴얼/page_3.png",
+              "url": "/api/image-viewer/document_images/AIH 재기동 매뉴얼/page_3.png",
+              "caption": "이미지 1: 3\nAIH 아키텍처과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1: 3\nAIH 아키텍처과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": false
+        },
+        {
+          "path": "AIH 재기동 매뉴얼.pptx",
+          "display_name": "AIH 재기동 매뉴얼.pptx",
+          "page": 7,
+          "chunk_id": "batch1_7",
+          "score": 0.05406751685375993,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/AIH 재기동 매뉴얼/page_7.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/AIH 재기동 매뉴얼/page_7.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: 4  FastAPI\nAIH 에서 FastAPI는 백엔드를 개발하기 위한 목적의 서비스입니다과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/AIH 재기동 매뉴얼/page_7.png",
+              "url": "/api/image-viewer/document_images/AIH 재기동 매뉴얼/page_7.png",
+              "caption": "이미지 1: 4  FastAPI\nAIH 에서 FastAPI는 백엔드를 개발하기 위한 목적의 서비스입니다과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1: 4  FastAPI\nAIH 에서 FastAPI는 백엔드를 개발하기 위한 목적의 서비스입니다과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": false
+        },
+        {
+          "path": "AIH 재기동 매뉴얼.pptx",
+          "display_name": "AIH 재기동 매뉴얼.pptx",
+          "page": 4,
+          "chunk_id": "batch1_4",
+          "score": 0.0537894920397234,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/AIH 재기동 매뉴얼/page_4.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/AIH 재기동 매뉴얼/page_4.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: 1  REDIS\nAIH 에서 Redis는 채팅 세션을 관리하기 위한 목적의 서비스입니다과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/AIH 재기동 매뉴얼/page_4.png",
+              "url": "/api/image-viewer/document_images/AIH 재기동 매뉴얼/page_4.png",
+              "caption": "이미지 1: 1  REDIS\nAIH 에서 Redis는 채팅 세션을 관리하기 위한 목적의 서비스입니다과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1: 1  REDIS\nAIH 에서 Redis는 채팅 세션을 관리하기 위한 목적의 서비스입니다과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": false
+        },
+        {
+          "path": "AIH 재기동 매뉴얼.pptx",
+          "display_name": "AIH 재기동 매뉴얼.pptx",
+          "page": 5,
+          "chunk_id": "batch1_5",
+          "score": 0.05344114075434145,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/AIH 재기동 매뉴얼/page_5.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/AIH 재기동 매뉴얼/page_5.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: 2  MariaDB\nAIH 에서 MariaDB는 고정 FAQ를 저장/ 관리하기 위한 목적의 서비스입니다과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/AIH 재기동 매뉴얼/page_5.png",
+              "url": "/api/image-viewer/document_images/AIH 재기동 매뉴얼/page_5.png",
+              "caption": "이미지 1: 2  MariaDB\nAIH 에서 MariaDB는 고정 FAQ를 저장/ 관리하기 위한 목적의 서비스입니다과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1: 2  MariaDB\nAIH 에서 MariaDB는 고정 FAQ를 저장/ 관리하기 위한 목적의 서비스입니다과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": false
+        },
+        {
+          "path": "AIH 재기동 매뉴얼.pptx",
+          "display_name": "AIH 재기동 매뉴얼.pptx",
+          "page": 6,
+          "chunk_id": "batch1_6",
+          "score": 0.034693937452337696,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/AIH 재기동 매뉴얼/page_6.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/AIH 재기동 매뉴얼/page_6.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: 3  Next과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/AIH 재기동 매뉴얼/page_6.png",
+              "url": "/api/image-viewer/document_images/AIH 재기동 매뉴얼/page_6.png",
+              "caption": "이미지 1: 3  Next과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1: 3  Next과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": false
+        }
+      ]
+    }
+  ],
+  "timestamp": "2025-07-14T14:50:55.704328"
+}

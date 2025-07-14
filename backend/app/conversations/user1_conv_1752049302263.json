@@ -1,0 +1,654 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1752049302263",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "사용자 비밀번호 초기화 방법 알려줘",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "사용자 비밀번호를 초기화하는 방법은 다음과 같습니다:\n\n[중앙보훈병원_FAQ_관리_20260324.pdf p.2]에 따르면, 사용자는 다음과 같이 비밀번호를 초기화할 수 있습니다.\n1. 홈 > 사용자 > “부서” 뉴에서 해당 사용자를 검색하고 선택합니다.\n2. 오른쪽 상단에 위치한 [비밀번호 변경]과 [비밀번호 초기화] 옵션을 통해 사용자의 암호를 변경할 수 있습니다.\n   - [비밀번호 변경]은 관리자가 임의로 설정할 수 있으며,\n   - [비밀번호 초기화]는 운영 설정에서 초기 비밀번호로 변경됩니다.\n\n또한, [NDT User Guide(Win).pdf p.5]에서는 최초 로그인 시 임시 비밀번호를 발급받아야 하며, 이를 통해 사용자 비밀번호를 변경할 수 있다고 설명하고 있습니다.",
+      "sources": [
+        {
+          "path": "중앙보훈병원_FAQ_관리_20260324.pdf",
+          "display_name": "중앙보훈병원_FAQ_관리_20260324.pdf",
+          "page": 1,
+          "chunk_id": "batch1_2",
+          "score": 0.30592241883277893,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/중앙보훈병원_FAQ_관리_20260324/page_1.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/중앙보훈병원_FAQ_관리_20260324/page_1.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1:  사용자 비밀번호 초기화 방법 알려줘\nA1  홈 > 사용자 > “부서” 뉴에서 해당 사용자 검색 및 선택 후 오른쪽 상단 [비밀번호 변경] 과 \n[비밀번호 초기화]로 사용자 암호를 변경할 수 있습니다과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/중앙보훈병원_FAQ_관리_20260324/page_1.png",
+              "url": "/api/image-viewer/document_images/중앙보훈병원_FAQ_관리_20260324/page_1.png",
+              "caption": "이미지 1:  사용자 비밀번호 초기화 방법 알려줘\nA1  홈 > 사용자 > “부서” 뉴에서 해당 사용자 검색 및 선택 후 오른쪽 상단 [비밀번호 변경] 과 \n[비밀번호 초기화]로 사용자 암호를 변경할 수 있습니다과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1:  사용자 비밀번호 초기화 방법 알려줘\nA1  홈 > 사용자 > “부서” 뉴에서 해당 사용자 검색 및 선택 후 오른쪽 상단 [비밀번호 변경] 과 \n[비밀번호 초기화]로 사용자 암호를 변경할 수 있습니다과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": false
+        },
+        {
+          "path": "NDT User Guide(Win).pdf",
+          "display_name": "NDT User Guide(Win).pdf",
+          "page": 5,
+          "chunk_id": "batch1_6",
+          "score": 0.01471032202243805,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/NDT User Guide(Win)/page_5.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/NDT User Guide(Win)/page_5.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: ②드롭다운메뉴에서도메인선택③로그인버튼클릭•아이디/비밀번호정상이면로그인2단계인증화면으로이동\nv비밀번호3회이상오류시계정잠금à관리자에게문의",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/NDT User Guide(Win)/page_5.png",
+              "url": "/api/image-viewer/document_images/NDT User Guide(Win)/page_5.png",
+              "caption": "이미지 1: ②드롭다운메뉴에서도메인선택③로그인버튼클릭•아이디/비밀번호정상이면로그인2단계인증화면으로이동\nv비밀번호3회이상오류시계정잠금à관리자에게문의",
+              "ocr_text": "",
+              "ai_description": "이미지 1: ②드롭다운메뉴에서도메인선택③로그인버튼클릭•아이디/비밀번호정상이면로그인2단계인증화면으로이동\nv비밀번호3회이상오류시계정잠금à관리자에게문의"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": true
+        },
+        {
+          "path": "NDT User Guide(Win).pdf",
+          "display_name": "NDT User Guide(Win).pdf",
+          "page": 4,
+          "chunk_id": "batch1_5",
+          "score": 0.01442052237689495,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/NDT User Guide(Win)/page_4.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/NDT User Guide(Win)/page_4.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: xxx xxx과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/NDT User Guide(Win)/page_4.png",
+              "url": "/api/image-viewer/document_images/NDT User Guide(Win)/page_4.png",
+              "caption": "이미지 1: xxx xxx과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1: xxx xxx과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": false
+        },
+        {
+          "path": "NDT 이미지만 있는 문서.pdf",
+          "display_name": "NDT 이미지만 있는 문서.pdf",
+          "page": 3,
+          "chunk_id": "batch1_2",
+          "score": 0.013290824368596077,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "자료전송 시스템 SSL인증서 갱신 매뉴얼.pdf",
+          "display_name": "자료전송 시스템 SSL인증서 갱신 매뉴얼.pdf",
+          "page": 4,
+          "chunk_id": "batch1_22",
+          "score": 0.013024996034801006,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "[NDT4]Windows11 Template VM 생성 가이드.pdf",
+          "display_name": "[NDT4]Windows11 Template VM 생성 가이드.pdf",
+          "page": 4,
+          "chunk_id": "batch1_5",
+          "score": 0.012930359691381454,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/[NDT4]Windows11 Template VM 생성 가이드/page_4.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/[NDT4]Windows11 Template VM 생성 가이드/page_4.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: 파일을 선택하고 계정명 (host server 계정 정보), 비밀번호(host server 비밀번호), 소프트웨어명(Windows10)을 입력하고 업로드 버튼 클릭\n정상 업로드 확인과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/[NDT4]Windows11 Template VM 생성 가이드/page_4.png",
+              "url": "/api/image-viewer/document_images/[NDT4]Windows11 Template VM 생성 가이드/page_4.png",
+              "caption": "이미지 1: 파일을 선택하고 계정명 (host server 계정 정보), 비밀번호(host server 비밀번호), 소프트웨어명(Windows10)을 입력하고 업로드 버튼 클릭\n정상 업로드 확인과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1: 파일을 선택하고 계정명 (host server 계정 정보), 비밀번호(host server 비밀번호), 소프트웨어명(Windows10)을 입력하고 업로드 버튼 클릭\n정상 업로드 확인과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": false
+        },
+        {
+          "path": "[NDT4]Windows11 Template VM 생성 가이드.pdf",
+          "display_name": "[NDT4]Windows11 Template VM 생성 가이드.pdf",
+          "page": 8,
+          "chunk_id": "batch1_9",
+          "score": 0.012904610484838486,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "[NDT4]Windows11 Template VM 생성 가이드.pdf",
+          "display_name": "[NDT4]Windows11 Template VM 생성 가이드.pdf",
+          "page": 37,
+          "chunk_id": "batch1_34",
+          "score": 0.012856102548539639,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/[NDT4]Windows11 Template VM 생성 가이드/page_37.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/[NDT4]Windows11 Template VM 생성 가이드/page_37.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: 사용자 폴더 우클릭 > 새 사용자 > 사용자이름 : sysprep, 암호 : sysprep,\n다음 로그온 시 사용자가 반드시 암호를 변경해야함 ← 체크 해제\n만들기\n설정 > 계정 > 다른 사용자 > sysprep > 계정 유형 변경 > 관리자과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/[NDT4]Windows11 Template VM 생성 가이드/page_37.png",
+              "url": "/api/image-viewer/document_images/[NDT4]Windows11 Template VM 생성 가이드/page_37.png",
+              "caption": "이미지 1: 사용자 폴더 우클릭 > 새 사용자 > 사용자이름 : sysprep, 암호 : sysprep,\n다음 로그온 시 사용자가 반드시 암호를 변경해야함 ← 체크 해제\n만들기\n설정 > 계정 > 다른 사용자 > sysprep > 계정 유형 변경 > 관리자과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1: 사용자 폴더 우클릭 > 새 사용자 > 사용자이름 : sysprep, 암호 : sysprep,\n다음 로그온 시 사용자가 반드시 암호를 변경해야함 ← 체크 해제\n만들기\n설정 > 계정 > 다른 사용자 > sysprep > 계정 유형 변경 > 관리자과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": false
+        },
+        {
+          "path": "[NDT4]Ceph 설치 가이드(CentOS 8 Stream).pdf",
+          "display_name": "[NDT4]Ceph 설치 가이드(CentOS 8 Stream).pdf",
+          "page": 4,
+          "chunk_id": "batch1_30",
+          "score": 0.012841016054153442,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "자료전송 시스템 SSL인증서 갱신 매뉴얼.pdf",
+          "display_name": "자료전송 시스템 SSL인증서 갱신 매뉴얼.pdf",
+          "page": 2,
+          "chunk_id": "batch1_17",
+          "score": 0.012819287367165089,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "공용 VM 특정 사용자만 사용하게 지정 가능한가요?",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "네, 공용 VM을 특정 사용자만 사용할 수 있도록 지정할 수 있습니다.\n\n[중앙보훈병원_FAQ_관리_20260324.pdf p.3]에 따르면, 다음과 같은 단계를 통해 특정 사용자만 공용 VM에서 사용할 수 있도록 할 수 있습니다.\n1. 홈 > 사용자 > “그룹” 메뉴에서 새로운 그룹을 추가합니다.\n2. 추가된 그룹에 특정 부서나 특정 사용자를 포함시키고, 해당 그룹을 선택합니다.\n3. 공용 VM에서 사용할 그룹만 체크하여 사용하도록 설정합니다.\n\n이렇게 하면, 해당 그룹의 사용자만 해당 공용 VM에서 사용할 수 있게 됩니다.",
+      "sources": [
+        {
+          "path": "중앙보훈병원_FAQ_관리_20260324.pdf",
+          "display_name": "중앙보훈병원_FAQ_관리_20260324.pdf",
+          "page": 1,
+          "chunk_id": "batch1_2",
+          "score": 0.3163401484489441,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/중앙보훈병원_FAQ_관리_20260324/page_1.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/중앙보훈병원_FAQ_관리_20260324/page_1.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1:  사용자 비밀번호 초기화 방법 알려줘\nA1  홈 > 사용자 > “부서” 뉴에서 해당 사용자 검색 및 선택 후 오른쪽 상단 [비밀번호 변경] 과 \n[비밀번호 초기화]로 사용자 암호를 변경할 수 있습니다과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/중앙보훈병원_FAQ_관리_20260324/page_1.png",
+              "url": "/api/image-viewer/document_images/중앙보훈병원_FAQ_관리_20260324/page_1.png",
+              "caption": "이미지 1:  사용자 비밀번호 초기화 방법 알려줘\nA1  홈 > 사용자 > “부서” 뉴에서 해당 사용자 검색 및 선택 후 오른쪽 상단 [비밀번호 변경] 과 \n[비밀번호 초기화]로 사용자 암호를 변경할 수 있습니다과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1:  사용자 비밀번호 초기화 방법 알려줘\nA1  홈 > 사용자 > “부서” 뉴에서 해당 사용자 검색 및 선택 후 오른쪽 상단 [비밀번호 변경] 과 \n[비밀번호 초기화]로 사용자 암호를 변경할 수 있습니다과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": false
+        },
+        {
+          "path": "[NDT4]Windows11 Template VM 생성 가이드.pdf",
+          "display_name": "[NDT4]Windows11 Template VM 생성 가이드.pdf",
+          "page": 41,
+          "chunk_id": "batch1_38",
+          "score": 0.013894348405301571,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/[NDT4]Windows11 Template VM 생성 가이드/page_41.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/[NDT4]Windows11 Template VM 생성 가이드/page_41.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: \n클라이언트 프로그램 접속 시에 vm 생성시 선택한 user계정이 왼쪽 하단에 나타난다 \n그 계정으로 로그인 했을 때 접속 되면 성공한 것과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/[NDT4]Windows11 Template VM 생성 가이드/page_41.png",
+              "url": "/api/image-viewer/document_images/[NDT4]Windows11 Template VM 생성 가이드/page_41.png",
+              "caption": "이미지 1: \n클라이언트 프로그램 접속 시에 vm 생성시 선택한 user계정이 왼쪽 하단에 나타난다 \n그 계정으로 로그인 했을 때 접속 되면 성공한 것과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1: \n클라이언트 프로그램 접속 시에 vm 생성시 선택한 user계정이 왼쪽 하단에 나타난다 \n그 계정으로 로그인 했을 때 접속 되면 성공한 것과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": false
+        },
+        {
+          "path": "[NDT4]Windows11 Template VM 생성 가이드.pdf",
+          "display_name": "[NDT4]Windows11 Template VM 생성 가이드.pdf",
+          "page": 35,
+          "chunk_id": "batch1_32",
+          "score": 0.013770166784524918,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "[NDT4]Rocky 8.10 설치.pdf",
+          "display_name": "[NDT4]Rocky 8.10 설치.pdf",
+          "page": 2,
+          "chunk_id": "batch1_13",
+          "score": 0.013715362176299095,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/[NDT4]Rocky 8.10 설치/page_2.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/[NDT4]Rocky 8.10 설치/page_2.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: VM 생성\nfig1) 가상 시스템 선택 → VM 생성 / 등록 선택\nfig2) 새 가상 시스템 생성 → 다음\nfig3) 이름 , 호환성 , 제품군 , 버전 선택 → 다음\nfig1\nfig2\nfig3과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/[NDT4]Rocky 8.10 설치/page_2.png",
+              "url": "/api/image-viewer/document_images/[NDT4]Rocky 8.10 설치/page_2.png",
+              "caption": "이미지 1: VM 생성\nfig1) 가상 시스템 선택 → VM 생성 / 등록 선택\nfig2) 새 가상 시스템 생성 → 다음\nfig3) 이름 , 호환성 , 제품군 , 버전 선택 → 다음\nfig1\nfig2\nfig3과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1: VM 생성\nfig1) 가상 시스템 선택 → VM 생성 / 등록 선택\nfig2) 새 가상 시스템 생성 → 다음\nfig3) 이름 , 호환성 , 제품군 , 버전 선택 → 다음\nfig1\nfig2\nfig3과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": false
+        },
+        {
+          "path": "NDT 이미지만 있는 문서.pdf",
+          "display_name": "NDT 이미지만 있는 문서.pdf",
+          "page": 19,
+          "chunk_id": "batch1_18",
+          "score": 0.013608821667730808,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "[NDT4]Rocky 8.10 설치.pdf",
+          "display_name": "[NDT4]Rocky 8.10 설치.pdf",
+          "page": 18,
+          "chunk_id": "batch1_36",
+          "score": 0.013559422455728054,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/[NDT4]Rocky 8.10 설치/page_18.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/[NDT4]Rocky 8.10 설치/page_18.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: Logical Volume 생성\n참고 자료 : lvcreate(8) - Linux manual page \n용량 직접 설정\n남은 용량의 퍼센트로 지정\nLogical Volume 생성...",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/[NDT4]Rocky 8.10 설치/page_18.png",
+              "url": "/api/image-viewer/document_images/[NDT4]Rocky 8.10 설치/page_18.png",
+              "caption": "이미지 1: Logical Volume 생성\n참고 자료 : lvcreate(8) - Linux manual page \n용량 직접 설정\n남은 용량의 퍼센트로 지정\nLogical Volume 생성...",
+              "ocr_text": "",
+              "ai_description": "이미지 1: Logical Volume 생성\n참고 자료 : lvcreate(8) - Linux manual page \n용량 직접 설정\n남은 용량의 퍼센트로 지정\nLogical Volume 생성..."
+            }
+          ],
+          "image_count": 1,
+          "is_cited": false
+        },
+        {
+          "path": "NDT 이미지만 있는 문서.pdf",
+          "display_name": "NDT 이미지만 있는 문서.pdf",
+          "page": 37,
+          "chunk_id": "batch1_36",
+          "score": 0.013545079156756401,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "[NDT4]Windows11 Template VM 생성 가이드.pdf",
+          "display_name": "[NDT4]Windows11 Template VM 생성 가이드.pdf",
+          "page": 34,
+          "chunk_id": "batch1_31",
+          "score": 0.013470383360981941,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "[NDT4]Rocky 8.10 설치.pdf",
+          "display_name": "[NDT4]Rocky 8.10 설치.pdf",
+          "page": 17,
+          "chunk_id": "batch1_35",
+          "score": 0.013467499054968357,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "NDT 이미지만 있는 문서.pdf",
+          "display_name": "NDT 이미지만 있는 문서.pdf",
+          "page": 16,
+          "chunk_id": "batch1_15",
+          "score": 0.013450074940919876,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "VDI 접속 및 사용 관련 통계자료 출력해줘",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "VDI 접속 및 사용 관련 통계자료를 출력하기 위해서는 다음 단계를 따라야 합니다:\n\n[중앙보훈병원_FAQ_관리_20260324.pdf p.4]에 따르면, 다음과 같이 통계 자료를 출력할 수 있습니다.\n1. 홈 > “통계” 메뉴로 이동합니다.\n2. 관리자 작업, 가상 머신 접속, 호스트 성능, 가상 머신 성능, 사용자 접속 등의 항목을 선택하여 원하는 조건으로 검색합니다.\n3. 검색 결과를 엑셀 시트로 다운로드하여 사용할 수 있습니다.\n\n이러한 방식으로 VDI 접속 및 사용 관련 통계자료를 수집하고 분석할 수 있습니다.",
+      "sources": [
+        {
+          "path": "중앙보훈병원_FAQ_관리_20260324.pdf",
+          "display_name": "중앙보훈병원_FAQ_관리_20260324.pdf",
+          "page": 1,
+          "chunk_id": "batch1_2",
+          "score": 0.28718844056129456,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/중앙보훈병원_FAQ_관리_20260324/page_1.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/중앙보훈병원_FAQ_관리_20260324/page_1.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1:  사용자 비밀번호 초기화 방법 알려줘\nA1  홈 > 사용자 > “부서” 뉴에서 해당 사용자 검색 및 선택 후 오른쪽 상단 [비밀번호 변경] 과 \n[비밀번호 초기화]로 사용자 암호를 변경할 수 있습니다과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/중앙보훈병원_FAQ_관리_20260324/page_1.png",
+              "url": "/api/image-viewer/document_images/중앙보훈병원_FAQ_관리_20260324/page_1.png",
+              "caption": "이미지 1:  사용자 비밀번호 초기화 방법 알려줘\nA1  홈 > 사용자 > “부서” 뉴에서 해당 사용자 검색 및 선택 후 오른쪽 상단 [비밀번호 변경] 과 \n[비밀번호 초기화]로 사용자 암호를 변경할 수 있습니다과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1:  사용자 비밀번호 초기화 방법 알려줘\nA1  홈 > 사용자 > “부서” 뉴에서 해당 사용자 검색 및 선택 후 오른쪽 상단 [비밀번호 변경] 과 \n[비밀번호 초기화]로 사용자 암호를 변경할 수 있습니다과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": false
+        },
+        {
+          "path": "NDT User Guide(Win).pdf",
+          "display_name": "NDT User Guide(Win).pdf",
+          "page": 2,
+          "chunk_id": "batch1_4",
+          "score": 0.012616323307156563,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "IV. 프로젝트관리 부문.pdf",
+          "display_name": "IV. 프로젝트관리 부문.pdf",
+          "page": 1,
+          "chunk_id": "batch1_24",
+          "score": 0.012612705118954182,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "VDI_RPA_일일보고.xlsx",
+          "display_name": "VDI_RPA_일일보고.xlsx",
+          "page": 2,
+          "chunk_id": "batch1_1",
+          "score": 0.012562263756990433,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "VDI_RPA_일일보고.xlsx",
+          "display_name": "VDI_RPA_일일보고.xlsx",
+          "page": 4,
+          "chunk_id": "batch1_3",
+          "score": 0.012562263756990433,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "[NDT4]Rocky 8.10 설치.pdf",
+          "display_name": "[NDT4]Rocky 8.10 설치.pdf",
+          "page": 17,
+          "chunk_id": "batch1_35",
+          "score": 0.012308287434279919,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "사내규정모음집20100129_개정.pdf",
+          "display_name": "사내규정모음집20100129_개정.pdf",
+          "page": 7,
+          "chunk_id": "batch1_50",
+          "score": 0.012229915708303452,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "[NDT4]Ceph 설치 가이드(CentOS 8 Stream).pdf",
+          "display_name": "[NDT4]Ceph 설치 가이드(CentOS 8 Stream).pdf",
+          "page": 4,
+          "chunk_id": "batch1_30",
+          "score": 0.012204622849822044,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "VDI_RPA_일일보고.xlsx",
+          "display_name": "VDI_RPA_일일보고.xlsx",
+          "page": 3,
+          "chunk_id": "batch1_2",
+          "score": 0.012157505378127098,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/VDI_RPA_일일보고/page_3.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/VDI_RPA_일일보고/page_3.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: 대시보드 현황\nVDI 점검 리포트\n1GROUP-VDI 상태\n2GROUP-VDI 상태과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/VDI_RPA_일일보고/page_3.png",
+              "url": "/api/image-viewer/document_images/VDI_RPA_일일보고/page_3.png",
+              "caption": "이미지 1: 대시보드 현황\nVDI 점검 리포트\n1GROUP-VDI 상태\n2GROUP-VDI 상태과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1: 대시보드 현황\nVDI 점검 리포트\n1GROUP-VDI 상태\n2GROUP-VDI 상태과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": false
+        },
+        {
+          "path": "20220408_장애결과보고_VDI_한국전자인증.pdf",
+          "display_name": "20220408_장애결과보고_VDI_한국전자인증.pdf",
+          "page": 2,
+          "chunk_id": "batch1_3",
+          "score": 0.012137942016124725,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "한전KDN 제안요청서 있어?",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "한전KDN의 제안요청서(ROP)에 대한 정보는 직접적으로 제공되지 않았습니다. 한전KDN의 제안요청서(RFP, Request for Proposal)는 일반적으로 고객사가 특정 서비스나 제품을 제공받기 위해 제안서를 받기 위한 프로세스를 설명하는 문서입니다. 이 문서에는 요구 사항, 평가 기준, 제안서 제출 방법 등이 포함됩니다.\n\n한전KDN의 RFP에 대한 자세한 정보를 얻으려면 다음과 같은 방법을 사용할 수 있습니다:\n\n1. 한전KDN의 공식 웹사이트를 방문하여 ‘사업 참여’나 ‘공급업체 지원’과 관련된 섹션을 찾아보세요.\n2. 전문 컨설팅 회사나 대형 IT 기업의 웹사이트를 확인하여 한전KDN과의 협력 사례나 제안요청서(RFP)에 대한 정보를 찾으세요.\n3. 산업 전문 매체나 포럼을 통해 한전KDN과 관련된 뉴스나 제안요청서(RFP)에 대한 정보를 얻으세요.\n\n위와 같은 방법들을 통해 한전KDN의 제안요청서에 대한 더 많은 정보를 얻을 수 있을 것입니다.",
+      "sources": []
+    }
+  ],
+  "timestamp": "2025-07-14T10:04:37.169400"
+}

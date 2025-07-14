@@ -1,0 +1,234 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1752453037946",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "버티카 국내 레퍼런스에 대한 자료가 있어?",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "네, 버티카 국내 레퍼런스에 대한 자료가 있습니다. 이 자료는 [버티카 국내 레퍼런스_2024.pdf]라는 이름의 파일에서 찾을 수 있으며, 이를 통해 다양한 정보를 얻을 수 있습니다. 이 레퍼런스에는 버티카 관련 데이터베이스 및 분석 솔루션에 대한 상세한 정보와 함께 국내 시장에서의 적용 사례 등이 포함되어 있습니다. 필요하시다면 해당 레퍼런스의 내용을 더 자세히 알려드리겠습니다.",
+      "sources": [
+        {
+          "path": "버티카 국내 레퍼런스_2024.pdf",
+          "display_name": "버티카 국내 레퍼런스_2024.pdf",
+          "page": 1,
+          "chunk_id": "batch1_0",
+          "score": 2,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/버티카 국내 레퍼런스_2024/page_1.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/버티카 국내 레퍼런스_2024/page_1.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: 버티카 국내 레퍼런스과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/버티카 국내 레퍼런스_2024/page_1.png",
+              "url": "/api/image-viewer/document_images/버티카 국내 레퍼런스_2024/page_1.png",
+              "caption": "이미지 1: 버티카 국내 레퍼런스과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1: 버티카 국내 레퍼런스과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": true
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "금융 쪽 레퍼런스가 있으면 정리해서 알려줘",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "금융 쪽 레퍼런스에 대한 정보는 [3S소프트 회사소개-250514.pdf]에서 찾을 수 있습니다. 이 문서에서는 주요 고객사를 다음과 같이 소개하고 있습니다:\n\n- 금융\n- 유통\n- IT 서비스\n\n이러한 고객들은 3S소프트의 주요 비즈니스 영역 중 하나인 금융 분야에서 중요한 파트너십을 맺고 있습니다. 이 레퍼런스는 회사의 사업 범위와 고객 기반에 대한 이해를 돕는 데 유용합니다.\n\n더 많은 정보가 필요한 경우에는 해당 문서를 참조해주세요.",
+      "sources": [
+        {
+          "path": "그라파나 구성_V1.pptx",
+          "display_name": "그라파나 구성_V1.pptx",
+          "page": 4,
+          "chunk_id": "batch1_30",
+          "score": 0.44275742769241333,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/그라파나 구성_V1/page_4.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/그라파나 구성_V1/page_4.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: : 그라파나 레퍼런스 자료들이 많으므로 꼭 한번 읽어보길 바람 ( 특히 공식문서 )과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/그라파나 구성_V1/page_4.png",
+              "url": "/api/image-viewer/document_images/그라파나 구성_V1/page_4.png",
+              "caption": "이미지 1: : 그라파나 레퍼런스 자료들이 많으므로 꼭 한번 읽어보길 바람 ( 특히 공식문서 )과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1: : 그라파나 레퍼런스 자료들이 많으므로 꼭 한번 읽어보길 바람 ( 특히 공식문서 )과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": false
+        },
+        {
+          "path": "3S소프트 회사소개-250514.pdf",
+          "display_name": "3S소프트 회사소개-250514.pdf",
+          "page": 9,
+          "chunk_id": "batch1_9",
+          "score": 0.02058398723602295,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/3S소프트 회사소개-250514/page_9.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/3S소프트 회사소개-250514/page_9.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: - 9 -\n주요 고객사\n금융\n유통, IT서비스\n고객추가과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/3S소프트 회사소개-250514/page_9.png",
+              "url": "/api/image-viewer/document_images/3S소프트 회사소개-250514/page_9.png",
+              "caption": "이미지 1: - 9 -\n주요 고객사\n금융\n유통, IT서비스\n고객추가과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1: - 9 -\n주요 고객사\n금융\n유통, IT서비스\n고객추가과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": true
+        },
+        {
+          "path": "사내규정모음집20100129_개정.pdf",
+          "display_name": "사내규정모음집20100129_개정.pdf",
+          "page": 10,
+          "chunk_id": "batch1_57",
+          "score": 0.020194655284285545,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "사내규정모음집20100129_개정.pdf",
+          "display_name": "사내규정모음집20100129_개정.pdf",
+          "page": 15,
+          "chunk_id": "batch1_83",
+          "score": 0.019992465153336525,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "그라파나 구성_V1.pptx",
+          "display_name": "그라파나 구성_V1.pptx",
+          "page": 57,
+          "chunk_id": "batch1_91",
+          "score": 0.019969386979937553,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "사내규정모음집20100129_개정.pdf",
+          "display_name": "사내규정모음집20100129_개정.pdf",
+          "page": 16,
+          "chunk_id": "batch1_94",
+          "score": 0.019955823197960854,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "사내규정모음집20100129_개정.pdf",
+          "display_name": "사내규정모음집20100129_개정.pdf",
+          "page": 14,
+          "chunk_id": "batch1_79",
+          "score": 0.0199065450578928,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "버티카 국내 레퍼런스_2024.pdf",
+          "display_name": "버티카 국내 레퍼런스_2024.pdf",
+          "page": 1,
+          "chunk_id": "batch1_0",
+          "score": 0.019869370386004448,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "AIH 사용자 가이드_v1.1.pptx",
+          "display_name": "AIH 사용자 가이드_v1.1.pptx",
+          "page": 1,
+          "chunk_id": "batch1_1",
+          "score": 0.01981929875910282,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "3S소프트 회사소개-250514.pdf",
+          "display_name": "3S소프트 회사소개-250514.pdf",
+          "page": 22,
+          "chunk_id": "batch1_24",
+          "score": 0.019796516746282578,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": true
+        }
+      ]
+    }
+  ],
+  "timestamp": "2025-07-14T10:04:51.022181"
+}

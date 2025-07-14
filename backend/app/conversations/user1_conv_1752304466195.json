@@ -1,0 +1,191 @@
+{
+  "userId": "user1",
+  "conversationId": "conv_1752304466195",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "셋째자녀이상의 경우 휴가일수가 얼마야?",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "셋째 자녀 이상의 경우, 출산 전후 휴가는 120일이 주어집니다. 이는 [B-1001_취업규칙_20230109.pdf p.27]에 따라 임신한 여자직원에 대한 휴가 규정에서 명시되어 있습니다.",
+      "sources": [
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 27,
+          "chunk_id": "batch1_339",
+          "score": 0.16424143314361572,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/B-1001_취업규칙_20230109/page_27.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/B-1001_취업규칙_20230109/page_27.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1:  임신중인 여자직원에 대하여는 출산 전후를 통한 90 일(다둥의 경우 120 일)의 \n휴가를 준다  다 만, 본 휴가는 출산 후 45 일 이상이 확보되도록 하여야 한다과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/B-1001_취업규칙_20230109/page_27.png",
+              "url": "/api/image-viewer/document_images/B-1001_취업규칙_20230109/page_27.png",
+              "caption": "이미지 1:  임신중인 여자직원에 대하여는 출산 전후를 통한 90 일(다둥의 경우 120 일)의 \n휴가를 준다  다 만, 본 휴가는 출산 후 45 일 이상이 확보되도록 하여야 한다과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1:  임신중인 여자직원에 대하여는 출산 전후를 통한 90 일(다둥의 경우 120 일)의 \n휴가를 준다  다 만, 본 휴가는 출산 후 45 일 이상이 확보되도록 하여야 한다과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": true
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 26,
+          "chunk_id": "batch1_335",
+          "score": 0.008737129159271717,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/B-1001_취업규칙_20230109/page_26.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/B-1001_취업규칙_20230109/page_26.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: 회사는 업무상 부득이한 사정 등이 있을 경우에는 직원과 협의하여 주휴일 또는 근로자 \n대표와 서면합의하여 정휴일을 4 주간 이내의 범위에서 다른 날로 대체할 수 있다",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/B-1001_취업규칙_20230109/page_26.png",
+              "url": "/api/image-viewer/document_images/B-1001_취업규칙_20230109/page_26.png",
+              "caption": "이미지 1: 회사는 업무상 부득이한 사정 등이 있을 경우에는 직원과 협의하여 주휴일 또는 근로자 \n대표와 서면합의하여 정휴일을 4 주간 이내의 범위에서 다른 날로 대체할 수 있다",
+              "ocr_text": "",
+              "ai_description": "이미지 1: 회사는 업무상 부득이한 사정 등이 있을 경우에는 직원과 협의하여 주휴일 또는 근로자 \n대표와 서면합의하여 정휴일을 4 주간 이내의 범위에서 다른 날로 대체할 수 있다"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": false
+        },
+        {
+          "path": "VDI_RPA_일일보고.xlsx",
+          "display_name": "VDI_RPA_일일보고.xlsx",
+          "page": 2,
+          "chunk_id": "batch1_1",
+          "score": 0.00823209248483181,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "VDI_RPA_일일보고.xlsx",
+          "display_name": "VDI_RPA_일일보고.xlsx",
+          "page": 4,
+          "chunk_id": "batch1_3",
+          "score": 0.00823209248483181,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 39,
+          "chunk_id": "batch1_390",
+          "score": 0.008227833546698093,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "사내규정모음집20100129_개정.pdf",
+          "display_name": "사내규정모음집20100129_개정.pdf",
+          "page": 18,
+          "chunk_id": "batch1_102",
+          "score": 0.008191998116672039,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "Outlook 메일계정 메뉴얼.pptx",
+          "display_name": "Outlook 메일계정 메뉴얼.pptx",
+          "page": 3,
+          "chunk_id": "batch1_2",
+          "score": 0.008023949339985847,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "AIH 재기동 매뉴얼.pptx",
+          "display_name": "AIH 재기동 매뉴얼.pptx",
+          "page": 3,
+          "chunk_id": "batch1_3",
+          "score": 0.008022504858672619,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 5,
+          "chunk_id": "batch1_226",
+          "score": 0.00801057182252407,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        },
+        {
+          "path": "B-1001_취업규칙_20230109.pdf",
+          "display_name": "B-1001_취업규칙_20230109.pdf",
+          "page": 33,
+          "chunk_id": "batch1_360",
+          "score": 0.008008517324924469,
+          "element_type": "text",
+          "has_images": false,
+          "images": [],
+          "processed_images": [],
+          "image_count": 0,
+          "is_cited": false
+        }
+      ]
+    }
+  ],
+  "timestamp": "2025-07-12T16:14:35.980777"
+}

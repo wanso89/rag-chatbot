@@ -1,0 +1,119 @@
+{
+  "userId": "user1",
+  "conversationId": "1752375800725",
+  "messages": [
+    {
+      "role": "assistant",
+      "content": "안녕하세요! 무엇을 도와드릴까요?",
+      "sources": []
+    },
+    {
+      "role": "user",
+      "content": "한국전자인증 2022년 4월에 있었던 장애와 장애원인이 뭐였지?'",
+      "sources": []
+    },
+    {
+      "role": "assistant",
+      "content": "한국전자인증에서는 2022년 4월 두 번의 장애가 발생했습니다.\n\n        첫 번째 장애는 4월 19일 화요일에 발생했으며, VDI 서버 접속이 불가능해졌습니다. 이 장애의 원인은 MongoDB 프로세스 내에서 캐시에 저장된 데이터를 삭제하지 않았고, MongoDB 스토리지 엔진 모듈이 데이터 페이지의 읽기 성능을 따라갈 수 없어서 단시간에 캐시에 대용량의 데이터가 쌓여 발생했다고 밝혔습니다. 이를 해결하기 위해 서버의 가용 용량을 확보하고 MongoDB 구성 파일을 수정하여 캐시 데이터 용량 관리를 강화했습니다.\n\n        두 번째 장애는 4월 8일 금요일에 발생했으며, VDI 서버 접속이 불가능해졌습니다. 이 장애의 원인은 솔루션 로그가 날짜별로 나뉘지 않고 하나의 파일에 저장되면서 오랜 기간 동안 쌓여서 서버의 가용 용량이 초과되었기 때문이라고 설명되었습니다. 이를 해결하기 위해 로그를 삭제하고 로그 관리 설정을 조정하여 서비스를 정상화했습니다.\n\n        이러한 장애들은 서버의 가용 용량 문제와 관련된 것으로, 특히 데이터 저장 및 로그 관리에 대한 문제가 있었습니다.",
+      "sources": [
+        {
+          "path": "한국전자인증_장애결과보고_VDI_수정.pdf",
+          "display_name": "한국전자인증_장애결과보고_VDI_수정.pdf",
+          "page": 1,
+          "chunk_id": "batch1_2",
+          "score": 0.2,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/한국전자인증_장애결과보고_VDI_수정/page_1.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/한국전자인증_장애결과보고_VDI_수정/page_1.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: 04 19(화)푸름데이타웨어❏ 장애 현황❍ 04과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/한국전자인증_장애결과보고_VDI_수정/page_1.png",
+              "url": "/api/image-viewer/document_images/한국전자인증_장애결과보고_VDI_수정/page_1.png",
+              "caption": "이미지 1: 04 19(화)푸름데이타웨어❏ 장애 현황❍ 04과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1: 04 19(화)푸름데이타웨어❏ 장애 현황❍ 04과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": false
+        },
+        {
+          "path": "20220408_장애결과보고_VDI_한국전자인증.pdf",
+          "display_name": "20220408_장애결과보고_VDI_한국전자인증.pdf",
+          "page": 1,
+          "chunk_id": "batch1_2",
+          "score": 0.2,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/20220408_장애결과보고_VDI_한국전자인증/page_1.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/20220408_장애결과보고_VDI_한국전자인증/page_1.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: 04 08(금)푸름데이타웨어❏ 장애 현황❍ 04과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/20220408_장애결과보고_VDI_한국전자인증/page_1.png",
+              "url": "/api/image-viewer/document_images/20220408_장애결과보고_VDI_한국전자인증/page_1.png",
+              "caption": "이미지 1: 04 08(금)푸름데이타웨어❏ 장애 현황❍ 04과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1: 04 08(금)푸름데이타웨어❏ 장애 현황❍ 04과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": false
+        },
+        {
+          "path": "한국전자인증_장애결과보고_VDI_수정.pdf",
+          "display_name": "한국전자인증_장애결과보고_VDI_수정.pdf",
+          "page": 2,
+          "chunk_id": "batch1_3",
+          "score": 0.07315738272810457,
+          "element_type": "text",
+          "has_images": true,
+          "images": [
+            "document_images/한국전자인증_장애결과보고_VDI_수정/page_2.png"
+          ],
+          "image_captions": [
+            {
+              "image_path": "document_images/한국전자인증_장애결과보고_VDI_수정/page_2.png",
+              "image_index": 0,
+              "ocr_text": "",
+              "ai_caption": "이미지 1: 19(화):VDI사용자 서버 09:00~13:00접속 불가 -현장 지원 후 13:00분부터 서비스 정상화❏ 향후 계획❍ 응급 조치로 Mongodbconf파일 수정(캐시데이터 용량 관리 파라미터 추가)적용 (22 04/19)❍ 제조사 SR을 통해 장애 상황 및 방안 요청,답변 회신 시 즉시 적용과 연관된 이미지",
+              "has_ocr": false
+            }
+          ],
+          "processed_images": [
+            {
+              "path": "document_images/한국전자인증_장애결과보고_VDI_수정/page_2.png",
+              "url": "/api/image-viewer/document_images/한국전자인증_장애결과보고_VDI_수정/page_2.png",
+              "caption": "이미지 1: 19(화):VDI사용자 서버 09:00~13:00접속 불가 -현장 지원 후 13:00분부터 서비스 정상화❏ 향후 계획❍ 응급 조치로 Mongodbconf파일 수정(캐시데이터 용량 관리 파라미터 추가)적용 (22 04/19)❍ 제조사 SR을 통해 장애 상황 및 방안 요청,답변 회신 시 즉시 적용과 연관된 이미지",
+              "ocr_text": "",
+              "ai_description": "이미지 1: 19(화):VDI사용자 서버 09:00~13:00접속 불가 -현장 지원 후 13:00분부터 서비스 정상화❏ 향후 계획❍ 응급 조치로 Mongodbconf파일 수정(캐시데이터 용량 관리 파라미터 추가)적용 (22 04/19)❍ 제조사 SR을 통해 장애 상황 및 방안 요청,답변 회신 시 즉시 적용과 연관된 이미지"
+            }
+          ],
+          "image_count": 1,
+          "is_cited": false
+        }
+      ]
+    }
+  ],
+  "timestamp": "2025-07-13T12:03:43.201741"
+}

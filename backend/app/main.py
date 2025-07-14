@@ -552,12 +552,13 @@ async def search_and_combine(
         prompt_text = answer["prompt_text"]
         inputs = tokenizer(prompt_text, return_tensors="pt", truncation=True)
         inputs = {k: v.to(llm_model.device) for k, v in inputs.items()}
-
+#--------------- 검색 끝 답변 시작----------------------------
+        #인공지능 모델 파라미터
         with torch.no_grad():
             outputs = llm_model.generate(
                 **inputs,
-                max_new_tokens=2048,
-                temperature=0.2,
+                max_new_tokens=2048,  #답변 길이
+                temperature=0.2, # 답변 자유도 높아지면 할루시네이션 발생
                 do_sample=True,
                 repetition_penalty=1.1,  # 반복 억제를 위한 페널티 추가
                 eos_token_id=tokenizer.eos_token_id,  # 토큰으로 끝나면 자동 종료
@@ -606,7 +607,7 @@ async def search_and_combine(
             return resp.strip()
 
 
-            
+    #---------------------- 답변 끝 출처 시작 -----------------------
     # 응답 정제 적용
         cleaned_answer = clean_response(answer)
         
